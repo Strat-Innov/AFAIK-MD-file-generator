@@ -21,6 +21,11 @@ export function getTagForFile(filename) {
   return readMap()[filename] || null;
 }
 
+// All remembered mappings, for the editable Memory Log view.
+export function listMemory() {
+  return Object.entries(readMap()).map(([filename, tag]) => ({ filename, tag }));
+}
+
 export function rememberTag(filename, tag) {
   const map = readMap();
   map[filename] = tag;

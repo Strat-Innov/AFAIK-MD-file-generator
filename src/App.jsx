@@ -3,11 +3,12 @@ import { Upload, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import BucketView from "./components/BucketView";
 import TagManager from "./components/TagManager";
-import ChangelogView from "./components/ChangelogView";
+import GithubSettings from "./components/GithubSettings";
 import { getTags } from "./lib/tags";
-import { rememberTag } from "./lib/memory";
+import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
-import { appendEntry } from "./lib/log";
+import { getSnapshot, setSnapshot, diffNames } from "./lib/snapshot";
+import { publishChangelog } from "./lib/github";
 
 /* ------------------------------------------------------------------ *
  * Transform rules — reverse-engineered from JUNE_13_Master_File.md
@@ -130,13 +131,45 @@ async function collectFiles(fileList) {
 export default function App() {
   const [tags, setTags] = useState(() => getTags());
   const [selected, setSelected] = useState(() => getTags()[0]);
-  const [logKey, setLogKey] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState("idle"); // idle | working | done | error
   const [error, setError] = useState("");
   const [buckets, setBuckets] = useState({}); // { [bucket]: files[] }  — session-only, never persisted
   const [mds, setMds] = useState({}); // { [bucket]: md string }       — session-only, never persisted
+  const [latestEntries, setLatestEntries] = useState(() => {
+    const map = {};
+    for (const t of getTags()) {
+      const snap = getSnapshot(t);
+      if (snap?.latestEntry) map[t] = snap.latestEntry;
+    }
+    return map;
+  });
   const inputRef = useRef(null);
+
+  // Mirrors `buckets` synchronously so handlers can compute the next state
+  // in one shot (needed to know exactly which bucket file-lists to check
+  // for a changelog-worthy diff) without depending on stale closures.
+  const bucketsRef = useRef({});
+  useEffect(() => { bucketsRef.current = buckets; }, [buckets]);
+
+  // Publishing to GitHub is secondary to actually getting the generated
+  // file — same lesson as the localStorage quota bug: a network/token
+  // failure here must surface as a visible warning, never block or
+  // overwrite the primary "done" result.
+  const publishIfChanged = useCallback(async (tag, files) => {
+    if (tag === UNSORTED) return;
+    const currentNames = files.map((f) => f.name).sort((a, b) => a.localeCompare(b));
+    const prev = getSnapshot(tag);
+    const { added, removed } = diffNames(prev ? prev.names : [], currentNames);
+    if (prev && added.length === 0 && removed.length === 0) return; // nothing changed since the last publish
+    try {
+      const entry = await publishChangelog(tag, added, removed);
+      setSnapshot(tag, { names: currentNames, latestEntry: entry });
+      setLatestEntries((prevEntries) => ({ ...prevEntries, [tag]: entry }));
+    } catch (e) {
+      setError(`Couldn't publish "${tag}" changelog to GitHub: ${e.message}`);
+    }
+  }, []);
 
   // One-time cleanup: the old per-entry history store (deprecated — it's
   // what used to overflow the localStorage quota) is no longer read or
@@ -152,33 +185,37 @@ export default function App() {
       if (files.length === 0) throw new Error("No .aspx files found in that drop (looked inside .zip too).");
 
       const currentTags = getTags();
+      // Dropping while a real tag tab is open forces every file into that
+      // tag and teaches the memory — an explicit placement always wins over
+      // auto-detection. Dropping from Unsorted (or any non-tag view) still
+      // auto-routes by folder/memory, since there's no explicit target.
+      const forcedBucket = currentTags.includes(selected) ? selected : null;
+
       const newByBucket = {};
       for (const f of files) {
-        const bucket = routeFile(f, currentTags);
+        const bucket = forcedBucket ?? routeFile(f, currentTags);
+        if (forcedBucket) rememberTag(f.name, forcedBucket);
         (newByBucket[bucket] ??= []).push(f);
       }
 
-      setBuckets((prev) => {
-        const next = { ...prev };
-        for (const [bucket, added] of Object.entries(newByBucket)) {
-          next[bucket] = [...(prev[bucket] || []), ...added];
-        }
-        setMds((prevMd) => {
-          const nextMd = { ...prevMd };
-          for (const bucket of Object.keys(newByBucket)) nextMd[bucket] = buildMaster(bucket, next[bucket]);
-          return nextMd;
-        });
-        return next;
-      });
-
-      for (const [bucket, added] of Object.entries(newByBucket)) appendEntry(bucket, added.length);
-      setLogKey((k) => k + 1);
+      const prevBuckets = bucketsRef.current;
+      const nextBuckets = { ...prevBuckets };
+      const touchedMd = {};
+      for (const [bucket, added] of Object.entries(newByBucket)) {
+        nextBuckets[bucket] = [...(prevBuckets[bucket] || []), ...added];
+        touchedMd[bucket] = buildMaster(bucket, nextBuckets[bucket]);
+      }
+      bucketsRef.current = nextBuckets;
+      setBuckets(nextBuckets);
+      setMds((prevMd) => ({ ...prevMd, ...touchedMd }));
       setStatus("done");
+
+      for (const bucket of Object.keys(newByBucket)) publishIfChanged(bucket, nextBuckets[bucket]);
     } catch (e) {
       setError(e.message || String(e));
       setStatus("error");
     }
-  }, []);
+  }, [selected, publishIfChanged]);
 
   const onDrop = (e) => {
     e.preventDefault(); setDragging(false);
@@ -187,19 +224,36 @@ export default function App() {
 
   const reassign = (file, targetTag) => {
     rememberTag(file.name, targetTag);
-    setBuckets((prev) => {
-      const next = { ...prev };
-      next[UNSORTED] = (prev[UNSORTED] || []).filter((f) => !(f.name === file.name && f.path === file.path));
-      next[targetTag] = [...(prev[targetTag] || []), file];
-      setMds((prevMd) => ({
-        ...prevMd,
-        [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
-        [targetTag]: buildMaster(targetTag, next[targetTag]),
-      }));
-      return next;
-    });
-    appendEntry(targetTag, 1);
-    setLogKey((k) => k + 1);
+    const prev = bucketsRef.current;
+    const next = { ...prev };
+    next[UNSORTED] = (prev[UNSORTED] || []).filter((f) => !(f.name === file.name && f.path === file.path));
+    next[targetTag] = [...(prev[targetTag] || []), file];
+    bucketsRef.current = next;
+    setBuckets(next);
+    setMds((prevMd) => ({
+      ...prevMd,
+      [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
+      [targetTag]: buildMaster(targetTag, next[targetTag]),
+    }));
+    publishIfChanged(targetTag, next[targetTag]);
+  };
+
+  // Correcting a wrong auto-sort: send the file back to Unsorted and forget
+  // its remembered tag, so it doesn't repeat the same mistake next time.
+  const unsort = (file, fromBucket) => {
+    forgetTag(file.name);
+    const prev = bucketsRef.current;
+    const next = { ...prev };
+    next[fromBucket] = (prev[fromBucket] || []).filter((f) => !(f.name === file.name && f.path === file.path));
+    next[UNSORTED] = [...(prev[UNSORTED] || []), file];
+    bucketsRef.current = next;
+    setBuckets(next);
+    setMds((prevMd) => ({
+      ...prevMd,
+      [fromBucket]: buildMaster(fromBucket, next[fromBucket]),
+      [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
+    }));
+    publishIfChanged(fromBucket, next[fromBucket]);
   };
 
   // Keep session bucket state consistent with tag edits: renames carry the
@@ -207,42 +261,43 @@ export default function App() {
   const syncTags = () => setTags(getTags());
 
   const onTagRenamed = (oldName, newName) => {
-    setBuckets((prev) => {
-      if (!(oldName in prev)) return prev;
+    const prev = bucketsRef.current;
+    if (oldName in prev) {
       const next = { ...prev, [newName]: prev[oldName] };
       delete next[oldName];
+      bucketsRef.current = next;
+      setBuckets(next);
       setMds((prevMd) => {
         const nextMd = { ...prevMd, [newName]: prevMd[oldName] };
         delete nextMd[oldName];
         return nextMd;
       });
-      return next;
-    });
+    }
     setSelected((sel) => (sel === oldName ? newName : sel));
     syncTags();
   };
 
   const onTagRemoved = (name) => {
-    setBuckets((prev) => {
-      if (!(name in prev)) return prev;
+    const prev = bucketsRef.current;
+    if (name in prev) {
       const merged = [...(prev[UNSORTED] || []), ...prev[name]];
       const next = { ...prev, [UNSORTED]: merged };
       delete next[name];
+      bucketsRef.current = next;
+      setBuckets(next);
       setMds((prevMd) => {
         const nextMd = { ...prevMd, [UNSORTED]: buildMaster(UNSORTED, merged) };
         delete nextMd[name];
         return nextMd;
       });
-      return next;
-    });
+    }
     setSelected((sel) => (sel === name ? UNSORTED : sel));
     syncTags();
   };
 
   const onTagAdded = () => syncTags();
 
-  const isFixedView = selected === "Changelog" || selected === "ManageTags";
-  const activeBucket = isFixedView ? null : selected;
+  const activeBucket = selected === "ManageTags" ? null : selected;
 
   const counts = Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, v.length]));
 
@@ -262,7 +317,9 @@ export default function App() {
           }
         >
           <Upload className="h-6 w-6 mx-auto text-slate-400 mb-1" />
-          <div className="text-sm font-medium text-slate-700">Drop .aspx files or a .zip here — sorts into the buckets on the left</div>
+          <div className="text-sm font-medium text-slate-700">
+            Drop .aspx files or a .zip here — {tags.includes(selected) ? `goes straight into "${selected}"` : "auto-sorts by folder/memory"}
+          </div>
           <input
             ref={inputRef} type="file" multiple accept=".aspx,.zip" className="hidden"
             onChange={(e) => e.target.files.length && handleFiles(e.target.files)}
@@ -286,9 +343,11 @@ export default function App() {
           </div>
         )}
 
-        {selected === "Changelog" && <ChangelogView refreshKey={logKey} onChanged={() => setLogKey((k) => k + 1)} />}
         {selected === "ManageTags" && (
-          <TagManager tags={tags} onRename={onTagRenamed} onRemove={onTagRemoved} onAdd={onTagAdded} />
+          <>
+            <GithubSettings />
+            <TagManager tags={tags} onRename={onTagRenamed} onRemove={onTagRemoved} onAdd={onTagAdded} />
+          </>
         )}
         {activeBucket && (
           <BucketView
@@ -297,6 +356,8 @@ export default function App() {
             md={mds[activeBucket]}
             tags={tags}
             onReassign={reassign}
+            onUnsort={(file) => unsort(file, activeBucket)}
+            latestChangelogEntry={latestEntries[activeBucket]}
           />
         )}
       </main>
