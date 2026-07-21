@@ -3,6 +3,16 @@ Posted: July 21, 2026 at 04:14 PM
 
 Changes since the previous generation:
 
+### Removed
+* TECHNICAL-SUPPORT-GROUP.aspx
+
+---
+
+## PROJECT PLAYBOOK Master Changelog
+Posted: July 21, 2026 at 04:14 PM
+
+Changes since the previous generation:
+
 ### Added
 * TECHNICAL-SUPPORT-GROUP.aspx
 
