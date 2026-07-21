@@ -1,9 +1,11 @@
 /* ------------------------------------------------------------------ *
- * Caches the most recent changelog entry per tag, so a bucket tab can
- * show "what changed last time" without re-fetching from GitHub. Tiny,
- * one entry per tag — this is a display cache only, not used to decide
- * whether a file was added or removed (bucket membership is session-
- * only, so it's never a reliable signal for that; see App.jsx).
+ * Caches the most recent changelog entry per tag — both the flat
+ * published text (used by the detailed Changelog tab, always complete)
+ * and the structured changes it was built from (used to render a
+ * filtered "highlights" view locally, so changing the visibility
+ * toggle later doesn't require re-publishing). Tiny, one entry per tag.
+ * Bucket membership is session-only, so this is never used to decide
+ * whether a file was added or removed — see App.jsx.
  * ------------------------------------------------------------------ */
 
 const KEY = "afaik-bucket-snapshot-v1";
@@ -22,8 +24,8 @@ export function getSnapshot(tag) {
   return readAll()[tag] || null;
 }
 
-export function setSnapshot(tag, { latestEntry }) {
+export function setSnapshot(tag, { latestEntry, latestChanges }) {
   const map = readAll();
-  map[tag] = { latestEntry, publishedAt: Date.now() };
+  map[tag] = { latestEntry, latestChanges, publishedAt: Date.now() };
   writeAll(map);
 }

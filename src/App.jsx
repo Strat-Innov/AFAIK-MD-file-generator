@@ -4,6 +4,7 @@ import Sidebar from "./components/Sidebar";
 import BucketView from "./components/BucketView";
 import TagManager from "./components/TagManager";
 import GithubSettings from "./components/GithubSettings";
+import ChangelogDetailView from "./components/ChangelogDetailView";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -178,11 +179,11 @@ export default function App() {
   const [error, setError] = useState("");
   const [buckets, setBuckets] = useState({}); // { [bucket]: files[] }  — session-only, never persisted
   const [mds, setMds] = useState({}); // { [bucket]: md string }       — session-only, never persisted
-  const [latestEntries, setLatestEntries] = useState(() => {
+  const [latestPublished, setLatestPublished] = useState(() => {
     const map = {};
     for (const t of getTags()) {
       const snap = getSnapshot(t);
-      if (snap?.latestEntry) map[t] = snap.latestEntry;
+      if (snap?.latestEntry) map[t] = { entry: snap.latestEntry, changes: snap.latestChanges || [] };
     }
     return map;
   });
@@ -239,9 +240,9 @@ export default function App() {
     runExclusive(tag, async () => {
       try {
         const entry = await publishChangelog(tag, fileVersionChanges);
-        setSnapshot(tag, { latestEntry: entry });
+        setSnapshot(tag, { latestEntry: entry, latestChanges: fileVersionChanges });
         for (const fv of fileVersionChanges) commitFileVersion(fv.filename, fv.version, fv.parts, fv.modifiedAt);
-        setLatestEntries((prevEntries) => ({ ...prevEntries, [tag]: entry }));
+        setLatestPublished((prev) => ({ ...prev, [tag]: { entry, changes: fileVersionChanges } }));
       } catch (e) {
         setError(`Couldn't publish "${tag}" changelog to GitHub: ${e.message}`);
       }
@@ -421,7 +422,7 @@ export default function App() {
 
   const onTagAdded = () => syncTags();
 
-  const activeBucket = selected === "ManageTags" ? null : selected;
+  const activeBucket = selected === "ManageTags" || selected === "Changelog" ? null : selected;
 
   const counts = Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, v.length]));
 
@@ -473,6 +474,7 @@ export default function App() {
             <TagManager tags={tags} onRename={onTagRenamed} onRemove={onTagRemoved} onAdd={onTagAdded} />
           </>
         )}
+        {selected === "Changelog" && <ChangelogDetailView tags={tags} />}
         {activeBucket && (
           <BucketView
             bucket={activeBucket}
@@ -482,7 +484,8 @@ export default function App() {
             onReassign={reassign}
             onUnsort={(file) => unsort(file, activeBucket)}
             onRemove={(file) => removeFile(file, activeBucket)}
-            latestChangelogEntry={latestEntries[activeBucket]}
+            latestPublished={latestPublished[activeBucket]}
+            onViewDetailed={() => setSelected("Changelog")}
             previewChanges={previewChanges[activeBucket]}
             staleFilenames={staleByBucket[activeBucket]}
           />

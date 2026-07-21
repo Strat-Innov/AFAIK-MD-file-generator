@@ -2,13 +2,21 @@ import React, { useState } from "react";
 import { Trash2, Plus, X } from "lucide-react";
 import * as tagsLib from "../lib/tags";
 import { renameTagEverywhere, clearTagEverywhere, listMemory, rememberTag, forgetTag } from "../lib/memory";
+import { WEBPART_TYPES } from "../lib/webparts";
+import { isVisible, setVisible } from "../lib/webpartVisibility";
 
 export default function TagManager({ tags, onRename, onRemove, onAdd }) {
   const [error, setError] = useState("");
   const [drafts, setDrafts] = useState(() => Object.fromEntries(tags.map((t) => [t, t])));
   const [newTag, setNewTag] = useState("");
   const [memoryKey, setMemoryKey] = useState(0);
+  const [visibilityKey, setVisibilityKey] = useState(0);
   const memory = listMemory();
+
+  const toggleVisibility = (type, checked) => {
+    setVisible(type, checked);
+    setVisibilityKey((k) => k + 1);
+  };
 
   const commitRename = (oldName) => {
     setError("");
@@ -94,6 +102,27 @@ export default function TagManager({ tags, onRename, onRemove, onAdd }) {
         <button onClick={add} className="inline-flex items-center gap-1 rounded-md bg-slate-900 text-white text-xs px-2.5 py-1.5 hover:bg-slate-700 shrink-0">
           <Plus className="h-3.5 w-3.5" /> Add
         </button>
+      </div>
+
+      <div className="mt-6 pt-4 border-t border-slate-100">
+        <div className="text-sm font-semibold text-slate-800 mb-1">Changelog & Preview Highlights</div>
+        <p className="text-xs text-slate-500 mb-3">
+          Controls what shows in the Preview panel and the changelog highlights on each bucket tab. Doesn't affect
+          what gets published — the full changelog on GitHub always includes every change, regardless of these toggles.
+        </p>
+        <div className="space-y-2">
+          {WEBPART_TYPES.map(({ type, label }) => (
+            <label key={type} className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={isVisible(type)}
+                onChange={(e) => toggleVisibility(type, e.target.checked)}
+                className="rounded border-slate-300"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
       </div>
 
       <div className="mt-6 pt-4 border-t border-slate-100">

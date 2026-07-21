@@ -94,11 +94,18 @@ function extractAgentLinkFields(blob) {
 }
 
 const REGISTRY = {
-  [PEOPLE_ID]: { label: "People", kind: "list", extract: extractPeople },
-  [QUICK_LINKS_ID]: { label: "Quick links", kind: "list", extract: extractQuickLinks },
-  [IMAGE_ID]: { label: "Image", kind: "fields", extract: extractImageFields },
-  [AGENT_LINK_ID]: { label: "Agent link", kind: "fields", extract: extractAgentLinkFields },
+  [PEOPLE_ID]: { type: "people", label: "People", kind: "list", extract: extractPeople },
+  [QUICK_LINKS_ID]: { type: "quicklinks", label: "Quick links", kind: "list", extract: extractQuickLinks },
+  [IMAGE_ID]: { type: "image", label: "Image", kind: "fields", extract: extractImageFields },
+  [AGENT_LINK_ID]: { type: "agentlink", label: "Agent link", kind: "fields", extract: extractAgentLinkFields },
 };
+
+// Canonical type list for the visibility toggle UI — stable identifiers,
+// independent of a web part's (customizable) display title.
+export const WEBPART_TYPES = [
+  ...Object.values(REGISTRY).map((r) => ({ type: r.type, label: r.label })),
+  { type: "generic", label: "Other content" },
+];
 
 // Small, non-cryptographic fingerprint — just needs to change when the
 // content changes, not to resist tampering.
@@ -119,9 +126,9 @@ export function extractStructuredContent(rawAspx) {
   return extractWebPartBlobs(rawAspx).map((blob, i) => {
     const reg = blob?.id && REGISTRY[blob.id];
     if (reg) {
-      return { instanceId: blob.instanceId || `part-${i}`, label: blob.title || reg.label, kind: reg.kind, data: reg.extract(blob) };
+      return { instanceId: blob.instanceId || `part-${i}`, label: blob.title || reg.label, type: reg.type, kind: reg.kind, data: reg.extract(blob) };
     }
-    return { instanceId: blob?.instanceId || `unrecognized-${i}`, label: blob?.title || "Other content", kind: "generic", data: fingerprint(blob) };
+    return { instanceId: blob?.instanceId || `unrecognized-${i}`, label: blob?.title || "Other content", type: "generic", kind: "generic", data: fingerprint(blob) };
   });
 }
 
@@ -140,7 +147,7 @@ export function diffStructuredContent(prevParts, currentParts) {
       const currKeys = new Set(part.data.map((i) => i.key));
       const added = part.data.filter((i) => !prevKeys.has(i.key));
       const removed = (prevPart?.data || []).filter((i) => !currKeys.has(i.key));
-      if (added.length || removed.length) changes.push({ label: part.label, kind: "list", added, removed });
+      if (added.length || removed.length) changes.push({ label: part.label, type: part.type, kind: "list", added, removed });
     } else if (part.kind === "fields") {
       const prevFields = prevPart?.data || {};
       const fieldChanges = [];
@@ -150,9 +157,9 @@ export function diffStructuredContent(prevParts, currentParts) {
         if (!prevPart) fieldChanges.push({ field: key, from: null, to });
         else if (prevFields[key] !== to) fieldChanges.push({ field: key, from: prevFields[key] || "(empty)", to });
       }
-      if (fieldChanges.length) changes.push({ label: part.label, kind: "fields", fieldChanges });
+      if (fieldChanges.length) changes.push({ label: part.label, type: part.type, kind: "fields", fieldChanges });
     } else {
-      if (!prevPart || prevPart.data !== part.data) changes.push({ label: part.label, kind: "generic" });
+      if (!prevPart || prevPart.data !== part.data) changes.push({ label: part.label, type: part.type, kind: "generic" });
     }
   }
 

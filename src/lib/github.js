@@ -97,6 +97,15 @@ export async function fetchFileRecords(tag) {
   return existing ? parseFileRecords(existing.content) : {};
 }
 
+// Fetches the full raw published changelog text for a tag — used by the
+// detailed Changelog view. Returns null if nothing's published yet.
+export async function fetchChangelogText(tag) {
+  const token = getToken();
+  if (!token) throw new Error("No GitHub token saved — add one in Manage Tags first.");
+  const existing = await getFile(changelogPath(tag), token);
+  return existing ? existing.content : null;
+}
+
 async function githubFetch(path, token, options = {}) {
   return fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${path}`, {
     ...options,

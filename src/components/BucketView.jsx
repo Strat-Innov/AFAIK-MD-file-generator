@@ -1,6 +1,7 @@
 import React from "react";
-import { Download, FolderTree, Inbox, X, Plus, Minus, History } from "lucide-react";
+import { Download, FolderTree, Inbox, X, Plus, Minus, History, ExternalLink } from "lucide-react";
 import { UNSORTED } from "../lib/router";
+import { isVisible } from "../lib/webpartVisibility";
 
 function download(bucket, md) {
   const blob = new Blob([md], { type: "text/markdown" });
@@ -17,81 +18,102 @@ function sizeLabel(md) {
   return bytes > 1e6 ? (bytes / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
 }
 
+// Shared between the live preview and the highlights panel — both show
+// the same shape of data (fileVersionChanges), just from different
+// sources, and both respect the visibility toggle from Manage Tags.
+function ChangeList({ fileVersionChanges }) {
+  const visibleEntries = fileVersionChanges
+    .map((fv) => ({ ...fv, changes: fv.changes.filter((c) => isVisible(c.type)) }))
+    .filter((fv) => fv.changes.length > 0);
+
+  if (visibleEntries.length === 0) {
+    return <div className="text-sm text-slate-400">Nothing to show with the current highlight settings.</div>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {visibleEntries.map((fv) => (
+        <div key={fv.filename} className="rounded-lg border border-slate-100 p-3">
+          <div className="text-xs font-semibold text-slate-700 mb-2">
+            {fv.filename} <span className="text-slate-400 font-normal">— Version {fv.version}</span>
+          </div>
+          {fv.changes.map((c) => (
+            <div key={c.label} className="mb-2 last:mb-0">
+              <div className="text-xs font-medium text-slate-500 mb-1">{c.label}</div>
+              {c.kind === "list" && c.added.map((item) => (
+                <div key={`add-${item.key}`} className="flex items-start gap-1.5 text-xs text-emerald-700 bg-emerald-50 rounded px-2 py-1 mb-1">
+                  <Plus className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span>{item.label}</span>
+                </div>
+              ))}
+              {c.kind === "list" && c.removed.map((item) => (
+                <div key={`rem-${item.key}`} className="flex items-start gap-1.5 text-xs text-rose-700 bg-rose-50 rounded px-2 py-1 mb-1">
+                  <Minus className="h-3 w-3 mt-0.5 shrink-0" />
+                  <span className="line-through">{item.label}</span>
+                </div>
+              ))}
+              {c.kind === "fields" && c.fieldChanges.map((fc) => (
+                <div key={fc.field} className="text-xs text-slate-700 bg-slate-50 rounded px-2 py-1 mb-1">
+                  <span className="font-medium">{fc.field}:</span>{" "}
+                  {fc.from == null ? <span className="text-emerald-700">{fc.to} (New)</span> : (
+                    <>
+                      <span className="text-rose-700 line-through">{fc.from}</span>
+                      {" → "}
+                      <span className="text-emerald-700">{fc.to}</span>
+                    </>
+                  )}
+                </div>
+              ))}
+              {c.kind === "generic" && (
+                <div className="text-xs text-slate-600 bg-slate-50 rounded px-2 py-1 mb-1">Content changed (no item-level detail available for this section)</div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function PreviewPanel({ previewChanges }) {
   const hasChanges = previewChanges && previewChanges.length > 0;
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 p-4 text-sm font-semibold text-slate-800">Preview of changes</div>
       <div className="p-4">
-        {!hasChanges ? (
-          <div className="text-sm text-slate-400">No pending content changes this session.</div>
+        {!hasChanges ? <div className="text-sm text-slate-400">No pending content changes this session.</div> : <ChangeList fileVersionChanges={previewChanges} />}
+      </div>
+    </div>
+  );
+}
+
+function HighlightsPanel({ latestPublished, onViewDetailed }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm mt-4">
+      <div className="flex items-center justify-between border-b border-slate-100 p-4">
+        <span className="text-sm font-semibold text-slate-800">Changelog highlights</span>
+        <button onClick={onViewDetailed} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800">
+          Full detail <ExternalLink className="h-3 w-3" />
+        </button>
+      </div>
+      <div className="p-4">
+        {!latestPublished ? (
+          <div className="text-sm text-slate-400">Nothing published yet.</div>
         ) : (
-          <div className="space-y-3">
-            {previewChanges.map((fv) => (
-              <div key={fv.filename} className="rounded-lg border border-slate-100 p-3">
-                <div className="text-xs font-semibold text-slate-700 mb-2">
-                  {fv.filename} <span className="text-slate-400 font-normal">— Version {fv.version}</span>
-                </div>
-                {fv.changes.map((c) => (
-                  <div key={c.label} className="mb-2 last:mb-0">
-                    <div className="text-xs font-medium text-slate-500 mb-1">{c.label}</div>
-                    {c.kind === "list" && c.added.map((item) => (
-                      <div key={`add-${item.key}`} className="flex items-start gap-1.5 text-xs text-emerald-700 bg-emerald-50 rounded px-2 py-1 mb-1">
-                        <Plus className="h-3 w-3 mt-0.5 shrink-0" />
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                    {c.kind === "list" && c.removed.map((item) => (
-                      <div key={`rem-${item.key}`} className="flex items-start gap-1.5 text-xs text-rose-700 bg-rose-50 rounded px-2 py-1 mb-1">
-                        <Minus className="h-3 w-3 mt-0.5 shrink-0" />
-                        <span className="line-through">{item.label}</span>
-                      </div>
-                    ))}
-                    {c.kind === "fields" && c.fieldChanges.map((fc) => (
-                      <div key={fc.field} className="text-xs text-slate-700 bg-slate-50 rounded px-2 py-1 mb-1">
-                        <span className="font-medium">{fc.field}:</span>{" "}
-                        {fc.from == null ? <span className="text-emerald-700">{fc.to} (New)</span> : (
-                          <>
-                            <span className="text-rose-700 line-through">{fc.from}</span>
-                            {" → "}
-                            <span className="text-emerald-700">{fc.to}</span>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                    {c.kind === "generic" && (
-                      <div className="text-xs text-slate-600 bg-slate-50 rounded px-2 py-1 mb-1">Content changed (no item-level detail available for this section)</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
+          <ChangeList fileVersionChanges={latestPublished.changes} />
         )}
       </div>
     </div>
   );
 }
 
-function ChangelogPanel({ latestChangelogEntry }) {
-  if (!latestChangelogEntry) return null;
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm mt-4">
-      <div className="border-b border-slate-100 p-4 text-sm font-semibold text-slate-800">Most recent changelog</div>
-      <div className="p-4">
-        <pre className="whitespace-pre-wrap text-xs text-slate-700 bg-slate-50 border border-slate-100 rounded p-3">{latestChangelogEntry}</pre>
-      </div>
-    </div>
-  );
-}
-
-export default function BucketView({ bucket, files, md, tags, onReassign, onUnsort, onRemove, latestChangelogEntry, previewChanges, staleFilenames }) {
+export default function BucketView({ bucket, files, md, tags, onReassign, onUnsort, onRemove, latestPublished, onViewDetailed, previewChanges, staleFilenames }) {
   const isUnsorted = bucket === UNSORTED;
   const staleSet = new Set(staleFilenames || []);
   const sidebar = !isUnsorted && (
     <div className="w-full md:w-80 shrink-0">
       <PreviewPanel previewChanges={previewChanges} />
-      <ChangelogPanel latestChangelogEntry={latestChangelogEntry} />
+      <HighlightsPanel latestPublished={latestPublished} onViewDetailed={onViewDetailed} />
     </div>
   );
 
