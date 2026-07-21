@@ -85,7 +85,7 @@ function ChangelogPanel({ latestChangelogEntry }) {
   );
 }
 
-export default function BucketView({ bucket, files, md, tags, onReassign, onUnsort, latestChangelogEntry, previewChanges, staleFilenames }) {
+export default function BucketView({ bucket, files, md, tags, onReassign, onUnsort, onRemove, latestChangelogEntry, previewChanges, staleFilenames }) {
   const isUnsorted = bucket === UNSORTED;
   const staleSet = new Set(staleFilenames || []);
   const sidebar = !isUnsorted && (
@@ -145,14 +145,23 @@ export default function BucketView({ bucket, files, md, tags, onReassign, onUnso
                     )}
                   </span>
                   {isUnsorted ? (
-                    <select
-                      defaultValue=""
-                      onChange={(e) => e.target.value && onReassign(f, e.target.value)}
-                      className="text-xs border border-slate-300 rounded px-1.5 py-1 bg-white shrink-0"
-                    >
-                      <option value="" disabled>Assign to…</option>
-                      {tags.map((t) => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <select
+                        defaultValue=""
+                        onChange={(e) => e.target.value && onReassign(f, e.target.value)}
+                        className="text-xs border border-slate-300 rounded px-1.5 py-1 bg-white"
+                      >
+                        <option value="" disabled>Assign to…</option>
+                        {tags.map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <button
+                        onClick={() => onRemove(f)}
+                        title="Discard this file"
+                        className="rounded-md p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   ) : (
                     <button
                       onClick={() => onUnsort(f)}

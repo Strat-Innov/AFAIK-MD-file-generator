@@ -143,6 +143,32 @@ async function collectFiles(fileList) {
   return collected;
 }
 
+// Poka-yoke: if the same filename shows up more than once in a bucket
+// (dropped twice, duplicated inside a zip, etc.), keep only the one with
+// the latest modification time and silently drop the other — a filename
+// should never appear twice in a generated master file, and "which one
+// is current" should never be ambiguous.
+function dedupeKeepingLatest(files) {
+  const byName = new Map();
+  const discardedNames = [];
+  for (const f of files) {
+    const existing = byName.get(f.name);
+    if (!existing) {
+      byName.set(f.name, f);
+      continue;
+    }
+    const existingTime = existing.modifiedAt ?? -Infinity;
+    const incomingTime = f.modifiedAt ?? -Infinity;
+    if (incomingTime > existingTime) {
+      byName.set(f.name, f);
+      discardedNames.push(existing.name);
+    } else {
+      discardedNames.push(f.name);
+    }
+  }
+  return { files: [...byName.values()], discardedNames };
+}
+
 /* ================================================================== */
 export default function App() {
   const [tags, setTags] = useState(() => getTags());
@@ -252,9 +278,13 @@ export default function App() {
       const prevBuckets = bucketsRef.current;
       const nextBuckets = { ...prevBuckets };
       const touchedMd = {};
+      const dupDiscarded = [];
       for (const [bucket, added] of Object.entries(newByBucket)) {
-        nextBuckets[bucket] = [...(prevBuckets[bucket] || []), ...added];
-        touchedMd[bucket] = buildMaster(bucket, nextBuckets[bucket]);
+        const merged = [...(prevBuckets[bucket] || []), ...added];
+        const { files: deduped, discardedNames } = dedupeKeepingLatest(merged);
+        nextBuckets[bucket] = deduped;
+        touchedMd[bucket] = buildMaster(bucket, deduped);
+        dupDiscarded.push(...discardedNames);
       }
       bucketsRef.current = nextBuckets;
       setBuckets(nextBuckets);
@@ -272,7 +302,10 @@ export default function App() {
       setPreviewChanges((prev) => ({ ...prev, ...previewUpdate }));
       setStaleByBucket((prev) => ({ ...prev, ...staleUpdate }));
       setStatus("done");
-      setError(staleAll.length ? `Flagged ${staleAll.length} file(s) as an older version than what's published: ${staleAll.join(", ")}` : "");
+      const notices = [];
+      if (dupDiscarded.length) notices.push(`Kept the newest copy of ${dupDiscarded.length} duplicate filename(s), discarded the older one: ${dupDiscarded.join(", ")}`);
+      if (staleAll.length) notices.push(`Flagged ${staleAll.length} file(s) as an older version than what's published: ${staleAll.join(", ")}`);
+      setError(notices.join(" — "));
 
       for (const bucket of Object.keys(newByBucket)) publishIfChanged(bucket, previewUpdate[bucket]);
     } catch (e) {
@@ -291,7 +324,8 @@ export default function App() {
     const prev = bucketsRef.current;
     const next = { ...prev };
     next[UNSORTED] = (prev[UNSORTED] || []).filter((f) => !(f.name === file.name && f.path === file.path));
-    next[targetTag] = [...(prev[targetTag] || []), file];
+    const { files: targetDeduped, discardedNames } = dedupeKeepingLatest([...(prev[targetTag] || []), file]);
+    next[targetTag] = targetDeduped;
     bucketsRef.current = next;
     setBuckets(next);
     setMds((prevMd) => ({
@@ -302,7 +336,10 @@ export default function App() {
     const { changes, staleFiles } = await computeFileVersionChanges(targetTag, next[targetTag]);
     setPreviewChanges((prevPreview) => ({ ...prevPreview, [targetTag]: changes }));
     setStaleByBucket((prevStale) => ({ ...prevStale, [targetTag]: staleFiles }));
-    if (staleFiles.length) setError(`Flagged "${file.name}" as an older version than what's published.`);
+    const notices = [];
+    if (discardedNames.length) notices.push(`Kept the newest copy of "${file.name}", "${targetTag}" already had one.`);
+    if (staleFiles.length) notices.push(`Flagged "${file.name}" as an older version than what's published.`);
+    if (notices.length) setError(notices.join(" — "));
     publishIfChanged(targetTag, changes);
   };
 
@@ -313,7 +350,8 @@ export default function App() {
     const prev = bucketsRef.current;
     const next = { ...prev };
     next[fromBucket] = (prev[fromBucket] || []).filter((f) => !(f.name === file.name && f.path === file.path));
-    next[UNSORTED] = [...(prev[UNSORTED] || []), file];
+    const { files: unsortedDeduped, discardedNames } = dedupeKeepingLatest([...(prev[UNSORTED] || []), file]);
+    next[UNSORTED] = unsortedDeduped;
     bucketsRef.current = next;
     setBuckets(next);
     setMds((prevMd) => ({
@@ -324,8 +362,22 @@ export default function App() {
     const { changes, staleFiles } = await computeFileVersionChanges(fromBucket, next[fromBucket]);
     setPreviewChanges((prevPreview) => ({ ...prevPreview, [fromBucket]: changes }));
     setStaleByBucket((prevStale) => ({ ...prevStale, [fromBucket]: staleFiles }));
-    if (staleFiles.length) setError(`Flagged file(s) in "${fromBucket}" as an older version than what's published.`);
+    const notices = [];
+    if (discardedNames.length) notices.push(`Kept the newest copy of "${file.name}" in Unsorted.`);
+    if (staleFiles.length) notices.push(`Flagged file(s) in "${fromBucket}" as an older version than what's published.`);
+    if (notices.length) setError(notices.join(" — "));
     publishIfChanged(fromBucket, changes);
+  };
+
+  // Discards a file entirely from a bucket's working list — used in
+  // Unsorted, where there's nowhere "back" to send it to.
+  const removeFile = (file, bucket) => {
+    const prev = bucketsRef.current;
+    const next = { ...prev };
+    next[bucket] = (prev[bucket] || []).filter((f) => !(f.name === file.name && f.path === file.path));
+    bucketsRef.current = next;
+    setBuckets(next);
+    setMds((prevMd) => ({ ...prevMd, [bucket]: buildMaster(bucket, next[bucket]) }));
   };
 
   // Keep session bucket state consistent with tag edits: renames carry the
@@ -429,6 +481,7 @@ export default function App() {
             tags={tags}
             onReassign={reassign}
             onUnsort={(file) => unsort(file, activeBucket)}
+            onRemove={(file) => removeFile(file, activeBucket)}
             latestChangelogEntry={latestEntries[activeBucket]}
             previewChanges={previewChanges[activeBucket]}
             staleFilenames={staleByBucket[activeBucket]}
