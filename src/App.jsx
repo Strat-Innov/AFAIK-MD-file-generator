@@ -8,6 +8,7 @@ import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
 import { getSnapshot, setSnapshot, diffNames } from "./lib/snapshot";
+import { checkFileVersion, commitFileVersion } from "./lib/fileVersions";
 import { publishChangelog } from "./lib/github";
 
 /* ------------------------------------------------------------------ *
@@ -159,12 +160,25 @@ export default function App() {
   const publishIfChanged = useCallback(async (tag, files) => {
     if (tag === UNSORTED) return;
     const currentNames = files.map((f) => f.name).sort((a, b) => a.localeCompare(b));
-    const prev = getSnapshot(tag);
-    const { added, removed } = diffNames(prev ? prev.names : [], currentNames);
-    if (prev && added.length === 0 && removed.length === 0) return; // nothing changed since the last publish
+    const prevSnap = getSnapshot(tag);
+    const { added, removed } = diffNames(prevSnap ? prevSnap.names : [], currentNames);
+
+    // Per-file content diffing (People/Quick Links/etc.) is independent of
+    // whether the bucket's filename set changed — a file can be edited
+    // without the bucket gaining or losing any files.
+    const fileVersionChanges = [];
+    for (const f of files) {
+      const result = checkFileVersion(f.name, f.raw);
+      if (result) fileVersionChanges.push({ filename: f.name, ...result });
+    }
+
+    const bucketFilenamesChanged = !prevSnap || added.length > 0 || removed.length > 0;
+    if (!bucketFilenamesChanged && fileVersionChanges.length === 0) return; // truly nothing to report
+
     try {
-      const entry = await publishChangelog(tag, added, removed);
+      const entry = await publishChangelog(tag, added, removed, fileVersionChanges);
       setSnapshot(tag, { names: currentNames, latestEntry: entry });
+      for (const fv of fileVersionChanges) commitFileVersion(fv.filename, fv.version, fv.parts);
       setLatestEntries((prevEntries) => ({ ...prevEntries, [tag]: entry }));
     } catch (e) {
       setError(`Couldn't publish "${tag}" changelog to GitHub: ${e.message}`);
