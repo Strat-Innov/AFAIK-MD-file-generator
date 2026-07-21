@@ -1,4 +1,414 @@
 ## PROJECT PLAYBOOK Master Changelog
+Posted: July 21, 2026 at 04:50 PM
+
+Changes since the previous generation:
+
+### MARKETING.aspx — Version 3
+<!-- modifiedAt:1784189552768 -->
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Roselle Anne S. Sales — Assistant Marketing Manager (New)
+* Norie Lei C. Laderas — Marketing Lead (New)
+* Celina Gabrielle R. Lozare — Marketing Associate (New)
+* Virgilio Cedrick C. Garcia — Administrative Associate (New)
+* Valine V. Aquino — Marketing Manager (Removed)
+* Claudine Anne S. Arciaga — Marketing Manager (Removed)
+* Monique G. Pensotes — Marketing Manager (Removed)
+* Sheila Therese I. Del Rosario — Senior Marketing Manager (Removed)
+* Baby Lyn D. Atienza — Senior Marketing Manager (Removed)
+People
+* Claudine Anne S. Arciaga — Marketing Manager (New)
+* Baby Lyn D. Atienza — Senior Marketing Manager (New)
+* Florianne A. Alvarez — Marketing Specialist - 1001 Parkway (New)
+* Laraine Faith I. Morata — Marketing Assistant (New)
+* Imajica May G. Cortez — Marketing Specialist (New)
+* Carol Jeline G. Raquedan — Marketing Associate (New)
+* Ma. Nicolette A. Sanchez — Marketing Associate (New)
+* Lara Carmela  I. Escalona — Marketing Assistant (New)
+People
+* Monique G. Pensotes — Marketing Manager (New)
+* Dorothy C. Torretijo — Digital Marketing Specialist (New)
+* Joanna A. Miranda — S&M Management Lead (New)
+People
+* Valine V. Aquino — Marketing Manager (New)
+* Maria Isabela T. Castañeda — Public Relations Specialist (New)
+* Zainel Christian L. Sebastian — Marketing Lead (New)
+
+### Southkey-Place.aspx — Version 1
+<!-- modifiedAt:1784189851048 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### River-Park.aspx — Version 1
+<!-- modifiedAt:1784189842739 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### Filinvest-Tent.aspx — Version 1
+<!-- modifiedAt:1784189841229 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### SOUTH-STATION-TRANSPORT-TERMINAL.aspx — Version 1
+<!-- modifiedAt:1784189839823 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### THE-PALMS-COUNTRY-CLUB.aspx — Version 1
+<!-- modifiedAt:1784189836493 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### Fast-Bytes.aspx — Version 1
+<!-- modifiedAt:1784189835000 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### LANDMARK-ALABANG.aspx — Version 1
+<!-- modifiedAt:1784189833413 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### Axis-Park.aspx — Version 1
+<!-- modifiedAt:1784189831920 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### WATER-GARDEN.aspx — Version 1
+<!-- modifiedAt:1784189830504 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### FESTIVAL-MALL-(EXPANSION).aspx — Version 1
+<!-- modifiedAt:1784189828572 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### SOUTH-SUPERMARKET.aspx — Version 1
+<!-- modifiedAt:1784189826875 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### WESTGATE-CENTER.aspx — Version 1
+<!-- modifiedAt:1784189825175 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### WILCON-DEPOT.aspx — Version 1
+<!-- modifiedAt:1784189822925 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### SOUTHPOINT-DRIVING-RANGE.aspx — Version 1
+<!-- modifiedAt:1784189813663 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### BLOC-10-RETAIL-CENTER.aspx — Version 1
+<!-- modifiedAt:1784189811259 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### AA-CORPORATE-PLAZA.aspx — Version 1
+<!-- modifiedAt:1784189809420 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### ASIAN-STAR-BUILDING.aspx — Version 1
+<!-- modifiedAt:1784189807674 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### CAPELLA-CENTER.aspx — Version 1
+<!-- modifiedAt:1784189804613 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### CAPITAL-ONE-BUILDING.aspx — Version 1
+<!-- modifiedAt:1784189800857 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### CONCENTRIX-BUILDING.aspx — Version 1
+<!-- modifiedAt:1784189799162 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### CTP-ASEAN-TOWER.aspx — Version 1
+<!-- modifiedAt:1784189797489 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### FILINVEST-AXIS-TOWERS.aspx — Version 1
+<!-- modifiedAt:1784189795570 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### AEON-CENTER.aspx — Version 1
+<!-- modifiedAt:1784189793756 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### INSULAR-LIFE-CORPORATE-CENTRE.aspx — Version 1
+<!-- modifiedAt:1784189791948 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### KINGSTON-EXCELL-BUILDING.aspx — Version 1
+<!-- modifiedAt:1784189790281 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### NATHASHA-MSE-BUILDING.aspx — Version 1
+<!-- modifiedAt:1784189788323 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### ONE-GRIFFINSTONE.aspx — Version 1
+<!-- modifiedAt:1784189785741 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### PCC.aspx — Version 1
+<!-- modifiedAt:1784189779952 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### PLAZA-OFFICE-BUILDING.aspx — Version 1
+<!-- modifiedAt:1784189777449 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### POLARIS-CORPORATE-CENTER.aspx — Version 1
+<!-- modifiedAt:1784189775215 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### SOUTHKEY-HUB-TWO.aspx — Version 1
+<!-- modifiedAt:1784189773484 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### THE-MERCEDIAN.aspx — Version 1
+<!-- modifiedAt:1784189771326 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### Central Park.aspx — Version 1
+<!-- modifiedAt:1784189769016 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### ASIAN-HOSPITAL-AND-MEDICAL-CENTER.aspx — Version 1
+<!-- modifiedAt:1784189766790 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### FILIGREE-SHOWROOM.aspx — Version 1
+<!-- modifiedAt:1784189765102 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### OUR-LADY-OF-LOURDES-CHAPEL.aspx — Version 1
+<!-- modifiedAt:1784189763156 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### RESEARCH-INSTITUTE-FOR-TROPICAL-MEDICINE.aspx — Version 1
+<!-- modifiedAt:1784189761512 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### TOYOTA-ALABANG.aspx — Version 1
+<!-- modifiedAt:1784189759451 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### 2301-CIVIC-PLACE-CONDOMINIUM.aspx — Version 1
+<!-- modifiedAt:1784189757540 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### ENTRATA-URBAN-COMPLEX.aspx — Version 1
+<!-- modifiedAt:1784189749430 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### South-Station-Terminal(test).aspx — Version 1
+<!-- modifiedAt:1784189747905 -->
+Quick links
+* Botanika Nature Residences | Muntinlupa City - Facebook (https://www.facebook.com/BotanikaAlabangOfficial/) (New)
+* Botanika Nature Residences - Instagram (https://www.instagram.com/botanikaph/) (New)
+* Two Botanika - Filigree (https://filigree.com.ph/properties/two-botanika/) (New)
+* Botanika Nature Residences - ExSight 360 Virtual Tours (https://fai.exsight360.com/botanika/index.html) (New)
+People
+* Claudine Anne S. Arciaga — Marketing Manager (New)
+* Joyce M. Isabelo — Marketing Lead (New)
+People
+* Apple S. Delos Reyes — Project Development Manager (New)
+* Pauline Regine — Project Development Manager (New)
+* Mira Louise M. Manalastas — Project Development Lead (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Sheena Mae Ann B. Labrador — Sales Administration Assistant (New)
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### SPECTRUM PARK.aspx — Version 1
+<!-- modifiedAt:1784189746072 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### COMMERCENTER-ALABANG.aspx — Version 1
+<!-- modifiedAt:1784189744124 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### SOUTH-STATION-RETAIL-GREEN-BUILDING.aspx — Version 1
+<!-- modifiedAt:1784189742215 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### SOUTH-STATION-RETAIL-YELLOW-BUILDING.aspx — Version 1
+<!-- modifiedAt:1784189740428 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### IT-CONVERGENCE-BUILDING.aspx — Version 1
+<!-- modifiedAt:1784189738819 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### ONE-TRIUM-TOWER.aspx — Version 1
+<!-- modifiedAt:1784189736934 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### VECTOR-BUILDINGS-BY-FILINVEST.aspx — Version 1
+<!-- modifiedAt:1784189735119 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### FILINVEST-CITY-FIRE-STATION.aspx — Version 1
+<!-- modifiedAt:1784189733026 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### CIVIC-PRIME-CONDOMINIUM.aspx — Version 1
+<!-- modifiedAt:1784189731222 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### SOUTHKEY-HUB-ONE.aspx — Version 1
+<!-- modifiedAt:1784189728993 -->
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+---
+
+## PROJECT PLAYBOOK Master Changelog
 Posted: July 21, 2026 at 04:48 PM
 
 Changes since the previous generation:
