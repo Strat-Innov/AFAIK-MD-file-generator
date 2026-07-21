@@ -1,5 +1,5 @@
 import React from "react";
-import { Download, FolderTree, Inbox, X, Plus, Minus } from "lucide-react";
+import { Download, FolderTree, Inbox, X, Plus, Minus, History } from "lucide-react";
 import { UNSORTED } from "../lib/router";
 
 function download(bucket, md) {
@@ -70,8 +70,9 @@ function ChangelogPanel({ latestChangelogEntry }) {
   );
 }
 
-export default function BucketView({ bucket, files, md, tags, onReassign, onUnsort, latestChangelogEntry, previewChanges }) {
+export default function BucketView({ bucket, files, md, tags, onReassign, onUnsort, latestChangelogEntry, previewChanges, staleFilenames }) {
   const isUnsorted = bucket === UNSORTED;
+  const staleSet = new Set(staleFilenames || []);
   const sidebar = !isUnsorted && (
     <div className="w-full md:w-80 shrink-0">
       <PreviewPanel previewChanges={previewChanges} />
@@ -120,7 +121,14 @@ export default function BucketView({ bucket, files, md, tags, onReassign, onUnso
             <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden">
               {files.map((f) => (
                 <div key={f.name} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                  <span className="font-mono text-xs text-slate-600 truncate">{f.name}</span>
+                  <span className="font-mono text-xs text-slate-600 truncate flex items-center gap-2">
+                    {f.name}
+                    {staleSet.has(f.name) && (
+                      <span title="This file's modification time isn't newer than what's already published to GitHub" className="inline-flex items-center gap-1 shrink-0 rounded-full bg-amber-100 text-amber-800 text-[10px] font-semibold px-2 py-0.5">
+                        <History className="h-3 w-3" /> Old version
+                      </span>
+                    )}
+                  </span>
                   {isUnsorted ? (
                     <select
                       defaultValue=""

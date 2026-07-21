@@ -6,9 +6,10 @@
  * are stored, never raw HTML, so this stays small regardless of file
  * count.
  *
- * Split into check (pure) and commit (persists) so a file's version
- * only actually advances after the changelog entry describing it was
- * successfully published — mirrors snapshot.js's same discipline.
+ * This module only computes/stores content diffs. Whether an incoming
+ * file is actually a newer version at all is validated separately in
+ * App.jsx against GitHub's published changelog — the authoritative,
+ * shared record — rather than this (local, per-browser) cache.
  * ------------------------------------------------------------------ */
 
 import { extractStructuredContent, diffStructuredContent } from "./webparts.js";
@@ -29,25 +30,16 @@ export function getFileVersion(filename) {
   return readAll()[filename] || null;
 }
 
-// Pure — computes what would change without persisting anything.
-// Returns:
-//   null                        — nothing recognized, or nothing changed
-//   { stale: true, ... }        — incoming file isn't newer than what's on
-//                                  record; skipped so a rolled-back/re-
-//                                  uploaded old copy can't fake a "change"
-//   { version, changes, parts, modifiedAt } — a real, validated change
-export function checkFileVersion(filename, rawContent, modifiedAt) {
+// Pure — computes the content diff without persisting anything. Returns
+// null if there's nothing recognized in the file, or nothing changed
+// since its last recorded local version.
+export function checkFileVersion(filename, rawContent) {
   const parts = extractStructuredContent(rawContent);
   if (parts.length === 0) return null;
   const prev = getFileVersion(filename);
-
-  if (prev && modifiedAt != null && prev.modifiedAt != null && modifiedAt <= prev.modifiedAt) {
-    return { stale: true, recordedAt: prev.modifiedAt, incomingAt: modifiedAt };
-  }
-
   const changes = diffStructuredContent(prev?.parts || [], parts);
   if (prev && changes.length === 0) return null;
-  return { version: (prev?.version || 0) + 1, changes, parts, modifiedAt };
+  return { version: (prev?.version || 0) + 1, changes, parts };
 }
 
 // Call only after the changelog entry describing this version was

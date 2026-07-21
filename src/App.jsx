@@ -9,7 +9,7 @@ import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
 import { getSnapshot, setSnapshot } from "./lib/snapshot";
 import { checkFileVersion, commitFileVersion } from "./lib/fileVersions";
-import { publishChangelog } from "./lib/github";
+import { publishChangelog, fetchFileRecords } from "./lib/github";
 import { runExclusive } from "./lib/publishQueue";
 
 /* ------------------------------------------------------------------ *
@@ -161,21 +161,33 @@ export default function App() {
     return map;
   });
   const [previewChanges, setPreviewChanges] = useState({}); // { [bucket]: fileVersionChanges[] } — this session's not-yet-confirmed diff
+  const [staleByBucket, setStaleByBucket] = useState({}); // { [bucket]: filename[] } — flagged old-version, per GitHub's own published record
   const inputRef = useRef(null);
 
-  // Pure: computes what would change for a bucket's files without
-  // persisting anything, splitting out files whose modification time
-  // isn't newer than what's on record — a rolled-back or re-uploaded old
-  // copy can't fake a "change" just because its content differs from
-  // what happens to be recorded.
-  const computeFileVersionChanges = (files) => {
+  // Async: "is this an older version?" is validated against GitHub's own
+  // published changelog for the tag — the authoritative, shared record —
+  // not this browser's local cache, which could be cleared or simply
+  // absent on a different device. The content diff itself still comes
+  // from the local cache, since only diffs (not full snapshots) are
+  // published, so there's nothing to reconstruct full state from remotely.
+  const computeFileVersionChanges = async (tag, files) => {
+    let githubRecords = {};
+    try {
+      githubRecords = await fetchFileRecords(tag);
+    } catch (e) {
+      setError(`Couldn't check GitHub for "${tag}"'s recorded versions — proceeding without that check: ${e.message}`);
+    }
+
     const changes = [];
     const staleFiles = [];
     for (const f of files) {
-      const result = checkFileVersion(f.name, f.raw, f.modifiedAt);
-      if (!result) continue;
-      if (result.stale) staleFiles.push(f.name);
-      else changes.push({ filename: f.name, ...result });
+      const recorded = githubRecords[f.name];
+      if (recorded && f.modifiedAt != null && recorded.modifiedAt != null && f.modifiedAt <= recorded.modifiedAt) {
+        staleFiles.push(f.name);
+        continue;
+      }
+      const result = checkFileVersion(f.name, f.raw);
+      if (result) changes.push({ filename: f.name, ...result, modifiedAt: f.modifiedAt });
     }
     return { changes, staleFiles };
   };
@@ -250,14 +262,17 @@ export default function App() {
 
       const staleAll = [];
       const previewUpdate = {};
+      const staleUpdate = {};
       for (const bucket of Object.keys(newByBucket)) {
-        const { changes, staleFiles } = computeFileVersionChanges(nextBuckets[bucket]);
+        const { changes, staleFiles } = await computeFileVersionChanges(bucket, nextBuckets[bucket]);
         previewUpdate[bucket] = changes;
+        staleUpdate[bucket] = staleFiles;
         staleAll.push(...staleFiles);
       }
       setPreviewChanges((prev) => ({ ...prev, ...previewUpdate }));
+      setStaleByBucket((prev) => ({ ...prev, ...staleUpdate }));
       setStatus("done");
-      setError(staleAll.length ? `Skipped ${staleAll.length} file(s) older than their last recorded version: ${staleAll.join(", ")}` : "");
+      setError(staleAll.length ? `Flagged ${staleAll.length} file(s) as an older version than what's published: ${staleAll.join(", ")}` : "");
 
       for (const bucket of Object.keys(newByBucket)) publishIfChanged(bucket, previewUpdate[bucket]);
     } catch (e) {
@@ -271,7 +286,7 @@ export default function App() {
     handleFiles(e.dataTransfer.files);
   };
 
-  const reassign = (file, targetTag) => {
+  const reassign = async (file, targetTag) => {
     rememberTag(file.name, targetTag);
     const prev = bucketsRef.current;
     const next = { ...prev };
@@ -284,15 +299,16 @@ export default function App() {
       [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
       [targetTag]: buildMaster(targetTag, next[targetTag]),
     }));
-    const { changes, staleFiles } = computeFileVersionChanges(next[targetTag]);
+    const { changes, staleFiles } = await computeFileVersionChanges(targetTag, next[targetTag]);
     setPreviewChanges((prevPreview) => ({ ...prevPreview, [targetTag]: changes }));
-    if (staleFiles.length) setError(`Skipped ${staleFiles.length} file(s) older than their last recorded version: ${staleFiles.join(", ")}`);
+    setStaleByBucket((prevStale) => ({ ...prevStale, [targetTag]: staleFiles }));
+    if (staleFiles.length) setError(`Flagged "${file.name}" as an older version than what's published.`);
     publishIfChanged(targetTag, changes);
   };
 
   // Correcting a wrong auto-sort: send the file back to Unsorted and forget
   // its remembered tag, so it doesn't repeat the same mistake next time.
-  const unsort = (file, fromBucket) => {
+  const unsort = async (file, fromBucket) => {
     forgetTag(file.name);
     const prev = bucketsRef.current;
     const next = { ...prev };
@@ -305,9 +321,10 @@ export default function App() {
       [fromBucket]: buildMaster(fromBucket, next[fromBucket]),
       [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
     }));
-    const { changes, staleFiles } = computeFileVersionChanges(next[fromBucket]);
+    const { changes, staleFiles } = await computeFileVersionChanges(fromBucket, next[fromBucket]);
     setPreviewChanges((prevPreview) => ({ ...prevPreview, [fromBucket]: changes }));
-    if (staleFiles.length) setError(`Skipped ${staleFiles.length} file(s) older than their last recorded version: ${staleFiles.join(", ")}`);
+    setStaleByBucket((prevStale) => ({ ...prevStale, [fromBucket]: staleFiles }));
+    if (staleFiles.length) setError(`Flagged file(s) in "${fromBucket}" as an older version than what's published.`);
     publishIfChanged(fromBucket, changes);
   };
 
@@ -414,6 +431,7 @@ export default function App() {
             onUnsort={(file) => unsort(file, activeBucket)}
             latestChangelogEntry={latestEntries[activeBucket]}
             previewChanges={previewChanges[activeBucket]}
+            staleFilenames={staleByBucket[activeBucket]}
           />
         )}
       </main>

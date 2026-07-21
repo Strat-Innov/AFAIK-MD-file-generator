@@ -51,6 +51,7 @@ export function buildEntry(tag, fileVersionChanges, when = new Date()) {
   let s = `## ${tag} Master Changelog\nPosted: ${formatDate(when)}\n\nChanges since the previous generation:\n\n`;
   for (const fv of fileVersionChanges) {
     s += `### ${fv.filename} — Version ${fv.version}\n`;
+    if (fv.modifiedAt != null) s += `<!-- modifiedAt:${fv.modifiedAt} -->\n`;
     for (const c of fv.changes) {
       s += `${c.label}\n`;
       for (const a of c.added) s += `* ${a.label} (New)\n`;
@@ -59,6 +60,33 @@ export function buildEntry(tag, fileVersionChanges, when = new Date()) {
     s += `\n`;
   }
   return s.trim();
+}
+
+// Reads the published changelog itself as the authoritative record of each
+// file's last known version + modification time — not local storage, which
+// can be cleared or simply absent on a different browser/device. Only the
+// topmost (most recent) mention of a filename counts, since entries are
+// prepended newest-first.
+export function parseFileRecords(changelogText) {
+  const records = {};
+  const re = /### (.+?) — Version (\d+)\n(?:<!-- modifiedAt:(\d+) -->\n)?/g;
+  let m;
+  while ((m = re.exec(changelogText))) {
+    const [, filename, version, modifiedAt] = m;
+    if (!(filename in records)) {
+      records[filename] = { version: Number(version), modifiedAt: modifiedAt ? Number(modifiedAt) : null };
+    }
+  }
+  return records;
+}
+
+// Fetches and parses a tag's published changelog. Returns {} if it doesn't
+// exist yet (nothing published = nothing to compare against, not an error).
+export async function fetchFileRecords(tag) {
+  const token = getToken();
+  if (!token) return {};
+  const existing = await getFile(changelogPath(tag), token);
+  return existing ? parseFileRecords(existing.content) : {};
 }
 
 async function githubFetch(path, token, options = {}) {
