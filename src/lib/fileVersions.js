@@ -30,21 +30,30 @@ export function getFileVersion(filename) {
 }
 
 // Pure — computes what would change without persisting anything.
-// Returns null if there's nothing recognized in the file, or nothing
-// changed since its last recorded version.
-export function checkFileVersion(filename, rawContent) {
+// Returns:
+//   null                        — nothing recognized, or nothing changed
+//   { stale: true, ... }        — incoming file isn't newer than what's on
+//                                  record; skipped so a rolled-back/re-
+//                                  uploaded old copy can't fake a "change"
+//   { version, changes, parts, modifiedAt } — a real, validated change
+export function checkFileVersion(filename, rawContent, modifiedAt) {
   const parts = extractStructuredContent(rawContent);
   if (parts.length === 0) return null;
   const prev = getFileVersion(filename);
+
+  if (prev && modifiedAt != null && prev.modifiedAt != null && modifiedAt <= prev.modifiedAt) {
+    return { stale: true, recordedAt: prev.modifiedAt, incomingAt: modifiedAt };
+  }
+
   const changes = diffStructuredContent(prev?.parts || [], parts);
   if (prev && changes.length === 0) return null;
-  return { version: (prev?.version || 0) + 1, changes, parts };
+  return { version: (prev?.version || 0) + 1, changes, parts, modifiedAt };
 }
 
 // Call only after the changelog entry describing this version was
 // actually published successfully.
-export function commitFileVersion(filename, version, parts) {
+export function commitFileVersion(filename, version, parts, modifiedAt) {
   const map = readAll();
-  map[filename] = { version, parts };
+  map[filename] = { version, parts, modifiedAt };
   writeAll(map);
 }

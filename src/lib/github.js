@@ -47,10 +47,8 @@ export function changelogPath(tag) {
   return `changelogs/${tag.replace(/[^\w.-]+/g, "_")}_Master_Changelog.md`;
 }
 
-export function buildEntry(tag, added, removed, fileVersionChanges = [], when = new Date()) {
+export function buildEntry(tag, fileVersionChanges, when = new Date()) {
   let s = `## ${tag} Master Changelog\nPosted: ${formatDate(when)}\n\nChanges since the previous generation:\n\n`;
-  if (added.length) s += `### Added\n${added.map((n) => `* ${n}`).join("\n")}\n\n`;
-  if (removed.length) s += `### Removed\n${removed.map((n) => `* ${n}`).join("\n")}\n\n`;
   for (const fv of fileVersionChanges) {
     s += `### ${fv.filename} — Version ${fv.version}\n`;
     for (const c of fv.changes) {
@@ -60,7 +58,6 @@ export function buildEntry(tag, added, removed, fileVersionChanges = [], when = 
     }
     s += `\n`;
   }
-  if (!added.length && !removed.length && fileVersionChanges.length === 0) s += `_No file changes detected._\n`;
   return s.trim();
 }
 
@@ -91,12 +88,12 @@ async function putFile(path, content, message, sha, token) {
 
 // Returns the entry text that was published, so the caller can cache it
 // for display without another round trip.
-export async function publishChangelog(tag, added, removed, fileVersionChanges = []) {
+export async function publishChangelog(tag, fileVersionChanges) {
   const token = getToken();
   if (!token) throw new Error("No GitHub token saved — add one in Manage Tags first.");
   const path = changelogPath(tag);
   const existing = await getFile(path, token);
-  const entry = buildEntry(tag, added, removed, fileVersionChanges);
+  const entry = buildEntry(tag, fileVersionChanges);
   const nextContent = existing ? `${entry}\n\n---\n\n${existing.content}` : `${entry}\n`;
   await putFile(path, nextContent, `Update ${tag} changelog`, existing?.sha, token);
   return entry;

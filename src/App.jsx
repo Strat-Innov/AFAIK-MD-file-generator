@@ -7,7 +7,7 @@ import GithubSettings from "./components/GithubSettings";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
-import { getSnapshot, setSnapshot, diffNames } from "./lib/snapshot";
+import { getSnapshot, setSnapshot } from "./lib/snapshot";
 import { checkFileVersion, commitFileVersion } from "./lib/fileVersions";
 import { publishChangelog } from "./lib/github";
 import { runExclusive } from "./lib/publishQueue";
@@ -73,6 +73,18 @@ async function inflateRaw(u8) {
   return new Uint8Array(ab);
 }
 
+// ZIP stores modification time/date as packed 16-bit DOS values, right in
+// the central directory record — no need to touch the local header.
+function dosDateTimeToEpoch(dosDate, dosTime) {
+  const year = ((dosDate >> 9) & 0x7f) + 1980;
+  const month = (dosDate >> 5) & 0x0f; // 1-12
+  const day = dosDate & 0x1f;
+  const hours = (dosTime >> 11) & 0x1f;
+  const minutes = (dosTime >> 5) & 0x3f;
+  const seconds = (dosTime & 0x1f) * 2; // 2-second resolution
+  return new Date(year, month - 1, day, hours, minutes, seconds).getTime();
+}
+
 async function readZip(arrayBuffer) {
   const dv = new DataView(arrayBuffer);
   const u8 = new Uint8Array(arrayBuffer);
@@ -87,13 +99,15 @@ async function readZip(arrayBuffer) {
   for (let n = 0; n < count; n++) {
     if (dv.getUint32(p, true) !== 0x02014b50) break;
     const method = dv.getUint16(p + 10, true);
+    const modTime = dv.getUint16(p + 12, true);
+    const modDate = dv.getUint16(p + 14, true);
     const compSize = dv.getUint32(p + 20, true);
     const nameLen = dv.getUint16(p + 28, true);
     const extraLen = dv.getUint16(p + 30, true);
     const commentLen = dv.getUint16(p + 32, true);
     const lho = dv.getUint32(p + 42, true);
     const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nameLen));
-    entries.push({ name, method, compSize, lho });
+    entries.push({ name, method, compSize, lho, modifiedAt: dosDateTimeToEpoch(modDate, modTime) });
     p += 46 + nameLen + extraLen + commentLen;
   }
   const out = [];
@@ -109,7 +123,7 @@ async function readZip(arrayBuffer) {
     else if (e.method === 8) bytes = await inflateRaw(comp);
     else continue;
     const raw = new TextDecoder("utf-8", { ignoreBOM: true }).decode(bytes);
-    out.push({ name: e.name.split("/").pop(), path: e.name, raw });
+    out.push({ name: e.name.split("/").pop(), path: e.name, raw, modifiedAt: e.modifiedAt });
   }
   return out;
 }
@@ -123,7 +137,7 @@ async function collectFiles(fileList) {
       collected.push(...(await readZip(buf)));
     } else if (lower.endsWith(".aspx")) {
       const raw = new TextDecoder("utf-8", { ignoreBOM: true }).decode(await f.arrayBuffer());
-      collected.push({ name: f.name, path: f.name, raw }); // loose drop, no folder
+      collected.push({ name: f.name, path: f.name, raw, modifiedAt: f.lastModified }); // loose drop, no folder
     }
   }
   return collected;
@@ -146,7 +160,25 @@ export default function App() {
     }
     return map;
   });
+  const [previewChanges, setPreviewChanges] = useState({}); // { [bucket]: fileVersionChanges[] } — this session's not-yet-confirmed diff
   const inputRef = useRef(null);
+
+  // Pure: computes what would change for a bucket's files without
+  // persisting anything, splitting out files whose modification time
+  // isn't newer than what's on record — a rolled-back or re-uploaded old
+  // copy can't fake a "change" just because its content differs from
+  // what happens to be recorded.
+  const computeFileVersionChanges = (files) => {
+    const changes = [];
+    const staleFiles = [];
+    for (const f of files) {
+      const result = checkFileVersion(f.name, f.raw, f.modifiedAt);
+      if (!result) continue;
+      if (result.stale) staleFiles.push(f.name);
+      else changes.push({ filename: f.name, ...result });
+    }
+    return { changes, staleFiles };
+  };
 
   // Mirrors `buckets` synchronously so handlers can compute the next state
   // in one shot (needed to know exactly which bucket file-lists to check
@@ -164,29 +196,13 @@ export default function App() {
   // calls for the same tag would otherwise both read the same "before"
   // state, both compute a diff against it, and race on GitHub's sha check
   // (409) and on which one's local commit wins.
-  const publishIfChanged = useCallback((tag, files) => {
-    if (tag === UNSORTED) return;
+  const publishIfChanged = useCallback((tag, fileVersionChanges) => {
+    if (tag === UNSORTED || fileVersionChanges.length === 0) return;
     runExclusive(tag, async () => {
-      const currentNames = files.map((f) => f.name).sort((a, b) => a.localeCompare(b));
-      const prevSnap = getSnapshot(tag);
-      const { added, removed } = diffNames(prevSnap ? prevSnap.names : [], currentNames);
-
-      // Per-file content diffing (People/Quick Links/etc.) is independent of
-      // whether the bucket's filename set changed — a file can be edited
-      // without the bucket gaining or losing any files.
-      const fileVersionChanges = [];
-      for (const f of files) {
-        const result = checkFileVersion(f.name, f.raw);
-        if (result) fileVersionChanges.push({ filename: f.name, ...result });
-      }
-
-      const bucketFilenamesChanged = !prevSnap || added.length > 0 || removed.length > 0;
-      if (!bucketFilenamesChanged && fileVersionChanges.length === 0) return; // truly nothing to report
-
       try {
-        const entry = await publishChangelog(tag, added, removed, fileVersionChanges);
-        setSnapshot(tag, { names: currentNames, latestEntry: entry });
-        for (const fv of fileVersionChanges) commitFileVersion(fv.filename, fv.version, fv.parts);
+        const entry = await publishChangelog(tag, fileVersionChanges);
+        setSnapshot(tag, { latestEntry: entry });
+        for (const fv of fileVersionChanges) commitFileVersion(fv.filename, fv.version, fv.parts, fv.modifiedAt);
         setLatestEntries((prevEntries) => ({ ...prevEntries, [tag]: entry }));
       } catch (e) {
         setError(`Couldn't publish "${tag}" changelog to GitHub: ${e.message}`);
@@ -231,9 +247,19 @@ export default function App() {
       bucketsRef.current = nextBuckets;
       setBuckets(nextBuckets);
       setMds((prevMd) => ({ ...prevMd, ...touchedMd }));
-      setStatus("done");
 
-      for (const bucket of Object.keys(newByBucket)) publishIfChanged(bucket, nextBuckets[bucket]);
+      const staleAll = [];
+      const previewUpdate = {};
+      for (const bucket of Object.keys(newByBucket)) {
+        const { changes, staleFiles } = computeFileVersionChanges(nextBuckets[bucket]);
+        previewUpdate[bucket] = changes;
+        staleAll.push(...staleFiles);
+      }
+      setPreviewChanges((prev) => ({ ...prev, ...previewUpdate }));
+      setStatus("done");
+      setError(staleAll.length ? `Skipped ${staleAll.length} file(s) older than their last recorded version: ${staleAll.join(", ")}` : "");
+
+      for (const bucket of Object.keys(newByBucket)) publishIfChanged(bucket, previewUpdate[bucket]);
     } catch (e) {
       setError(e.message || String(e));
       setStatus("error");
@@ -258,7 +284,10 @@ export default function App() {
       [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
       [targetTag]: buildMaster(targetTag, next[targetTag]),
     }));
-    publishIfChanged(targetTag, next[targetTag]);
+    const { changes, staleFiles } = computeFileVersionChanges(next[targetTag]);
+    setPreviewChanges((prevPreview) => ({ ...prevPreview, [targetTag]: changes }));
+    if (staleFiles.length) setError(`Skipped ${staleFiles.length} file(s) older than their last recorded version: ${staleFiles.join(", ")}`);
+    publishIfChanged(targetTag, changes);
   };
 
   // Correcting a wrong auto-sort: send the file back to Unsorted and forget
@@ -276,7 +305,10 @@ export default function App() {
       [fromBucket]: buildMaster(fromBucket, next[fromBucket]),
       [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
     }));
-    publishIfChanged(fromBucket, next[fromBucket]);
+    const { changes, staleFiles } = computeFileVersionChanges(next[fromBucket]);
+    setPreviewChanges((prevPreview) => ({ ...prevPreview, [fromBucket]: changes }));
+    if (staleFiles.length) setError(`Skipped ${staleFiles.length} file(s) older than their last recorded version: ${staleFiles.join(", ")}`);
+    publishIfChanged(fromBucket, changes);
   };
 
   // Keep session bucket state consistent with tag edits: renames carry the
@@ -328,7 +360,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex">
       <Sidebar tags={tags} selected={selected} onSelect={setSelected} counts={counts} />
 
-      <main className="flex-1 px-6 py-6 max-w-3xl">
+      <main className="flex-1 px-6 py-6 max-w-5xl">
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
@@ -381,6 +413,7 @@ export default function App() {
             onReassign={reassign}
             onUnsort={(file) => unsort(file, activeBucket)}
             latestChangelogEntry={latestEntries[activeBucket]}
+            previewChanges={previewChanges[activeBucket]}
           />
         )}
       </main>
