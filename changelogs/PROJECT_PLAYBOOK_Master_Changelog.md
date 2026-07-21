@@ -1,4 +1,224 @@
 ## PROJECT PLAYBOOK Master Changelog
+Posted: July 21, 2026 at 04:48 PM
+
+Changes since the previous generation:
+
+### GOLF-RIDGE.aspx — Version 2
+<!-- modifiedAt:1784189633822 -->
+People
+* Apple S. Delos Reyes — Project Development Manager (New)
+* Marloe P. De Gracia — Project Development Manager (New)
+* Margarette Mae V. Penesa — Project Development Specialist (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Sherine Rosene B. Trinidad — Sales Operations Lead (New)
+* Christine Joy D. Tecson — Sales Operations Associate - 1001 (New)
+
+### THE-GLADES.aspx — Version 2
+<!-- modifiedAt:1784189630111 -->
+Quick links
+* The Glades at Timberland Heights | San Mateo - Facebook (https://www.facebook.com/TheGladesPrestige/) (New)
+* The Glades at Timberland Heights - Glades Prestige (https://thegladesprestige.com/) (New)
+People
+* Apple S. Delos Reyes — Project Development Manager (New)
+* Jon Angelique A. Sarmiento — Project Development Manager (New)
+* Emaru Joann P. Maranan — Assistant Project Development Manager (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Christy F. Alegroso — Sales Operation Specialist (New)
+* Jemaina D. Javier — Site Assistant (New)
+
+### CELESTIA.aspx — Version 2
+<!-- modifiedAt:1784189628189 -->
+Quick links
+* Celestia at Timberland Heights | San Mateo - Facebook (https://www.facebook.com/CelestiaatTimberlandHeights/) (New)
+* Celestia at Timberland Heights | Instagram (https://www.instagram.com/celestia.timberlandheights/) (New)
+* Timberland Heights San Mateo, Rizal: Mountain-Resort Living (https://www.timberlandheights.com/) (New)
+People
+* Apple S. Delos Reyes — Project Development Manager (New)
+* Jon Angelique A. Sarmiento — Project Development Manager (New)
+* Emaru Joann P. Maranan — Assistant Project Development Manager (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Christy F. Alegroso — Sales Operation Specialist (New)
+* Jemaina D. Javier — Site Assistant (New)
+
+### STUDIO-N.aspx — Version 1
+<!-- modifiedAt:1784189623939 -->
+Quick links
+* Studio N | Muntinlupa City - Facebook (https://www.facebook.com/StudioNAlabang/) (New)
+* Studio N - Instagram  (https://www.instagram.com/studion.ph/) (New)
+* Studio N | Aspire - Filinvest (https://aspirebyfilinvest.com/project/studio-n) (New)
+* 360 Virtual Tour- ExSight 360 Virtual Tours (https://tours.exsight360.com/filinvest/studio-n/index.html) (New)
+People
+* Baby Lyn D. Atienza — Senior Marketing Manager (New)
+* Daryl Dee A. Flores — Marketing Assistant (New)
+People
+* Maria Angela M. Ongsip — Sr. Project Development Manager (New)
+* Abigael Mae D. Detablan — Project Development Manager (New)
+* Jonathan D. Velasquez — Project Development Associate (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Sherine Rosene B. Trinidad — Sales Operations Lead (New)
+* Deborah J. Nene — Sales Administration Assistant (New)
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### THE-LEVELS.aspx — Version 2
+<!-- modifiedAt:1784189622364 -->
+People
+* Maria Angela M. Ongsip — Sr. Project Development Manager (New)
+* Charles Emman V. Dolot — Project Development Manager (New)
+* Mariah Christina F. Cavero — Project Development Associate (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Sherine Rosene B. Trinidad — Sales Operations Lead (New)
+
+### ARBORAGE.aspx — Version 2
+<!-- modifiedAt:1784189620625 -->
+People
+* Vincent Abner C. Linao — Marketing Assistant (Removed)
+People
+* Maria Angela M. Ongsip — Sr. Project Development Manager (New)
+* Jomerlyn C. Borbon — Project Development Manager (New)
+* Dana Francesca T. Samonte — Project Development Associate (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Sherine Rosene B. Trinidad — Sales Operations Lead (New)
+* Anna Patricia F. Sodusta — Sales Operations Associate - 1001 (New)
+Quick links
+* Project Playbook (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+* Home (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brands (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project Playbook (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (Removed)
+* Home (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/Home.aspx) (Removed)
+* Brands (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (Removed)
+
+### PROMINENCE.aspx — Version 2
+<!-- modifiedAt:1784189615255 -->
+People
+* Apple S. Delos Reyes — Project Development Manager (New)
+* Jon Angelique A. Sarmiento — Project Development Manager (New)
+* Emaru Joann P. Maranan — Assistant Project Development Manager (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+
+### BOTANIKA-TOWER-1.aspx — Version 2
+<!-- modifiedAt:1784189613123 -->
+People
+* Apple S. Delos Reyes — Project Development Manager (New)
+* Pauline Regine — Project Development Manager (New)
+* Mira Louise M. Manalastas — Project Development Lead (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Sheena Mae Ann B. Labrador — Sales Operations Associate - Botanika/TPCC (New)
+
+### 1001-Parkway.aspx — Version 2
+<!-- modifiedAt:1784189586216 -->
+People
+* Apple S. Delos Reyes — Project Development Manager (New)
+* Joseph Miguel A. Bagadiong — ASSISTANT PROJECT DEVELOPMENT MANAGER (New)
+* Alyssa Beatrice H. Cuevo — Project Development Associate (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Sherine Rosene B. Trinidad — Sales Operations Lead (New)
+* Felyn E. Francisco — Sales Operations Associate (New)
+
+### TWO-BOTANIKA.aspx — Version 2
+<!-- modifiedAt:1784189584718 -->
+People
+* Joyce M. Isabelo — Marketing Lead (Removed)
+People
+* Apple S. Delos Reyes — Project Development Manager (New)
+* Pauline Regine — Project Development Manager (New)
+* Mira Louise M. Manalastas — Project Development Lead (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Sheena Mae Ann B. Labrador — Sales Operations Associate - Botanika/TPCC (New)
+
+### ParkwayCorporateCenter.aspx — Version 1
+<!-- modifiedAt:1784189583036 -->
+Quick links
+* Parkway Corporate Center | Muntinlupa City - Facebook (https://www.facebook.com/ParkwayCorporateCenterFilinvestAlabang/) (New)
+* Parkway Corporate Center - Instagram (https://www.instagram.com/parkwaycorporatecenter/) (New)
+* Parkway Corporate Center - 360 Tour (https://tours.exsight360.com/filinvest/parkway-corporate-center/index.html) (New)
+* Parkway Corporate Center - Parkway Corporate (https://www.parkwaycorporate.com/) (New)
+People
+* Baby Lyn D. Atienza — Senior Marketing Manager (New)
+* Carol Jeline G. Raquedan — Marketing Associate (New)
+People
+* Frances Bonna C. Crisostomo — Senior Project Development Manager (New)
+* Kyle Kaizer C. Mercado — Project Development Specialist (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Sheena Mae Ann B. Labrador — Sales Operations Associate - Botanika/TPCC (New)
+Quick links
+* Home (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### DAANG-HARI.aspx — Version 1
+<!-- modifiedAt:1784189565870 -->
+People
+* Aaron R. Dela Rosa — Marketing Manager (New)
+* Roselle Anne S. Sales — Assistant Marketing Manager (New)
+* Celina Gabrielle R. Lozare — Marketing Associate (New)
+People
+* Frances Bonna C. Crisostomo — Senior Project Development Manager (New)
+* Carlos Jan P. Penas — Project Development Manager (New)
+* Kristine A. Mangaran — Project Development Associate (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Ma. Krista Beatrice M. Bermudo — Sales Operations Lead (New)
+Quick links
+* Home (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### ENTRATA-RETAIL-CENTER.aspx — Version 1
+<!-- modifiedAt:1784189563874 -->
+People
+* Alyzza May F. Ramos — Corporate Sales & Leasing Manager (New)
+* Magell Maru D. Mejia — Lease and Marketing Specialist (New)
+* Andre Conrad G. Selencio — Leasing Associate (New)
+People
+* Dion D. Canlas — Project Development Specialist (New)
+Quick links
+* Home (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### The-Crib-Alabang.aspx — Version 1
+<!-- modifiedAt:1784189561945 -->
+People
+* Alyzza May F. Ramos — Corporate Sales & Leasing Manager (New)
+* Magell Maru D. Mejia — Lease and Marketing Specialist (New)
+Quick links
+* Home (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+### The-Village-Front.aspx — Version 1
+<!-- modifiedAt:1784189557998 -->
+People
+* Claudine Anne S. Arciaga — Marketing Manager (New)
+* Laraine Faith I. Morata — Marketing Assistant (New)
+People
+* Frances Bonna C. Crisostomo — Senior Project Development Manager (New)
+* Kyle Kaizer C. Mercado — Project Development Specialist (New)
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Anna Patricia F. Sodusta — Sales Operations Associate - 1001 (New)
+Quick links
+* Home (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+
+---
+
+## PROJECT PLAYBOOK Master Changelog
 Posted: July 21, 2026 at 04:46 PM
 
 Changes since the previous generation:
