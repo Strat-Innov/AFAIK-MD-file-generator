@@ -1,7 +1,13 @@
-import React, { useState, useCallback, useRef } from "react";
-import { Upload, FileCode, Download, Loader2, AlertCircle, CheckCircle2, List, FolderTree } from "lucide-react";
-import Changelog from "./components/Changelog";
-import { addEntry } from "./lib/history";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { Upload, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import Sidebar from "./components/Sidebar";
+import BucketView from "./components/BucketView";
+import TagManager from "./components/TagManager";
+import ChangelogView from "./components/ChangelogView";
+import { getTags } from "./lib/tags";
+import { rememberTag } from "./lib/memory";
+import { routeFile, UNSORTED } from "./lib/router";
+import { appendEntry } from "./lib/log";
 
 /* ------------------------------------------------------------------ *
  * Transform rules — reverse-engineered from JUNE_13_Master_File.md
@@ -10,7 +16,6 @@ import { addEntry } from "./lib/history";
  *   CanvasContent1 decoded exactly ONE html-entity pass.
  * ------------------------------------------------------------------ */
 
-// One-pass HTML entity decode (matches the sample: inner &#123;/&quot; stay encoded)
 function decodeOnce(s) {
   if (!s) return "";
   const ta = document.createElement("textarea");
@@ -45,18 +50,7 @@ function stamp() {
   return `${p(d.getMonth() + 1)}/${p(d.getDate())}/${p(d.getFullYear())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
-/* ---- Bucketing: group files by their top-level folder ----
- * "TOWNSHIP PAGES/foo.aspx"            -> bucket "TOWNSHIP PAGES"
- * "TOWNSHIP PAGES/sub/foo.aspx"        -> bucket "TOWNSHIP PAGES" (nested folders collapse to the top-level parent)
- * "foo.aspx" (no folder, loose drop)   -> bucket "Uncategorized"
- * ------------------------------------------------------------ */
-function bucketOf(path) {
-  const segments = path.split("/").filter(Boolean);
-  return segments.length > 1 ? segments[0] : "Uncategorized";
-}
-
 function buildMaster(bucketName, files) {
-  // files: [{name, path, raw}] — sort case-insensitively by name to match sample order
   const sorted = [...files].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
   let md =
     `# ${bucketName} — ASPx Codebase Master File\n` +
@@ -69,26 +63,6 @@ function buildMaster(bucketName, files) {
   return md;
 }
 
-function buildBuckets(files) {
-  const map = new Map();
-  for (const f of files) {
-    const bucket = bucketOf(f.path);
-    if (!map.has(bucket)) map.set(bucket, []);
-    map.get(bucket).push(f);
-  }
-  // alphabetical, but "Uncategorized" always sinks to the end
-  const bucketNames = [...map.keys()].sort((a, b) => {
-    if (a === "Uncategorized") return 1;
-    if (b === "Uncategorized") return -1;
-    return a.toLowerCase().localeCompare(b.toLowerCase());
-  });
-  return bucketNames.map((bucket) => {
-    const bucketFiles = map.get(bucket);
-    const names = bucketFiles.map((f) => f.name).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    return { bucket, count: bucketFiles.length, names, md: buildMaster(bucket, bucketFiles) };
-  });
-}
-
 /* ---- ZIP reading via native DecompressionStream (no dependency) ---- */
 async function inflateRaw(u8) {
   const ds = new DecompressionStream("deflate-raw");
@@ -99,7 +73,6 @@ async function inflateRaw(u8) {
 async function readZip(arrayBuffer) {
   const dv = new DataView(arrayBuffer);
   const u8 = new Uint8Array(arrayBuffer);
-  // locate End Of Central Directory (sig 0x06054b50)
   let eocd = -1;
   for (let i = u8.length - 22; i >= 0; i--) {
     if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
@@ -147,54 +120,59 @@ async function collectFiles(fileList) {
       collected.push(...(await readZip(buf)));
     } else if (lower.endsWith(".aspx")) {
       const raw = new TextDecoder("utf-8", { ignoreBOM: true }).decode(await f.arrayBuffer());
-      collected.push({ name: f.name, path: f.name, raw }); // loose drop, no folder -> Uncategorized
+      collected.push({ name: f.name, path: f.name, raw }); // loose drop, no folder
     }
   }
   return collected;
 }
 
 /* ================================================================== */
-function autoTitle(bucket, count) {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, "0");
-  return `${bucket} — ${p(d.getMonth() + 1)}/${p(d.getDate())}/${d.getFullYear()} (${count} file${count !== 1 ? "s" : ""})`;
-}
-
-function downloadMd(filenameBase, md) {
-  const blob = new Blob([md], { type: "text/markdown" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${filenameBase.replace(/[^\w.-]+/g, "_")}_Master_File.md`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function bucketSizeLabel(md) {
-  const bytes = new Blob([md]).size;
-  return bytes > 1e6 ? (bytes / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(bytes / 1024)) + " KB";
-}
-
 export default function App() {
-  const [view, setView] = useState("generator"); // generator | changelog
-  const [historyKey, setHistoryKey] = useState(0); // bump to force Changelog to re-read localStorage
+  const [tags, setTags] = useState(() => getTags());
+  const [selected, setSelected] = useState(() => getTags()[0]);
+  const [logKey, setLogKey] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [status, setStatus] = useState("idle"); // idle | working | done | error
   const [error, setError] = useState("");
-  const [buckets, setBuckets] = useState(null); // [{bucket, count, names, md}]
+  const [buckets, setBuckets] = useState({}); // { [bucket]: files[] }  — session-only, never persisted
+  const [mds, setMds] = useState({}); // { [bucket]: md string }       — session-only, never persisted
   const inputRef = useRef(null);
 
+  // One-time cleanup: the old per-entry history store (deprecated — it's
+  // what used to overflow the localStorage quota) is no longer read or
+  // written anywhere. Reclaim the space if it's still sitting there.
+  useEffect(() => {
+    localStorage.removeItem("afaik-history-v1");
+  }, []);
+
   const handleFiles = useCallback(async (fileList) => {
-    setStatus("working"); setError(""); setBuckets(null);
+    setStatus("working"); setError("");
     try {
       const files = await collectFiles(fileList);
       if (files.length === 0) throw new Error("No .aspx files found in that drop (looked inside .zip too).");
-      const built = buildBuckets(files);
-      for (const b of built) {
-        addEntry({ title: autoTitle(b.bucket, b.count), count: b.count, names: b.names, md: b.md });
+
+      const currentTags = getTags();
+      const newByBucket = {};
+      for (const f of files) {
+        const bucket = routeFile(f, currentTags);
+        (newByBucket[bucket] ??= []).push(f);
       }
-      setHistoryKey((k) => k + 1);
-      setBuckets(built);
+
+      setBuckets((prev) => {
+        const next = { ...prev };
+        for (const [bucket, added] of Object.entries(newByBucket)) {
+          next[bucket] = [...(prev[bucket] || []), ...added];
+        }
+        setMds((prevMd) => {
+          const nextMd = { ...prevMd };
+          for (const bucket of Object.keys(newByBucket)) nextMd[bucket] = buildMaster(bucket, next[bucket]);
+          return nextMd;
+        });
+        return next;
+      });
+
+      for (const [bucket, added] of Object.entries(newByBucket)) appendEntry(bucket, added.length);
+      setLogKey((k) => k + 1);
       setStatus("done");
     } catch (e) {
       setError(e.message || String(e));
@@ -207,54 +185,84 @@ export default function App() {
     handleFiles(e.dataTransfer.files);
   };
 
-  return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans">
-      <header className="bg-slate-900 text-white">
-        <div className="mx-auto max-w-3xl px-5 py-3 flex items-center gap-3">
-          <div className="h-8 w-8 rounded bg-emerald-500 flex items-center justify-center">
-            <FileCode className="h-5 w-5 text-slate-900" />
-          </div>
-          <div className="leading-tight flex-1">
-            <div className="text-sm font-semibold tracking-wide">ASPx → Markdown Master File</div>
-            <div className="text-xs text-slate-400">Drop .aspx files or a .zip — sorted into one .md per folder</div>
-          </div>
-          <nav className="flex items-center gap-1">
-            <button
-              onClick={() => setView("generator")}
-              className={"rounded-md px-3 py-1.5 text-sm font-medium " + (view === "generator" ? "bg-slate-700 text-white" : "text-slate-300 hover:text-white")}
-            >
-              Generator
-            </button>
-            <button
-              onClick={() => setView("changelog")}
-              className={"inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium " + (view === "changelog" ? "bg-slate-700 text-white" : "text-slate-300 hover:text-white")}
-            >
-              <List className="h-3.5 w-3.5" /> Changelog
-            </button>
-          </nav>
-        </div>
-      </header>
+  const reassign = (file, targetTag) => {
+    rememberTag(file.name, targetTag);
+    setBuckets((prev) => {
+      const next = { ...prev };
+      next[UNSORTED] = (prev[UNSORTED] || []).filter((f) => !(f.name === file.name && f.path === file.path));
+      next[targetTag] = [...(prev[targetTag] || []), file];
+      setMds((prevMd) => ({
+        ...prevMd,
+        [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
+        [targetTag]: buildMaster(targetTag, next[targetTag]),
+      }));
+      return next;
+    });
+    appendEntry(targetTag, 1);
+    setLogKey((k) => k + 1);
+  };
 
-      <main className="mx-auto max-w-3xl px-5 py-6">
-        {view === "changelog" ? (
-          <Changelog refreshKey={historyKey} onChanged={() => setHistoryKey((k) => k + 1)} />
-        ) : (
-        <>
+  // Keep session bucket state consistent with tag edits: renames carry the
+  // bucket's files forward under the new name; removals send them to Unsorted.
+  const syncTags = () => setTags(getTags());
+
+  const onTagRenamed = (oldName, newName) => {
+    setBuckets((prev) => {
+      if (!(oldName in prev)) return prev;
+      const next = { ...prev, [newName]: prev[oldName] };
+      delete next[oldName];
+      setMds((prevMd) => {
+        const nextMd = { ...prevMd, [newName]: prevMd[oldName] };
+        delete nextMd[oldName];
+        return nextMd;
+      });
+      return next;
+    });
+    setSelected((sel) => (sel === oldName ? newName : sel));
+    syncTags();
+  };
+
+  const onTagRemoved = (name) => {
+    setBuckets((prev) => {
+      if (!(name in prev)) return prev;
+      const merged = [...(prev[UNSORTED] || []), ...prev[name]];
+      const next = { ...prev, [UNSORTED]: merged };
+      delete next[name];
+      setMds((prevMd) => {
+        const nextMd = { ...prevMd, [UNSORTED]: buildMaster(UNSORTED, merged) };
+        delete nextMd[name];
+        return nextMd;
+      });
+      return next;
+    });
+    setSelected((sel) => (sel === name ? UNSORTED : sel));
+    syncTags();
+  };
+
+  const onTagAdded = () => syncTags();
+
+  const isFixedView = selected === "Changelog" || selected === "ManageTags";
+  const activeBucket = isFixedView ? null : selected;
+
+  const counts = Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, v.length]));
+
+  return (
+    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex">
+      <Sidebar tags={tags} selected={selected} onSelect={setSelected} counts={counts} />
+
+      <main className="flex-1 px-6 py-6 max-w-3xl">
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           onClick={() => inputRef.current?.click()}
           className={
-            "rounded-xl border-2 border-dashed p-10 text-center cursor-pointer transition-colors " +
+            "rounded-xl border-2 border-dashed p-6 text-center cursor-pointer transition-colors mb-4 " +
             (dragging ? "border-emerald-500 bg-emerald-50" : "border-slate-300 bg-white hover:bg-slate-50")
           }
         >
-          <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
-          <div className="text-sm font-medium text-slate-700">Drop .aspx files or a .zip here</div>
-          <div className="text-xs text-slate-500 mt-1">
-            Folders in the zip become buckets (e.g. <span className="font-mono">TOWNSHIP PAGES/</span>) — each gets its own .md. Loose files with no folder land in "Uncategorized".
-          </div>
+          <Upload className="h-6 w-6 mx-auto text-slate-400 mb-1" />
+          <div className="text-sm font-medium text-slate-700">Drop .aspx files or a .zip here — sorts into the buckets on the left</div>
           <input
             ref={inputRef} type="file" multiple accept=".aspx,.zip" className="hidden"
             onChange={(e) => e.target.files.length && handleFiles(e.target.files)}
@@ -262,57 +270,34 @@ export default function App() {
         </div>
 
         {status === "working" && (
-          <div className="mt-4 flex items-center gap-2 text-sm text-slate-600">
+          <div className="mb-4 flex items-center gap-2 text-sm text-slate-600">
             <Loader2 className="h-4 w-4 animate-spin" /> Unpacking, sorting, and converting…
           </div>
         )}
-
-        {status === "error" && (
-          <div className="mt-4 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+        {status === "done" && (
+          <div className="mb-4 flex items-center gap-2 text-sm text-emerald-700">
+            <CheckCircle2 className="h-4 w-4" /> Sorted into the buckets on the left.
+          </div>
+        )}
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        {status === "done" && buckets && (
-          <div className="mt-4 space-y-3">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              <span className="font-semibold text-slate-800">
-                {buckets.reduce((n, b) => n + b.count, 0)} file{buckets.reduce((n, b) => n + b.count, 0) !== 1 ? "s" : ""} sorted into {buckets.length} bucket{buckets.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {buckets.map((b) => (
-              <div key={b.bucket} className="rounded-xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 p-4">
-                  <div className="flex items-center gap-2 text-sm min-w-0">
-                    <FolderTree className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span className="font-semibold text-slate-800 truncate">{b.bucket}</span>
-                    <span className="text-slate-400 shrink-0">· {b.count} file{b.count !== 1 ? "s" : ""} · {bucketSizeLabel(b.md)}</span>
-                  </div>
-                  <button
-                    onClick={() => downloadMd(b.bucket, b.md)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 text-white text-sm px-3.5 py-2 hover:bg-slate-700 shrink-0"
-                  >
-                    <Download className="h-4 w-4" /> Download .md
-                  </button>
-                </div>
-                <div className="p-4">
-                  <div className="text-xs uppercase tracking-wide text-slate-400 mb-2">Included files</div>
-                  <div className="max-h-24 overflow-auto rounded border border-slate-100 bg-slate-50 p-2 text-xs font-mono text-slate-600" style={{ lineHeight: "1.6" }}>
-                    {b.names.map((n) => <div key={n}>{n}</div>)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+        {selected === "Changelog" && <ChangelogView refreshKey={logKey} onChanged={() => setLogKey((k) => k + 1)} />}
+        {selected === "ManageTags" && (
+          <TagManager tags={tags} onRename={onTagRenamed} onRemove={onTagRemoved} onAdd={onTagAdded} />
         )}
-
-        <p className="mt-4 text-xs text-slate-500">
-          Note: the <span className="font-mono">Path:</span> line uses each file's path as it appeared in the drop (folder-relative, since the original absolute Windows path can't be reproduced in a browser). Each bucket is also saved to the Changelog automatically.
-        </p>
-        </>
+        {activeBucket && (
+          <BucketView
+            bucket={activeBucket}
+            files={buckets[activeBucket]}
+            md={mds[activeBucket]}
+            tags={tags}
+            onReassign={reassign}
+          />
         )}
       </main>
     </div>
