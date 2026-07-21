@@ -1,4 +1,17 @@
 ## LIFE AT FAI Master Changelog
+Posted: July 21, 2026 at 05:05 PM
+
+Changes since the previous generation:
+
+### SALES.aspx — Version 2
+<!-- modifiedAt:1784624344722 -->
+People
+* Krizel T. Santos — Sales Operations Manager (New)
+* Kristel A. Calicdan — Senior Operations Manager (Removed)
+
+---
+
+## LIFE AT FAI Master Changelog
 Posted: July 21, 2026 at 04:14 PM
 
 Changes since the previous generation:
