@@ -182,7 +182,7 @@ export default function App() {
     const staleFiles = [];
     for (const f of files) {
       const recorded = githubRecords[f.name];
-      if (recorded && f.modifiedAt != null && recorded.modifiedAt != null && f.modifiedAt <= recorded.modifiedAt) {
+      if (recorded && f.modifiedAt != null && recorded.modifiedAt != null && f.modifiedAt < recorded.modifiedAt) {
         staleFiles.push(f.name);
         continue;
       }
