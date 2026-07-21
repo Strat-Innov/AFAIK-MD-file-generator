@@ -35,18 +35,33 @@ function PreviewPanel({ previewChanges }) {
                 {fv.changes.map((c) => (
                   <div key={c.label} className="mb-2 last:mb-0">
                     <div className="text-xs font-medium text-slate-500 mb-1">{c.label}</div>
-                    {c.added.map((item) => (
+                    {c.kind === "list" && c.added.map((item) => (
                       <div key={`add-${item.key}`} className="flex items-start gap-1.5 text-xs text-emerald-700 bg-emerald-50 rounded px-2 py-1 mb-1">
                         <Plus className="h-3 w-3 mt-0.5 shrink-0" />
                         <span>{item.label}</span>
                       </div>
                     ))}
-                    {c.removed.map((item) => (
+                    {c.kind === "list" && c.removed.map((item) => (
                       <div key={`rem-${item.key}`} className="flex items-start gap-1.5 text-xs text-rose-700 bg-rose-50 rounded px-2 py-1 mb-1">
                         <Minus className="h-3 w-3 mt-0.5 shrink-0" />
                         <span className="line-through">{item.label}</span>
                       </div>
                     ))}
+                    {c.kind === "fields" && c.fieldChanges.map((fc) => (
+                      <div key={fc.field} className="text-xs text-slate-700 bg-slate-50 rounded px-2 py-1 mb-1">
+                        <span className="font-medium">{fc.field}:</span>{" "}
+                        {fc.from == null ? <span className="text-emerald-700">{fc.to} (New)</span> : (
+                          <>
+                            <span className="text-rose-700 line-through">{fc.from}</span>
+                            {" → "}
+                            <span className="text-emerald-700">{fc.to}</span>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                    {c.kind === "generic" && (
+                      <div className="text-xs text-slate-600 bg-slate-50 rounded px-2 py-1 mb-1">Content changed (no item-level detail available for this section)</div>
+                    )}
                   </div>
                 ))}
               </div>

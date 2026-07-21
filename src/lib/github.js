@@ -54,8 +54,16 @@ export function buildEntry(tag, fileVersionChanges, when = new Date()) {
     if (fv.modifiedAt != null) s += `<!-- modifiedAt:${fv.modifiedAt} -->\n`;
     for (const c of fv.changes) {
       s += `${c.label}\n`;
-      for (const a of c.added) s += `* ${a.label} (New)\n`;
-      for (const r of c.removed) s += `* ${r.label} (Removed)\n`;
+      if (c.kind === "list") {
+        for (const a of c.added) s += `* ${a.label} (New)\n`;
+        for (const r of c.removed) s += `* ${r.label} (Removed)\n`;
+      } else if (c.kind === "fields") {
+        for (const fc of c.fieldChanges) {
+          s += fc.from == null ? `* ${fc.field}: ${fc.to} (New)\n` : `* ${fc.field}: changed from "${fc.from}" to "${fc.to}"\n`;
+        }
+      } else {
+        s += `* Content changed\n`;
+      }
     }
     s += `\n`;
   }
@@ -110,19 +118,38 @@ async function putFile(path, content, message, sha, token) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, content: toBase64(content), branch: BRANCH, ...(sha ? { sha } : {}) }),
   });
-  if (!res.ok) throw new Error(`GitHub publish failed (${res.status}): ${await res.text()}`);
+  if (!res.ok) {
+    const err = new Error(`GitHub publish failed (${res.status}): ${await res.text()}`);
+    err.status = res.status;
+    throw err;
+  }
   return res.json();
 }
 
 // Returns the entry text that was published, so the caller can cache it
 // for display without another round trip.
+//
+// On a 409 (someone else — another tab, device, or a manual edit — wrote
+// to this file between our read and our write), re-reads the file fresh
+// and retries. The per-tag queue (publishQueue.js) already prevents this
+// within a single browser tab; this handles the cases it can't reach.
+const MAX_CONFLICT_RETRIES = 3;
+
 export async function publishChangelog(tag, fileVersionChanges) {
   const token = getToken();
   if (!token) throw new Error("No GitHub token saved — add one in Manage Tags first.");
   const path = changelogPath(tag);
-  const existing = await getFile(path, token);
   const entry = buildEntry(tag, fileVersionChanges);
-  const nextContent = existing ? `${entry}\n\n---\n\n${existing.content}` : `${entry}\n`;
-  await putFile(path, nextContent, `Update ${tag} changelog`, existing?.sha, token);
-  return entry;
+
+  for (let attempt = 0; ; attempt++) {
+    const existing = await getFile(path, token);
+    const nextContent = existing ? `${entry}\n\n---\n\n${existing.content}` : `${entry}\n`;
+    try {
+      await putFile(path, nextContent, `Update ${tag} changelog`, existing?.sha, token);
+      return entry;
+    } catch (e) {
+      if (e.status === 409 && attempt < MAX_CONFLICT_RETRIES) continue;
+      throw e;
+    }
+  }
 }
