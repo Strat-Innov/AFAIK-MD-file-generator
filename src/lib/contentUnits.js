@@ -131,19 +131,89 @@ function webPartValues(blob) {
   return out;
 }
 
+// Structural pairs the renderer joins onto one line: a link's label with
+// its target, a person's name with their email. Keeping them together is
+// what stops a phone number attaching to the wrong person or a URL to the
+// wrong label — an association a token-presence check cannot see.
+function webPartPairs(blob) {
+  const spt = blob?.serverProcessedContent?.searchablePlainTexts || {};
+  const links = blob?.serverProcessedContent?.links || {};
+  const pairs = [];
+  for (const [key, value] of Object.entries(spt)) {
+    const link = key.match(/^items\[(\d+)\]\.title$/);
+    if (link) {
+      const url = links[`items[${link[1]}].sourceItem.url`];
+      if (url && !isImageAssetUrl(url)) pairs.push([String(value), String(url)]);
+      continue;
+    }
+    const person = key.match(/^persons\[(\d+)\]\.name$/);
+    if (person) {
+      const email = spt[`persons[${person[1]}].email`];
+      if (email) pairs.push([String(value), String(email)]);
+    }
+  }
+  return pairs.map(([a, b]) => [decodeEntitiesOnce(a), decodeEntitiesOnce(b)]);
+}
+
+// Walks the canvas in document order so that source order is reading
+// order. Harvesting all RTE blocks and then all web parts (the previous
+// shape) made the sequence meaningless for an ordering check, because the
+// rendered document interleaves them by canvas position.
+//
+// A group is one canvas control. RTE groups are `ordered` — their lines
+// are prose a reader follows top to bottom. A web part is a record, so
+// its fields carry no reading order and only the group as a whole is
+// positioned.
+//
 // `doc` is a parsed canvas document (see aspxDocument.parseCanvas).
-export function sourceUnits(doc) {
+export function sourceModel(doc) {
   const units = new Map(); // token-key -> original text, deduped
-  for (const rte of doc.querySelectorAll("[data-sp-rte]")) {
-    addUnits(units, rteLines(rte.innerHTML));
-    addUnits(units, anchorHrefs(rte.innerHTML));
-  }
-  for (const el of doc.querySelectorAll("[data-sp-webpartdata]")) {
-    let blob = null;
-    try { blob = JSON.parse(el.getAttribute("data-sp-webpartdata")); } catch { continue; }
-    addUnits(units, webPartValues(blob));
-  }
-  return units;
+  const groups = [];
+  const pairs = [];
+  const seen = new Set();
+
+  const keysFor = (values) => {
+    const before = new Set(units.keys());
+    addUnits(units, values);
+    // Every key these values map to, whether newly added or already
+    // present from a duplicate elsewhere on the page.
+    return values.map((v) => tokenize(v).join(" ")).filter((k) => k && (units.has(k) || before.has(k)));
+  };
+
+  const harvest = (el) => {
+    for (const rte of el.querySelectorAll("[data-sp-rte]")) {
+      if (seen.has(rte)) continue;
+      seen.add(rte);
+      // Prose lines carry reading order; anchor targets do not — the
+      // renderer places each href inline where its link sits, while
+      // these are harvested after the text. Only the prose is ordered.
+      const proseKeys = keysFor(rteLines(rte.innerHTML));
+      const hrefKeys = keysFor(anchorHrefs(rte.innerHTML));
+      const keys = [...proseKeys, ...hrefKeys];
+      if (keys.length) groups.push({ kind: "rte", ordered: true, keys, orderedKeys: proseKeys });
+    }
+    for (const wp of el.querySelectorAll("[data-sp-webpartdata]")) {
+      if (seen.has(wp)) continue;
+      seen.add(wp);
+      let blob = null;
+      try { blob = JSON.parse(wp.getAttribute("data-sp-webpartdata")); } catch { continue; }
+      const keys = keysFor(webPartValues(blob));
+      if (keys.length) groups.push({ kind: "webpart", ordered: false, keys, orderedKeys: [] });
+      for (const [a, b] of webPartPairs(blob)) {
+        const ka = tokenize(a).join(" "), kb = tokenize(b).join(" ");
+        if (ka && kb && units.has(ka) && units.has(kb)) pairs.push([ka, kb]);
+      }
+    }
+  };
+
+  for (const control of doc.querySelectorAll("[data-sp-canvascontrol]")) harvest(control);
+  harvest(doc.body || doc); // anything outside a canvas control
+
+  return { units, groups, pairs };
+}
+
+export function sourceUnits(doc) {
+  return sourceModel(doc).units;
 }
 
 /* ---------------- rendered side ---------------- */
@@ -155,19 +225,23 @@ export function sourceUnits(doc) {
 // The "## Source" block is excluded as provenance metadata rather than
 // page content.
 export function renderedLines(md) {
-  return md
-    .replace(/\n## Source\n[\s\S]*$/, "\n")
-    .split("\n")
-    .map((line) => line.replace(/^\s*(?:[-*+]|\d+\.)\s+/, "").trim())
+  const lines = md.split("\n");
+  // Find the provenance block by normalizing rather than by matching
+  // "## Source" literally. A changed heading depth, a doubled space, a
+  // blockquote prefix or a non-breaking space all defeat a literal match
+  // and turn the block into apparent content. It is always the last such
+  // heading the renderer emits.
+  const cut = lines.map((l) => normalize(l)).lastIndexOf("source");
+  const body = cut >= 0 ? lines.slice(0, cut) : lines;
+  return body
+    // List markers are the renderer's scaffolding, not content. Emphasis
+    // may sit outside the marker ("**1. Prepare…**"), so leading
+    // quote/emphasis characters are consumed first — otherwise the bare
+    // "1" survives tokenization and reads as content the source never had.
+    .map((line) => line.replace(/^\s*(?:[>*_`~]+\s*)*(?:[-*+]|\d+[.)])\s+/, "").trim())
     .filter(Boolean);
 }
 
-// The title a page gets when it has no heading of its own — the 7
-// web-part-only pages in the August corpus. It describes the source
-// rather than quoting it, so it is scaffolding, not untraceable output.
-// Deciding that by string shape alone was wrong: ARBORAGE.aspx really
-// does have "ARBORAGE" as its heading. The caller only treats it as
-// scaffolding when no source unit backs it.
 export function derivedTitleLine(pageName) {
   return pageName ? `# ${pageName.replace(/\.aspx$/i, "")}` : null;
 }
