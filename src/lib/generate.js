@@ -19,7 +19,7 @@ import { validateCoverage, formatReport } from "./coverage.js";
 export function generatePage(file) {
   const page = parsePage(file.raw, { name: file.name, path: file.path });
   const md = renderOptimized(page);
-  const validation = validateCoverage(parseCanvas(page.canvasHtml), md);
+  const validation = validateCoverage(parseCanvas(page.canvasHtml), md, { pageName: file.name });
   return { name: file.name, md, validation, report: formatReport(validation, file.name) };
 }
 

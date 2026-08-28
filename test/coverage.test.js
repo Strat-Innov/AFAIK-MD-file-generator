@@ -74,7 +74,9 @@ describe.skipIf(!HAS_REAL_PAGES)("the gate fails when information disappears", (
     const page = parsePage(readFixture("STUDIO-CITY.aspx"), { name: "STUDIO-CITY.aspx" });
     const embellished = md.replace("## Amenities", "## Amenities\n\n- Rooftop helipad and private cinema");
     const result = validateCoverage(parseCanvas(page.canvasHtml), embellished);
-    expect(result.unmatched).toContain("Rooftop helipad and private cinema");
+    expect(result.unmatched.flatMap((u) => u.tokens)).toEqual(
+      expect.arrayContaining(["rooftop", "helipad", "cinema"])
+    );
   });
 });
 

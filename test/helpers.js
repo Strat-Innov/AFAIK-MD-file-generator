@@ -45,3 +45,18 @@ export function makeAspx(canvasHtml, extraTags = {}) {
     .join("\n");
   return `<html><head><!--[if gte mso 9]><xml>\n<mso:CustomDocumentProperties>\n${props}\n<mso:CanvasContent1 msdt:dt="string">${escapeHtml(canvasHtml)}</mso:CanvasContent1>\n</mso:CustomDocumentProperties>\n</xml><![endif]--></head><body></body></html>`;
 }
+
+/* ---- the August 2026 regression corpus (gitignored, see test/corpus/README.md) ---- */
+
+const corpusDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "corpus");
+
+export function corpusFiles() {
+  if (!fs.existsSync(corpusDir)) return [];
+  return fs.readdirSync(corpusDir).filter((f) => f.endsWith(".aspx")).sort();
+}
+
+export function readCorpus(name) {
+  return fs.readFileSync(path.join(corpusDir, name), "utf8");
+}
+
+export const HAS_CORPUS = corpusFiles().length > 0;

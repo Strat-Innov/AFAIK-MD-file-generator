@@ -1,7 +1,9 @@
 node_modules/
 dist/
 
-# Real exported SharePoint pages used as test fixtures. They contain
-# employee names, work email addresses and internal tenant URLs, and this
-# repository is public — keep them local. See test/fixtures/README.md.
+# Real exported SharePoint pages used as test fixtures and as the
+# standing regression corpus. They contain employee names, work email
+# addresses and internal tenant URLs, and this repository is public —
+# keep them local. See test/fixtures/README.md and test/corpus/README.md.
 test/fixtures/*.aspx
+test/corpus/*.aspx

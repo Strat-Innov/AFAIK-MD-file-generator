@@ -19,6 +19,7 @@
 import { extractTag, decodeOnce } from "./masterMd.js";
 import {
   decodeEntitiesOnce,
+  isImageAssetUrl,
   PEOPLE_ID,
   QUICK_LINKS_ID,
   IMAGE_ID,
@@ -66,20 +67,39 @@ function lines(s) {
 
 /* ---------------- rich-text blocks ---------------- */
 
+// A list item can hold several block-level children. SharePoint's
+// editor produces <li><p>The Palms Country Club</p><p>Private Access
+// </p><p>(Exclusive for Club Members)</p></li>, and running inlineText
+// over the whole <li> concatenates them with no separator, fusing three
+// distinct facts into "The Palms Country ClubPrivate Access…". Each
+// block child becomes its own item line, in source order.
+function itemLines(li) {
+  const blocks = [...li.children].filter((c) => /^(P|DIV|H[1-6]|BLOCKQUOTE)$/.test(c.tagName.toUpperCase()));
+  if (!blocks.length) return tidy(inlineText(li)).split("\n");
+  const lines = [];
+  // Text sitting directly in the <li>, before or between its blocks.
+  for (const node of li.childNodes) {
+    if (node.nodeType === 3) { const t = tidy(node.data); if (t) lines.push(...t.split("\n")); continue; }
+    if (node.nodeType !== 1) continue;
+    if (/^(UL|OL)$/.test(node.tagName.toUpperCase())) continue;
+    lines.push(...tidy(inlineText(node)).split("\n"));
+  }
+  return lines;
+}
+
 function listItems(listEl) {
   const items = [];
   for (const li of listEl.children) {
     if (li.tagName?.toUpperCase() !== "LI") continue;
-    // Take the item's own text without the nested list, then append the
-    // nested items after it, so nothing is fused and nothing is lost.
+    // Take the item's own content without the nested list, then append
+    // the nested items after it, so nothing is fused and nothing is lost.
     const nested = [...li.children].filter((c) => /^(UL|OL)$/.test(c.tagName.toUpperCase()));
     const clone = li.cloneNode(true);
     for (const c of [...clone.children]) if (/^(UL|OL)$/.test(c.tagName.toUpperCase())) c.remove();
-    const own = tidy(inlineText(clone));
-    if (own) items.push(...own.split("\n"));
+    items.push(...itemLines(clone));
     for (const n of nested) items.push(...listItems(n));
   }
-  return items.filter(Boolean);
+  return items.map((i) => i.trim()).filter(Boolean);
 }
 
 function tableRows(tableEl) {
@@ -138,7 +158,10 @@ function json(el, attr) {
 // serverProcessedContent values are HTML-escaped inside the JSON
 // ("Socials &amp; Websites"), so they need one entity pass to become
 // the text a reader actually saw.
-const text = (v) => (typeof v === "string" ? decodeEntitiesOnce(v).replace(/ /g, " ").trim() : "");
+// Whitespace is collapsed because these are single-line values —
+// titles, labels, names. A quick link titled "Procurement\n Request"
+// would otherwise split a Markdown link across two lines.
+const text = (v) => (typeof v === "string" ? decodeEntitiesOnce(v).replace(/\s+/g, " ").trim() : "");
 
 function indexedValues(map, suffix) {
   const out = [];
@@ -174,7 +197,12 @@ function people(blob) {
     persons[i] = { name: text(value), email: text(spt[`persons[${i}].email`]), role: roles[i] || "" };
   }
   const list = persons.filter((p) => p && (p.name || p.email));
-  return list.length ? { type: "people", title: text(blob?.properties?.title), persons: list } : null;
+  // The section heading ("MARKETING", "LEASING", "PROJECT DEVELOPMENT")
+  // is stored in searchablePlainTexts.title; properties.title is
+  // usually absent. Reading only the latter dropped the department
+  // labels that make a contact list answerable.
+  const title = text(spt.title) || text(blob?.properties?.title);
+  return list.length ? { type: "people", title, persons: list } : null;
 }
 
 function image(blob) {
@@ -182,7 +210,10 @@ function image(blob) {
   const caption = text(p.captionText);
   const alt = text(p.altText);
   const overlay = text(p.overlayText);
-  const linkUrl = text(p.linkUrl);
+  // The click-through target is recorded under serverProcessedContent
+  // .links.linkUrl; properties.linkUrl is frequently empty.
+  const candidate = text(p.linkUrl) || text(blob?.serverProcessedContent?.links?.linkUrl);
+  const linkUrl = isImageAssetUrl(candidate) ? "" : candidate;
   // The file name and asset path are SharePoint implementation detail —
   // they stay in the RAW master file. Only what a reader could actually
   // read or click on the page carries over.
@@ -201,9 +232,16 @@ function generic(blob) {
   const spt = blob?.serverProcessedContent?.searchablePlainTexts || {};
   const links = blob?.serverProcessedContent?.links || {};
   const texts = Object.entries(spt).filter(([k]) => k !== "title").map(([, v]) => text(v)).filter(Boolean);
-  const urls = Object.entries(links).filter(([k]) => k !== "baseUrl").map(([, v]) => text(v)).filter(Boolean);
-  if (!texts.length && !urls.length) return null;
-  return { type: "other", title: text(spt.title), texts, urls };
+  const urls = Object.entries(links)
+    .filter(([k, v]) => k !== "baseUrl" && !isImageAssetUrl(v))
+    .map(([, v]) => text(v))
+    .filter(Boolean);
+  const title = text(spt.title);
+  // A title-only part is still content: Home.aspx's News web part
+  // carries nothing but "Company News & Announcements", and requiring
+  // body text discarded that heading entirely.
+  if (!texts.length && !urls.length && !title) return null;
+  return { type: "other", title, texts, urls };
 }
 
 const EXTRACTORS = {
