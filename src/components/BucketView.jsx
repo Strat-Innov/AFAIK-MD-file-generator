@@ -1,14 +1,15 @@
 import React from "react";
-import { Download, FolderTree, Inbox, X, Plus, Minus, History, ExternalLink } from "lucide-react";
+import { Download, FolderTree, Inbox, X, Plus, Minus, History, ExternalLink, ShieldCheck, ShieldAlert } from "lucide-react";
 import { UNSORTED } from "../lib/router";
 import { isVisible } from "../lib/webpartVisibility";
+import { formatBucketReport } from "../lib/generate";
 
-function download(bucket, md) {
+function download(bucket, md, suffix) {
   const blob = new Blob([md], { type: "text/markdown" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${bucket.replace(/[^\w.-]+/g, "_")}_Master_File.md`;
+  a.download = `${bucket.replace(/[^\w.-]+/g, "_")}_${suffix}.md`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -75,6 +76,43 @@ function ChangeList({ fileVersionChanges }) {
   );
 }
 
+// The gate, made inspectable. A FAIL names the values that went missing
+// rather than just refusing the download, so the cause is diagnosable
+// without opening a console.
+function ValidationPanel({ bucket, optimized }) {
+  if (!optimized) return null;
+  const pass = optimized.status === "PASS";
+  const missing = optimized.totals.sourceUnits - optimized.totals.representedUnits;
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm mt-4">
+      <div className="flex items-center gap-2 border-b border-slate-100 p-4">
+        {pass ? <ShieldCheck className="h-4 w-4 text-emerald-600" /> : <ShieldAlert className="h-4 w-4 text-rose-600" />}
+        <span className="text-sm font-semibold text-slate-800">AI file validation</span>
+        <span className={"ml-auto text-xs font-semibold rounded-full px-2 py-0.5 " + (pass ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700")}>
+          {optimized.status}
+        </span>
+      </div>
+      <div className="p-4 space-y-1 text-xs text-slate-600">
+        <div>Pages: <span className="font-mono">{optimized.pages.length}</span></div>
+        <div>Source content units: <span className="font-mono">{optimized.totals.sourceUnits}</span></div>
+        <div>Represented content units: <span className="font-mono">{optimized.totals.representedUnits}</span></div>
+        <div>Missing units: <span className={"font-mono " + (missing ? "text-rose-700 font-semibold" : "")}>{missing}</span></div>
+        <div>Unmatched units: <span className={"font-mono " + (optimized.totals.unmatched ? "text-amber-700 font-semibold" : "")}>{optimized.totals.unmatched}</span></div>
+        {!pass && (
+          <>
+            <p className="pt-2 text-rose-700">
+              The AI file is blocked: {optimized.failed.length} page(s) lost meaningful source information. The raw master file is unaffected and still downloadable.
+            </p>
+            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded border border-rose-100 bg-rose-50 p-2 text-[11px] text-rose-800">
+              {formatBucketReport(bucket, optimized)}
+            </pre>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PreviewPanel({ previewChanges }) {
   const hasChanges = previewChanges && previewChanges.length > 0;
   return (
@@ -107,12 +145,15 @@ function HighlightsPanel({ latestPublished, onViewDetailed }) {
   );
 }
 
-export default function BucketView({ bucket, files, md, tags, onReassign, onUnsort, onRemove, latestPublished, onViewDetailed, previewChanges, staleFilenames }) {
+export default function BucketView({ bucket, files, outputs, tags, onReassign, onUnsort, onRemove, latestPublished, onViewDetailed, previewChanges, staleFilenames }) {
   const isUnsorted = bucket === UNSORTED;
+  const md = outputs?.master;
+  const optimized = outputs?.optimized;
   const staleSet = new Set(staleFilenames || []);
   const sidebar = !isUnsorted && (
     <div className="w-full md:w-80 shrink-0">
       <PreviewPanel previewChanges={previewChanges} />
+      <ValidationPanel bucket={bucket} optimized={optimized} />
       <HighlightsPanel latestPublished={latestPublished} onViewDetailed={onViewDetailed} />
     </div>
   );
@@ -136,12 +177,26 @@ export default function BucketView({ bucket, files, md, tags, onReassign, onUnso
             <div className="flex items-center gap-2 text-sm min-w-0">
               {isUnsorted ? <Inbox className="h-4 w-4 text-amber-500 shrink-0" /> : <FolderTree className="h-4 w-4 text-emerald-600 shrink-0" />}
               <span className="font-semibold text-slate-800 truncate">{bucket}</span>
-              <span className="text-slate-400 shrink-0">· {files.length} file{files.length !== 1 ? "s" : ""}{md ? ` · ${sizeLabel(md)}` : ""}</span>
+              <span className="text-slate-400 shrink-0">
+                · {files.length} file{files.length !== 1 ? "s" : ""}
+                {md ? ` · raw ${sizeLabel(md)}` : ""}
+                {optimized?.status === "PASS" ? ` · AI ${sizeLabel(optimized.md)}` : ""}
+              </span>
             </div>
             {!isUnsorted && md && (
-              <button onClick={() => download(bucket, md)} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 text-white text-sm px-3.5 py-2 hover:bg-slate-700 shrink-0">
-                <Download className="h-4 w-4" /> Download .md
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={() => download(bucket, md, "Master_File")} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 text-white text-sm px-3.5 py-2 hover:bg-slate-700">
+                  <Download className="h-4 w-4" /> Raw .md
+                </button>
+                <button
+                  onClick={() => download(bucket, optimized.md, "AI_File")}
+                  disabled={optimized?.status !== "PASS"}
+                  title={optimized?.status === "PASS" ? "Retrieval-optimized file for Copilot Studio" : "Blocked: validation found missing source information"}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 text-white text-sm px-3.5 py-2 hover:bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+                >
+                  <Download className="h-4 w-4" /> AI .md
+                </button>
+              </div>
             )}
           </div>
 

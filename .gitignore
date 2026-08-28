@@ -1,2 +1,7 @@
 node_modules/
 dist/
+
+# Real exported SharePoint pages used as test fixtures. They contain
+# employee names, work email addresses and internal tenant URLs, and this
+# repository is public — keep them local. See test/fixtures/README.md.
+test/fixtures/*.aspx
