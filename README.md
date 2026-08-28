@@ -69,6 +69,14 @@ Missing content:
 The raw master file is never gated — it stays downloadable precisely
 when something has gone wrong with the optimized one.
 
+## Status
+
+The generator is **frozen at v1.0.0** (2026-08-28). See
+[GENERATOR-CONTRACT.md](GENERATOR-CONTRACT.md) for what it guarantees,
+what it does not, the validated baseline over the 133-page August
+corpus, and the protocol for changing it. Each AI file records the
+generator version in its `## Source` block.
+
 ## Tests
 ```bash
 npm test

@@ -5,6 +5,7 @@ import { validateCoverage } from "../src/lib/coverage.js";
 import { tokenize, normalize } from "../src/lib/contentUnits.js";
 import { textControl, webPartControl, makeAspx } from "./helpers.js";
 import { QUICK_LINKS_ID, PEOPLE_ID, IMAGE_ID } from "../src/lib/webparts.js";
+import { GENERATOR_VERSION } from "../src/lib/version.js";
 
 const build = (canvas, name = "T.aspx") => {
   const page = parsePage(makeAspx(canvas), { name, path: name });
@@ -181,5 +182,24 @@ describe("validation-model defects closed", () => {
     const res = check(md.replace(/^# ARBORAGE$/m, "#"));
     expect(res.status).toBe("FAIL");
     expect(res.missing).toContain("ARBORAGE");
+  });
+});
+
+describe("frozen generator contract", () => {
+  it("stamps the generator version into the provenance block", () => {
+    // Traceability for the retrieval benchmark: a measurement is only
+    // meaningful against a known build.
+    const { md } = build(textControl("<h2>Page</h2><p>Some content.</p>"));
+    expect(md).toContain(`- Generator: ${GENERATOR_VERSION}`);
+    expect(md.indexOf("- Generator:")).toBeGreaterThan(md.indexOf("## Source"));
+  });
+
+  it("does not let the version stamp count as page content", () => {
+    // It lives in "## Source", which coverage validation excludes — so a
+    // version bump can never turn a passing page into a failing one.
+    const { check } = build(textControl("<h2>Page</h2><p>Some content.</p>"));
+    const res = check();
+    expect(res.status).toBe("PASS");
+    expect(res.unmatched).toEqual([]);
   });
 });

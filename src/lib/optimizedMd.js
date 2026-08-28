@@ -13,6 +13,8 @@
  * section.
  * ------------------------------------------------------------------ */
 
+import { GENERATOR_VERSION } from "./version.js";
+
 const esc = (s) => s.replace(/([*_`[\]])/g, "\\$1");
 
 function headingPrefix(level, minLevel, isTitle) {
@@ -81,6 +83,11 @@ function sourceSection(page) {
   if (page.metadata.pageLayoutType) rows.push(`- Page layout: ${page.metadata.pageLayoutType}`);
   if (page.metadata.authorByline) rows.push(`- Author: ${page.metadata.authorByline}`);
   if (page.metadata.topicHeader) rows.push(`- Topic: ${page.metadata.topicHeader}`);
+  // Provenance, not page content: the "## Source" block is excluded from
+  // coverage validation, so stamping the generator here records which
+  // build produced the document without asserting anything about the
+  // source.
+  rows.push(`- Generator: ${GENERATOR_VERSION}`);
   return rows.length ? ["## Source", rows.join("\n")].join("\n\n") : "";
 }
 
