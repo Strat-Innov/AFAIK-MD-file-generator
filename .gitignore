@@ -7,3 +7,10 @@ dist/
 # keep them local. See test/fixtures/README.md and test/corpus/README.md.
 test/fixtures/*.aspx
 test/corpus/*.aspx
+
+# Generated retrieval question set. Ground-truth answers include employee
+# names and work email addresses drawn from the corpus, and this
+# repository is public — the generator is committed, its output is not.
+# See benchmark/README.md.
+benchmark/question-set.json
+benchmark/question-set.md
