@@ -5,14 +5,19 @@ import os from "node:os";
 import crypto from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import zlib from "node:zlib";
 import {
   buildBenchmarkArtifacts,
   compareToCanonical,
+  verifyArtifacts,
+  fileSetSignature,
   CANONICAL,
   SNAPSHOT,
   SNAPSHOT_CLOCK,
+  BENCHMARK_ZIP_FILE,
   sha256,
 } from "../src/lib/benchmarkExport.js";
+import { createZip } from "../src/lib/zip.js";
 import { buildMaster } from "../src/lib/masterMd.js";
 import { generateOptimized } from "../src/lib/generate.js";
 import { corpusFiles, readCorpus, HAS_CORPUS, makeAspx, textControl, escapeHtml } from "./helpers.js";
@@ -118,6 +123,106 @@ describe("the gate still governs Arm C", () => {
   });
 });
 
+/* ---- artifact integrity: the number on screen must describe the bytes
+       the download hands over ---- */
+
+describe("artifact integrity", () => {
+  const page = (heading) => makeAspx(textControl(`<p>${heading}</p>`));
+  const files = [
+    { name: "a.aspx", path: "a.aspx", raw: page("Alpha") },
+    { name: "b.aspx", path: "b.aspx", raw: page("Beta") },
+  ];
+
+  it("re-hashes both arms and confirms they are self-consistent", async () => {
+    const built = await buildBenchmarkArtifacts(files);
+    const v = await verifyArtifacts(built);
+    expect(v.ok).toBe(true);
+    expect(v.armB.selfConsistent).toBe(true);
+    expect(v.armC.selfConsistent).toBe(true);
+    expect(v.armB.sha256).toBe(built.armB.sha256);
+    expect(v.armC.sha256).toBe(built.armC.sha256);
+  });
+
+  it("catches a reported digest that no longer describes the bytes", async () => {
+    const built = await buildBenchmarkArtifacts(files);
+    const tampered = { ...built, armB: { ...built.armB, md: built.armB.md + "\n" } };
+    const v = await verifyArtifacts(tampered);
+    expect(v.armB.selfConsistent).toBe(false);
+    expect(v.ok).toBe(false);
+  });
+
+  it("reports a synthetic corpus as not the canonical snapshot", async () => {
+    const built = await buildBenchmarkArtifacts(files);
+    const v = await verifyArtifacts(built);
+    expect(v.armB.matchesCanonical).toBe(false);
+    expect(compareToCanonical(built)).toMatchObject({ files: false, armB: false, armC: false, pages: false });
+  });
+
+  it("signs the input set so a changed file list invalidates a build", () => {
+    const sig = fileSetSignature(files);
+    expect(fileSetSignature([...files].reverse())).toBe(sig);
+    expect(fileSetSignature([...files, { name: "c.aspx", path: "c.aspx", raw: page("Gamma") }])).not.toBe(sig);
+    expect(fileSetSignature(files.slice(0, 1))).not.toBe(sig);
+  });
+});
+
+/* ---- "Download Both": one archive, two arms, nothing altered ---- */
+
+// Independent of the writer under test: central directory walk plus
+// node:zlib, the same reader test/zip.test.js uses.
+function unzip(buf) {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= 0; i--) if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  const out = [];
+  for (let n = 0; n < count; n++) {
+    const method = dv.getUint16(p + 10, true);
+    const compSize = dv.getUint32(p + 20, true);
+    const nameLen = dv.getUint16(p + 28, true);
+    const lho = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(buf.subarray(p + 46, p + 46 + nameLen));
+    p += 46 + nameLen + dv.getUint16(p + 30, true) + dv.getUint16(p + 32, true);
+    const start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+    const payload = buf.subarray(start, start + compSize);
+    out.push({ name, text: (method === 8 ? zlib.inflateRawSync(payload) : Buffer.from(payload)).toString("utf8") });
+  }
+  return out;
+}
+
+const bothArms = (built) =>
+  createZip(
+    [
+      { name: built.armB.filename, text: built.armB.md },
+      { name: built.armC.filename, text: built.armC.md },
+    ],
+    { modifiedAt: SNAPSHOT_CLOCK }
+  );
+
+describe("download both", () => {
+  const files = [{ name: "a.aspx", path: "a.aspx", raw: makeAspx(textControl("<p>Alpha</p>")) }];
+
+  it("names the archive for the snapshot", () => {
+    expect(BENCHMARK_ZIP_FILE).toBe("AUGUST-2026-COPILOT-BENCHMARK.zip");
+  });
+
+  it("carries exactly the two arm files, under their own filenames", async () => {
+    const built = await buildBenchmarkArtifacts(files);
+    const read = unzip(await bothArms(built));
+    expect(read.map((e) => e.name)).toEqual([built.armB.filename, built.armC.filename]);
+  });
+
+  it("delivers each arm unaltered — same bytes, same digest", async () => {
+    const built = await buildBenchmarkArtifacts(files);
+    const read = unzip(await bothArms(built));
+    expect(read[0].text).toBe(built.armB.md);
+    expect(read[1].text).toBe(built.armC.md);
+    expect(await sha256(read[0].text)).toBe(built.armB.sha256);
+    expect(await sha256(read[1].text)).toBe(built.armC.sha256);
+  });
+});
+
 /* ---- against the real corpus ---- */
 
 describe.skipIf(!HAS_CORPUS)("benchmark export over the August corpus", () => {
@@ -158,5 +263,21 @@ describe.skipIf(!HAS_CORPUS)("benchmark export over the August corpus", () => {
     expect(built.filesSha256).toBe(m.filesSha256);
     expect(fs.readFileSync(path.join(out, m.arms.B.file), "utf8")).toBe(built.armB.md);
     expect(fs.readFileSync(path.join(out, m.arms.C.file), "utf8")).toBe(built.armC.md);
+  }, 900000);
+});
+
+describe.skipIf(!HAS_CORPUS)("download both, over the real corpus", () => {
+  it("packages the canonical artifacts and reads them back byte-for-byte", async () => {
+    const built = await buildBenchmarkArtifacts(loadCorpus());
+    const archive = await bothArms(built);
+    // 37 MB of markup compresses hard; if it ever does not, the archive
+    // is still correct, so only the round trip is asserted as a rule.
+    expect(archive.length).toBeLessThan(built.armB.bytes + built.armC.bytes);
+    const read = unzip(archive);
+    expect(read.map((e) => e.name)).toEqual([built.armB.filename, built.armC.filename]);
+    expect(read[0].text).toBe(built.armB.md);
+    expect(read[1].text).toBe(built.armC.md);
+    expect(await sha256(read[0].text)).toBe(CANONICAL.armBSha256);
+    expect(await sha256(read[1].text)).toBe(CANONICAL.armCSha256);
   }, 900000);
 });

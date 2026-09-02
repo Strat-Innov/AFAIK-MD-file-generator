@@ -26,20 +26,46 @@ so a result can be tied to exactly the bytes that produced it.
 reimplementing it, so the artifacts under test are the ones the app
 itself emits.
 
-### Or from the app: **Benchmark Export**
+### Or from the app: the **Benchmark** workspace
 
-The same two artifacts can be produced without a checkout. Drop the
-corpus into the app, open **Benchmark Export** in the sidebar, and press
-*Generate Benchmark Artifacts*; Arm B, Arm C and the manifest download
-separately, and the panel reports each artifact's size, page count,
-SHA-256 and — for Arm C — its source/represented/untraceable unit
-counts.
+The same two artifacts can be produced without a checkout, a terminal,
+or knowing this directory exists:
+
+> Load the corpus → **Benchmark** in the sidebar → *Generate Benchmark
+> Artifacts* → *Download Both* → upload to Copilot Studio.
+
+*Download Both* gives one archive, `AUGUST-2026-COPILOT-BENCHMARK.zip`,
+holding `AUGUST-2026-CORPUS_Master_File.md` and
+`AUGUST-2026-CORPUS_AI_File.md`. Each arm can also be downloaded on its
+own, as can `manifest.json`.
+
+The workspace shows the snapshot identity (name, generator, clock, file
+count, file-set SHA-256) and one card per arm: filename, size, page
+count, SHA-256, and for Arm C the coverage result with its
+source / represented / untraceable unit counts. *Verify Artifacts*
+re-derives both digests from the bytes in hand and reports whether they
+still describe what the download buttons will produce — the check worth
+having, since a stale number on screen is exactly what a person cannot
+see. *Regenerate* rebuilds; if the staged files change after a build,
+the result is marked stale and downloads are held until it is rebuilt,
+so nothing leaves under an identity that was never displayed.
+
+Arm B is offered whatever the validation says — it is the fidelity layer
+and is most needed when the optimized one has gone wrong. Arm C, and
+therefore *Download Both*, require a PASS.
+
+The archive is written by `src/lib/zip.js`, a ~120-line writer over the
+browser's native `CompressionStream` — the mirror of the
+`DecompressionStream` the app already uses to read dropped zips, so
+there is still no runtime dependency beyond React. It is deterministic:
+entry timestamps come from the snapshot clock, not the wall clock.
 
 It is an admin surface, deliberately outside the normal workflow: the
-product is still the per-bucket Master files, and this panel does not
+product is still the per-bucket Master files, and this page does not
 touch them. The recipe itself lives in `src/lib/benchmarkExport.js` and
 is shared, so the CLI and the button call the *same* function and cannot
-drift; `test/benchmarkExport.test.js` asserts they agree byte-for-byte.
+drift; `test/benchmarkExport.test.js` asserts they agree byte-for-byte,
+and that the archive's entries round-trip to the canonical digests.
 
 > The panel compares what it built against the verified artifacts and
 > says so on screen. A mismatch is reported, never enforced — building

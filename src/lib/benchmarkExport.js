@@ -44,6 +44,8 @@ export const SNAPSHOT_CLOCK = new Date(Date.UTC(2026, 7, 31, 0, 0, 0));
 
 export const ARM_B_FILE = `${SNAPSHOT}_Master_File.md`;
 export const ARM_C_FILE = `${SNAPSHOT}_AI_File.md`;
+// Both arms in one download, so the pre-flight is a single click.
+export const BENCHMARK_ZIP_FILE = `${SNAPSHOT.replace(/-CORPUS$/, "")}-COPILOT-BENCHMARK.zip`;
 
 /* ---- the artifacts the pre-flight was verified against ----
  * Hashes only — nothing here reproduces corpus content. They let the
@@ -159,4 +161,37 @@ export function compareToCanonical({ armB, armC, filesSha256 }) {
     armC: armC.sha256 === CANONICAL.armCSha256,
     pages: armB.pages === CANONICAL.pages,
   };
+}
+
+/**
+ * Re-derives each artifact's SHA-256 from the bytes now in hand and
+ * checks it two ways: against the digest recorded at build time, and
+ * against the frozen canonical digest.
+ *
+ * The first check is the one worth having. `matchesCanonical` only
+ * repeats what compareToCanonical already said; `selfConsistent` proves
+ * the number on screen still describes the bytes the download button is
+ * about to hand over, which is the claim a person actually relies on
+ * when they check the file after saving it.
+ */
+export async function verifyArtifacts({ armB, armC }) {
+  const check = async (artifact, canonicalSha) => {
+    if (!artifact.md) return { produced: false, selfConsistent: null, matchesCanonical: null, sha256: null };
+    const recomputed = await sha256(artifact.md);
+    return {
+      produced: true,
+      sha256: recomputed,
+      selfConsistent: recomputed === artifact.sha256,
+      matchesCanonical: recomputed === canonicalSha,
+    };
+  };
+  const B = await check(armB, CANONICAL.armBSha256);
+  const C = await check(armC, CANONICAL.armCSha256);
+  return { armB: B, armC: C, ok: B.selfConsistent !== false && C.selfConsistent !== false };
+}
+
+// Identifies the exact input set a build came from, so a result can be
+// marked stale the moment the staged files change underneath it.
+export function fileSetSignature(files) {
+  return [...files].map((f) => f.name).sort().join("\u0000");
 }
