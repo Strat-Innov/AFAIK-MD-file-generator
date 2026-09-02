@@ -5,6 +5,7 @@ import BucketView from "./components/BucketView";
 import TagManager from "./components/TagManager";
 import GithubSettings from "./components/GithubSettings";
 import ChangelogDetailView from "./components/ChangelogDetailView";
+import BenchmarkExport from "./components/BenchmarkExport";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -384,7 +385,14 @@ export default function App() {
 
   const onTagAdded = () => syncTags();
 
-  const activeBucket = selected === "ManageTags" || selected === "Changelog" ? null : selected;
+  const activeBucket = ["ManageTags", "Changelog", "Benchmark"].includes(selected) ? null : selected;
+
+  // The benchmark builds ONE snapshot from every file this session holds,
+  // Unsorted included: it deliberately ignores tags, because the corpus
+  // carries no tag assignment and inventing one would add a second
+  // variable to the experiment. Deduped the same way a bucket is, so a
+  // file dropped into two tags cannot appear twice in the artifact.
+  const benchmarkFiles = dedupeKeepingLatest(Object.values(buckets).flat()).files;
 
   const counts = Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, v.length]));
 
@@ -446,6 +454,7 @@ export default function App() {
           </>
         )}
         {selected === "Changelog" && <ChangelogDetailView tags={tags} />}
+        {selected === "Benchmark" && <BenchmarkExport files={benchmarkFiles} />}
         {activeBucket && (
           <BucketView
             bucket={activeBucket}

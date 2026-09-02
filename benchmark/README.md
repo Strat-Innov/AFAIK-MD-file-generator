@@ -26,6 +26,52 @@ so a result can be tied to exactly the bytes that produced it.
 reimplementing it, so the artifacts under test are the ones the app
 itself emits.
 
+### Or from the app: **Benchmark Export**
+
+The same two artifacts can be produced without a checkout. Drop the
+corpus into the app, open **Benchmark Export** in the sidebar, and press
+*Generate Benchmark Artifacts*; Arm B, Arm C and the manifest download
+separately, and the panel reports each artifact's size, page count,
+SHA-256 and — for Arm C — its source/represented/untraceable unit
+counts.
+
+It is an admin surface, deliberately outside the normal workflow: the
+product is still the per-bucket Master files, and this panel does not
+touch them. The recipe itself lives in `src/lib/benchmarkExport.js` and
+is shared, so the CLI and the button call the *same* function and cannot
+drift; `test/benchmarkExport.test.js` asserts they agree byte-for-byte.
+
+> The panel compares what it built against the verified artifacts and
+> says so on screen. A mismatch is reported, never enforced — building
+> from a different corpus is legitimate, it just is not the run the
+> pre-flight was designed against.
+>
+> One thing will trip it, and it is worth knowing before you press the
+> button: **filename spelling**. One page of the corpus is named
+> `PROJECT-DEVELOPMENT-–-PRIMING-&-INNOVATION.aspx`, with a real en
+> dash. The browser reads that name straight off the ZIP entry and
+> keeps it. Command-line `unzip`, extracting the same archive into
+> `test/corpus/`, rewrites the character it cannot map as `#U2013` — so
+> the CLI build, and therefore the canonical artifact, carries the
+> escaped spelling.
+>
+> The page content is identical either way; the bytes of the name are
+> not. Diffed against the canonical artifacts, a ZIP-dropped build
+> differs on exactly three lines of Arm B (the table-of-contents entry,
+> the `## heading`, the `Path:`) and one line of Arm C (`- Source
+> file:`, inside the `## Source` block the gate excludes from
+> coverage) — nothing else. So a ZIP-dropped build is a valid,
+> deterministic pair of artifacts whose checksums are simply not the
+> canonical ones. The file-set SHA-256 at the top of the panel tells you
+> which input set you are on. Nothing normalizes the name — a filename
+> is source metadata, and rewriting it to make a checksum agree would be
+> the exact failure the checksum exists to catch.
+>
+> For the same reason, a ZIP whose pages sit inside folders records the
+> folder in each section's `Path:` line, where a loose drop or the CLI
+> records the bare filename. Same content, different provenance line,
+> different checksum.
+
 > One determinism detail: `buildMaster()` stamps a generation time into
 > its header, which would change Arm B's checksum on every run. The
 > builder passes a fixed snapshot clock (`2026-08-31T00:00:00Z`) so the
