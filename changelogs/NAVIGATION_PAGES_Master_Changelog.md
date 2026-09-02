@@ -1,4 +1,111 @@
 ## NAVIGATION PAGES Master Changelog
+Posted: September 02, 2026 at 03:00 PM
+
+Changes since the previous generation:
+
+### Ramco.aspx — Version 1
+<!-- modifiedAt:1787879972000 -->
+Editorial card
+* Content changed
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brands (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project Playbook (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+Agent link
+* title: Chat with AFAIK AGent (New)
+* agentName: -AFAIK-_crce9_AFAIKMDNEWDATAA (New)
+* agentAuthor: Kirk Niel D. Ranches (New)
+Other content
+* Content changed
+
+### Page.aspx — Version 1
+<!-- modifiedAt:1787879976000 -->
+Image
+* fileName: 2175622012-Untitled.png (New)
+* imageSource: /sites/FAIKnowledgeBase/SiteAssets/SitePages/About-Us(1)/copy-(1)-2175622012-Untitled.png (New)
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+Agent link
+* title: Chat With Afaik Agent (New)
+* agentName: -AFAIK-_crce9_AFAIKMDNEWDATAA (New)
+* agentAuthor: Kirk Niel D. Ranches (New)
+Other content
+* Content changed
+
+### Permit.aspx — Version 1
+<!-- modifiedAt:1787880002000 -->
+Editorial card
+* Content changed
+Quick links
+* Permit System Phase 2 Userguide (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Memo/Strategy and Innovation/Permit System Phase 2 Userguide.pdf) (New)
+* Permit_Monitoring_Process (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Memo/Strategy and Innovation/Permit_Monitoring_Process.pdf) (New)
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+Agent link
+* title: Chat with AFAIK Agent (New)
+* agentName: -AFAIK-_crce9_AFAIKMDNEWDATAA (New)
+* agentAuthor: Kirk Niel D. Ranches (New)
+Other content
+* Content changed
+
+### Darwinbox.aspx — Version 1
+<!-- modifiedAt:1787880004000 -->
+Editorial card
+* Content changed
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brands (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project Playbook (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+Agent link
+* title: Chat with AFAIK AGent (New)
+* agentName: -AFAIK-_crce9_AFAIKMDNEWDATAA (New)
+* agentAuthor: Kirk Niel D. Ranches (New)
+Other content
+* Content changed
+
+### OurLink.aspx — Version 1
+<!-- modifiedAt:1787880006000 -->
+Editorial card
+* Content changed
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brands (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project Playbook (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+Agent link
+* title: Chat with AFAIK AGent (New)
+* agentName: -AFAIK-_crce9_AFAIKMDNEWDATAA (New)
+* agentAuthor: Kirk Niel D. Ranches (New)
+Other content
+* Content changed
+
+### Exclusive-Promos.aspx — Version 1
+<!-- modifiedAt:1787880030000 -->
+List
+* Content changed
+Divider
+* Content changed
+List
+* Content changed
+Divider
+* Content changed
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+Agent link
+* title: Chat With Afaik Agent (New)
+* agentName: -AFAIK-_crce9_AFAIKMDNEWDATAA (New)
+* agentAuthor: Kirk Niel D. Ranches (New)
+Other content
+* Content changed
+
+---
+
+## NAVIGATION PAGES Master Changelog
 Posted: September 02, 2026 at 09:24 AM
 
 Changes since the previous generation:
