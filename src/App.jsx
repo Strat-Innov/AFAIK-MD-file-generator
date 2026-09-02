@@ -143,6 +143,12 @@ export default function App() {
     }
     return map;
   });
+  // Kept apart from `error` on purpose. Publishing a changelog is
+  // secondary to producing the files: a GitHub conflict must not be
+  // dressed up as a generation failure, because the sorted buckets and
+  // both Markdown outputs are already complete and downloadable when it
+  // happens.
+  const [publishWarning, setPublishWarning] = useState("");
   const [previewChanges, setPreviewChanges] = useState({}); // { [bucket]: fileVersionChanges[] } — this session's not-yet-confirmed diff
   const [staleByBucket, setStaleByBucket] = useState({}); // { [bucket]: filename[] } — flagged old-version, per GitHub's own published record
   const inputRef = useRef(null);
@@ -200,7 +206,7 @@ export default function App() {
         for (const fv of fileVersionChanges) commitFileVersion(fv.filename, fv.version, fv.parts, fv.modifiedAt);
         setLatestPublished((prev) => ({ ...prev, [tag]: { entry, changes: fileVersionChanges } }));
       } catch (e) {
-        setError(`Couldn't publish "${tag}" changelog to GitHub: ${e.message}`);
+        setPublishWarning(e.message);
       }
     });
   }, []);
@@ -213,7 +219,7 @@ export default function App() {
   }, []);
 
   const handleFiles = useCallback(async (fileList) => {
-    setStatus("working"); setError("");
+    setStatus("working"); setError(""); setPublishWarning("");
     try {
       const files = await collectFiles(fileList);
       if (files.length === 0) throw new Error("No .aspx files found in that drop (looked inside .zip too).");
@@ -421,6 +427,15 @@ export default function App() {
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+        {publishWarning && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              <span className="font-semibold">Changelog not published.</span> {publishWarning}{" "}
+              <span className="text-amber-700">Your files sorted and generated normally and are ready to download.</span>
+            </span>
           </div>
         )}
 

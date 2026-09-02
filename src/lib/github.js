@@ -113,8 +113,15 @@ async function githubFetch(path, token, options = {}) {
   });
 }
 
+// `cache: "no-store"` matters more than it looks. The Contents API sits
+// behind a cache that can serve a blob sha a few seconds out of date, and
+// a conditional revalidation would happily hand back the very sha that
+// just lost a write — turning the conflict retry below into a no-op.
 async function getFile(path, token) {
-  const res = await githubFetch(`${path}?ref=${BRANCH}`, token);
+  const res = await githubFetch(`${path}?ref=${BRANCH}`, token, {
+    cache: "no-store",
+    headers: { "Cache-Control": "no-cache" },
+  });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`GitHub read failed (${res.status}): ${await res.text()}`);
   const data = await res.json();
@@ -138,27 +145,72 @@ async function putFile(path, content, message, sha, token) {
 // Returns the entry text that was published, so the caller can cache it
 // for display without another round trip.
 //
-// On a 409 (someone else — another tab, device, or a manual edit — wrote
-// to this file between our read and our write), re-reads the file fresh
-// and retries. The per-tag queue (publishQueue.js) already prevents this
-// within a single browser tab; this handles the cases it can't reach.
-const MAX_CONFLICT_RETRIES = 3;
+// The Contents API is optimistically concurrent: a write carries the sha
+// the writer believes the file is at, and GitHub rejects it if the file
+// has moved on. That check is the only thing stopping this app from
+// clobbering a changelog entry written by another tab, another device or
+// a person editing on github.com, so it is never bypassed — no blind
+// retry, no write without a sha, no force.
+//
+// Losing the race is recoverable: re-read the file, prepend this entry to
+// whatever is there NOW, and write again. The other party's entry is
+// preserved below ours.
+//
+// Three things make that reliable which the first version got wrong:
+//
+//   - Reads bypass the cache (see getFile). Without that, a re-read can
+//     return the stale sha that just lost, and the retry re-loses.
+//   - Attempts are spaced. GitHub needs a moment to become consistent
+//     after someone else's write; retrying inside the same millisecond
+//     burns every attempt against the same stale read.
+//   - 422 counts as a conflict too. GitHub answers a sha mismatch with
+//     409 or 422 depending on the path taken, and treating 422 as fatal
+//     meant the common case never retried at all.
+const CONFLICT_STATUSES = new Set([409, 422]);
+const RETRY_DELAYS_MS = [250, 750, 1500, 3000];
 
-export async function publishChangelog(tag, fileVersionChanges) {
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Our entry is prepended, so if it is already at the top of the remote
+// file this publish has already landed. That happens when a write
+// succeeds but its response never arrives; without this check the retry
+// would prepend the same entry a second time.
+function alreadyPublished(content, entry) {
+  return typeof content === "string" && content.trimStart().startsWith(entry.trim());
+}
+
+export async function publishChangelog(tag, fileVersionChanges, { sleep = wait } = {}) {
   const token = getToken();
   if (!token) throw new Error("No GitHub token saved — add one in Manage Tags first.");
   const path = changelogPath(tag);
   const entry = buildEntry(tag, fileVersionChanges);
 
-  for (let attempt = 0; ; attempt++) {
+  let lastConflict = null;
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);
+
+    // Always reconcile against the file as it is right now, never against
+    // what it looked like before the conflict.
     const existing = await getFile(path, token);
+    if (existing && alreadyPublished(existing.content, entry)) return entry;
+
     const nextContent = existing ? `${entry}\n\n---\n\n${existing.content}` : `${entry}\n`;
     try {
       await putFile(path, nextContent, `Update ${tag} changelog`, existing?.sha, token);
       return entry;
     } catch (e) {
-      if (e.status === 409 && attempt < MAX_CONFLICT_RETRIES) continue;
-      throw e;
+      if (!CONFLICT_STATUSES.has(e.status)) throw e;
+      lastConflict = e;
     }
   }
+
+  const error = new Error(
+    `Couldn't publish the "${tag}" changelog: GitHub reported the file changed underneath us ` +
+      `${RETRY_DELAYS_MS.length + 1} times in a row. Nothing was overwritten. ` +
+      `The generated files are unaffected — try publishing again, or check whether something else is writing to ${path}.`
+  );
+  error.status = lastConflict?.status;
+  error.cause = lastConflict;
+  throw error;
 }
