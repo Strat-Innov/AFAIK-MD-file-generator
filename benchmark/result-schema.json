@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Copilot Studio retrieval benchmark — one result row per question per arm",
+  "type": "object",
+  "required": [
+    "question_id", "arm", "question", "expected_answer", "copilot_answer",
+    "correct", "partial", "retrieval_failure", "hallucination", "grounded",
+    "citation_present", "latency_ms", "notes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "question_id":       { "type": "string", "description": "id from question-set.json, e.g. q0042" },
+    "arm":               { "enum": ["A", "B", "C"], "description": "A SharePoint only, B consolidated MD, C AI-optimized MD" },
+    "question":          { "type": "string", "description": "asked verbatim, copied from the question set" },
+    "expected_answer":   { "type": "string", "description": "ground truth, verbatim source value" },
+    "copilot_answer":    { "type": ["string", "null"], "description": "reply verbatim; null only when the request failed" },
+    "correct":           { "type": "boolean", "description": "matchAnswer().correct — full expected value present as a whole-token run" },
+    "partial":           { "type": "boolean", "description": "matchAnswer().partial — some expected tokens present, not all. Never true when correct is true" },
+    "retrieval_failure": { "type": "boolean", "description": "the agent said it could not find the information, or answered about a different page" },
+    "hallucination":     { "type": "boolean", "description": "a confident, specific answer that contradicts the source. Distinct from retrieval_failure, and more serious" },
+    "grounded":          { "type": "boolean", "description": "the answer is attributable to a supplied source, not general knowledge" },
+    "citation_present":  { "type": "boolean", "description": "hasCitation() — the reply names a file, page or URL" },
+    "latency_ms":        { "type": ["number", "null"], "description": "wall clock; null when not reliably measurable" },
+    "notes":             { "type": "string", "description": "free text: anything the flags cannot carry" },
+    "run":               { "type": "integer", "minimum": 1, "description": "repetition index, 1-based" },
+    "asked_at":          { "type": "string", "description": "ISO 8601" },
+    "conversation_id":   { "type": ["string", "null"], "description": "proof each question ran in its own conversation" },
+    "request_failed":    { "type": "boolean", "description": "transport/timeout failure. Recorded and excluded from correctness rates, never scored as incorrect" }
+  }
+}

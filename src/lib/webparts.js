@@ -10,14 +10,24 @@
  *                                          no item-level detail
  * ------------------------------------------------------------------ */
 
-const PEOPLE_ID = "7f718435-ee4d-431c-bdbf-9c4ff326f46e";
-const QUICK_LINKS_ID = "c70391ea-0b10-4ee9-b2b4-006d3fcad0cd";
-const IMAGE_ID = "d1d91016-032f-456d-98a4-721247c305e8";
-const AGENT_LINK_ID = "f82072bb-4968-4341-b99b-d450fc52ec2f";
+export const PEOPLE_ID = "7f718435-ee4d-431c-bdbf-9c4ff326f46e";
+export const QUICK_LINKS_ID = "c70391ea-0b10-4ee9-b2b4-006d3fcad0cd";
+export const IMAGE_ID = "d1d91016-032f-456d-98a4-721247c305e8";
+export const AGENT_LINK_ID = "f82072bb-4968-4341-b99b-d450fc52ec2f";
+
+// A link whose target is an image file is that image, not a destination
+// a reader navigates to. The Hero web part records its tiles as
+// links.content[i].link pointing straight at a .png in SiteAssets, which
+// is the same rendering detail already excluded via imageSources — so it
+// is excluded on the same grounds. Links to pages, documents, external
+// sites and mailto: addresses are content and are kept.
+export function isImageAssetUrl(url) {
+  return /\.(png|jpe?g|gif|webp|svg|bmp|tiff?|avif)(\?|#|$)/i.test(String(url || ""));
+}
 
 const NAMED_ENTITIES = { amp: "&", quot: '"', lt: "<", gt: ">", apos: "'", nbsp: "\u00A0" };
 
-function decodeEntitiesOnce(s) {
+export function decodeEntitiesOnce(s) {
   return s.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, ref) => {
     if (ref[0] === "#") {
       const code = ref[1] === "x" || ref[1] === "X" ? parseInt(ref.slice(2), 16) : parseInt(ref.slice(1), 10);

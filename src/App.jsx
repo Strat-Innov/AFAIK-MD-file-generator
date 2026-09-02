@@ -5,6 +5,7 @@ import BucketView from "./components/BucketView";
 import TagManager from "./components/TagManager";
 import GithubSettings from "./components/GithubSettings";
 import ChangelogDetailView from "./components/ChangelogDetailView";
+import BenchmarkExport from "./components/BenchmarkExport";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -12,60 +13,8 @@ import { getSnapshot, setSnapshot } from "./lib/snapshot";
 import { checkFileVersion, commitFileVersion } from "./lib/fileVersions";
 import { publishChangelog, fetchFileRecords } from "./lib/github";
 import { runExclusive } from "./lib/publishQueue";
-
-/* ------------------------------------------------------------------ *
- * Transform rules — reverse-engineered from JUNE_13_Master_File.md
- * (verified consistent across all 121 sections):
- *   per .aspx: raw fence + ContentTypeId + PageLayoutType +
- *   CanvasContent1 decoded exactly ONE html-entity pass.
- * ------------------------------------------------------------------ */
-
-function decodeOnce(s) {
-  if (!s) return "";
-  const ta = document.createElement("textarea");
-  ta.innerHTML = s;
-  return ta.value;
-}
-
-function extractTag(raw, tag) {
-  const m = raw.match(new RegExp(`<mso:${tag}[^>]*>([\\s\\S]*?)</mso:${tag}>`));
-  return m ? m[1] : "";
-}
-
-function buildSection(name, path, raw) {
-  const ctid = extractTag(raw, "ContentTypeId");
-  const layout = extractTag(raw, "PageLayoutType");
-  const canvas = decodeOnce(extractTag(raw, "CanvasContent1"));
-  return (
-    `\n---\n## ${name}\n` +
-    `Path: ${path}\n` +
-    `Type: aspx-web-file\n` +
-    `---\n` +
-    "```aspx\n" + raw + "\n```\n" +
-    `### Project Specifications\n\n` +
-    `### Content Overview\n\n` +
-    `${ctid}\n${layout}\n${canvas}\n`
-  );
-}
-
-function stamp() {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, "0");
-  return `${p(d.getMonth() + 1)}/${p(d.getDate())}/${p(d.getFullYear())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
-
-function buildMaster(bucketName, files) {
-  const sorted = [...files].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  let md =
-    `# ${bucketName} — ASPx Codebase Master File\n` +
-    `Generated on: ${stamp()}\n` +
-    `Total Files: ${sorted.length}\n\n` +
-    `## Table of Contents\n` +
-    sorted.map((f) => `* [${f.name}](__#)`).join("\n") +
-    `\n`;
-  for (const f of sorted) md += buildSection(f.name, f.path, f.raw);
-  return md;
-}
+import { buildMaster } from "./lib/masterMd";
+import { generateOptimized } from "./lib/generate";
 
 /* ---- ZIP reading via native DecompressionStream (no dependency) ---- */
 async function inflateRaw(u8) {
@@ -170,6 +119,14 @@ function dedupeKeepingLatest(files) {
   return { files: [...byName.values()], discardedNames };
 }
 
+// Both representations are always built together from the same file
+// list: the raw master (fidelity) and the optimized document (retrieval,
+// gated on validation). Keeping this in one place means no code path can
+// refresh one and leave the other describing an older set of files.
+function buildOutputs(bucket, files) {
+  return { master: buildMaster(bucket, files), optimized: generateOptimized(bucket, files) };
+}
+
 /* ================================================================== */
 export default function App() {
   const [tags, setTags] = useState(() => getTags());
@@ -178,7 +135,7 @@ export default function App() {
   const [status, setStatus] = useState("idle"); // idle | working | done | error
   const [error, setError] = useState("");
   const [buckets, setBuckets] = useState({}); // { [bucket]: files[] }  — session-only, never persisted
-  const [mds, setMds] = useState({}); // { [bucket]: md string }       — session-only, never persisted
+  const [mds, setMds] = useState({}); // { [bucket]: {master, optimized} } — session-only, never persisted
   const [latestPublished, setLatestPublished] = useState(() => {
     const map = {};
     for (const t of getTags()) {
@@ -187,6 +144,12 @@ export default function App() {
     }
     return map;
   });
+  // Kept apart from `error` on purpose. Publishing a changelog is
+  // secondary to producing the files: a GitHub conflict must not be
+  // dressed up as a generation failure, because the sorted buckets and
+  // both Markdown outputs are already complete and downloadable when it
+  // happens.
+  const [publishWarning, setPublishWarning] = useState("");
   const [previewChanges, setPreviewChanges] = useState({}); // { [bucket]: fileVersionChanges[] } — this session's not-yet-confirmed diff
   const [staleByBucket, setStaleByBucket] = useState({}); // { [bucket]: filename[] } — flagged old-version, per GitHub's own published record
   const inputRef = useRef(null);
@@ -244,7 +207,7 @@ export default function App() {
         for (const fv of fileVersionChanges) commitFileVersion(fv.filename, fv.version, fv.parts, fv.modifiedAt);
         setLatestPublished((prev) => ({ ...prev, [tag]: { entry, changes: fileVersionChanges } }));
       } catch (e) {
-        setError(`Couldn't publish "${tag}" changelog to GitHub: ${e.message}`);
+        setPublishWarning(e.message);
       }
     });
   }, []);
@@ -257,7 +220,7 @@ export default function App() {
   }, []);
 
   const handleFiles = useCallback(async (fileList) => {
-    setStatus("working"); setError("");
+    setStatus("working"); setError(""); setPublishWarning("");
     try {
       const files = await collectFiles(fileList);
       if (files.length === 0) throw new Error("No .aspx files found in that drop (looked inside .zip too).");
@@ -284,7 +247,7 @@ export default function App() {
         const merged = [...(prevBuckets[bucket] || []), ...added];
         const { files: deduped, discardedNames } = dedupeKeepingLatest(merged);
         nextBuckets[bucket] = deduped;
-        touchedMd[bucket] = buildMaster(bucket, deduped);
+        touchedMd[bucket] = buildOutputs(bucket, deduped);
         dupDiscarded.push(...discardedNames);
       }
       bucketsRef.current = nextBuckets;
@@ -331,8 +294,8 @@ export default function App() {
     setBuckets(next);
     setMds((prevMd) => ({
       ...prevMd,
-      [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
-      [targetTag]: buildMaster(targetTag, next[targetTag]),
+      [UNSORTED]: buildOutputs(UNSORTED, next[UNSORTED]),
+      [targetTag]: buildOutputs(targetTag, next[targetTag]),
     }));
     const { changes, staleFiles } = await computeFileVersionChanges(targetTag, next[targetTag]);
     setPreviewChanges((prevPreview) => ({ ...prevPreview, [targetTag]: changes }));
@@ -357,8 +320,8 @@ export default function App() {
     setBuckets(next);
     setMds((prevMd) => ({
       ...prevMd,
-      [fromBucket]: buildMaster(fromBucket, next[fromBucket]),
-      [UNSORTED]: buildMaster(UNSORTED, next[UNSORTED]),
+      [fromBucket]: buildOutputs(fromBucket, next[fromBucket]),
+      [UNSORTED]: buildOutputs(UNSORTED, next[UNSORTED]),
     }));
     const { changes, staleFiles } = await computeFileVersionChanges(fromBucket, next[fromBucket]);
     setPreviewChanges((prevPreview) => ({ ...prevPreview, [fromBucket]: changes }));
@@ -378,7 +341,7 @@ export default function App() {
     next[bucket] = (prev[bucket] || []).filter((f) => !(f.name === file.name && f.path === file.path));
     bucketsRef.current = next;
     setBuckets(next);
-    setMds((prevMd) => ({ ...prevMd, [bucket]: buildMaster(bucket, next[bucket]) }));
+    setMds((prevMd) => ({ ...prevMd, [bucket]: buildOutputs(bucket, next[bucket]) }));
   };
 
   // Keep session bucket state consistent with tag edits: renames carry the
@@ -411,7 +374,7 @@ export default function App() {
       bucketsRef.current = next;
       setBuckets(next);
       setMds((prevMd) => {
-        const nextMd = { ...prevMd, [UNSORTED]: buildMaster(UNSORTED, merged) };
+        const nextMd = { ...prevMd, [UNSORTED]: buildOutputs(UNSORTED, merged) };
         delete nextMd[name];
         return nextMd;
       });
@@ -422,7 +385,14 @@ export default function App() {
 
   const onTagAdded = () => syncTags();
 
-  const activeBucket = selected === "ManageTags" || selected === "Changelog" ? null : selected;
+  const activeBucket = ["ManageTags", "Changelog", "Benchmark"].includes(selected) ? null : selected;
+
+  // The benchmark builds ONE snapshot from every file this session holds,
+  // Unsorted included: it deliberately ignores tags, because the corpus
+  // carries no tag assignment and inventing one would add a second
+  // variable to the experiment. Deduped the same way a bucket is, so a
+  // file dropped into two tags cannot appear twice in the artifact.
+  const benchmarkFiles = dedupeKeepingLatest(Object.values(buckets).flat()).files;
 
   const counts = Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, v.length]));
 
@@ -467,6 +437,15 @@ export default function App() {
             <span>{error}</span>
           </div>
         )}
+        {publishWarning && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              <span className="font-semibold">Changelog not published.</span> {publishWarning}{" "}
+              <span className="text-amber-700">Your files sorted and generated normally and are ready to download.</span>
+            </span>
+          </div>
+        )}
 
         {selected === "ManageTags" && (
           <>
@@ -475,11 +454,12 @@ export default function App() {
           </>
         )}
         {selected === "Changelog" && <ChangelogDetailView tags={tags} />}
+        {selected === "Benchmark" && <BenchmarkExport files={benchmarkFiles} />}
         {activeBucket && (
           <BucketView
             bucket={activeBucket}
             files={buckets[activeBucket]}
-            md={mds[activeBucket]}
+            outputs={mds[activeBucket]}
             tags={tags}
             onReassign={reassign}
             onUnsort={(file) => unsort(file, activeBucket)}
