@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "benchmark:questions": "node scripts/build-question-set.mjs"
+    "benchmark:questions": "node scripts/build-question-set.mjs",
+    "benchmark:arms": "node scripts/build-arms.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.383.0",

@@ -14,3 +14,11 @@ test/corpus/*.aspx
 # See benchmark/README.md.
 benchmark/question-set.json
 benchmark/question-set.md
+
+# Benchmark knowledge artifacts (Arm B / Arm C) built from the corpus by
+# `npm run benchmark:arms`. They reproduce the corpus content, including
+# employee names, work email addresses and internal tenant URLs, and this
+# repository is public — the builder is committed, its output is not.
+# See benchmark/README.md.
+benchmark-artifacts/
+

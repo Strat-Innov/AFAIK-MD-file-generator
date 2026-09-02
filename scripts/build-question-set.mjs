@@ -46,9 +46,14 @@ const isFieldLabel = (label, value) =>
 
 const questions = [];
 let id = 0;
-const add = (page, kind, question, answer, evidence) => {
+// `evidence` is the source text a question was built from; `locator` is
+// where that text sits in the parsed page — section index, then block or
+// record index within it. Both come from the iteration itself, so the
+// locator points at real structure rather than asserting metadata the
+// page does not carry.
+const add = (page, kind, question, answer, evidence, locator) => {
   if (!answer || !String(answer).trim()) return;
-  questions.push({ id: `q${String(++id).padStart(4, "0")}`, page, kind, question, answer: String(answer).trim(), evidence });
+  questions.push({ id: `q${String(++id).padStart(4, "0")}`, page, kind, question, answer: String(answer).trim(), evidence, locator });
 };
 
 const titleOf = (page) => {
@@ -69,17 +74,18 @@ for (const name of fs.readdirSync(corpusDir).filter((f) => f.endsWith(".aspx")).
   // the answers beats asking twice with contradictory ones.
   const rolesOnPage = new Map();
 
-  for (const section of page.sections) {
+  for (const [sectionIndex, section] of page.sections.entries()) {
     if (section.kind === "text") {
-      for (const block of section.blocks) {
+      for (const [blockIndex, block] of section.blocks.entries()) {
         if (block.type === "heading") { heading = block.text.replace(/:$/, "").trim(); continue; }
 
         if (block.type === "paragraph") {
           // "Total Number of units: 94" -> a directly answerable fact.
-          for (const line of block.lines) {
+          for (const [lineIndex, line] of block.lines.entries()) {
             const m = line.match(LABELLED);
             if (m && !/^https?$/i.test(m[1]) && isFieldLabel(m[1], m[2])) {
-              add(name, "labelled-fact", `For ${subject}, what is the ${m[1].trim().toLowerCase()}?`, m[2], line);
+              add(name, "labelled-fact", `For ${subject}, what is the ${m[1].trim().toLowerCase()}?`, m[2], line,
+                { section: sectionIndex, block: blockIndex, line: lineIndex });
             }
           }
           // A unit type followed by its floor area and its price. This is
@@ -98,15 +104,18 @@ for (const name of fs.readdirSync(corpusDir).filter((f) => f.endsWith(".aspx")).
             const after = (ls[i + 2] || "").trim();
             const area = AREA.test(next) && !PRICE.test(next) ? next : null;
             const price = PRICE.test(next) ? next : area && PRICE.test(after) ? after : null;
-            if (area) add(name, "unit-area", `At ${subject}, what is the floor area of a ${unit}?`, area, `${unit} / ${area}`);
-            if (price) add(name, "unit-price", `At ${subject}, how much does a ${unit} cost?`, price, `${unit} / ${price}`);
+            if (area) add(name, "unit-area", `At ${subject}, what is the floor area of a ${unit}?`, area, `${unit} / ${area}`,
+              { section: sectionIndex, block: blockIndex, line: ls.indexOf(area), unitLine: i });
+            if (price) add(name, "unit-price", `At ${subject}, how much does a ${unit} cost?`, price, `${unit} / ${price}`,
+              { section: sectionIndex, block: blockIndex, line: ls.indexOf(price), unitLine: i });
           }
         }
 
         if (block.type === "list" && /amenit|feature|inclusion/i.test(heading)) {
-          for (const item of block.items) {
+          for (const [itemIndex, item] of block.items.entries()) {
             if (item.length > 60) continue;
-            add(name, "amenity", `Does ${subject} have ${/^(a|an|the)\b/i.test(item) ? "" : "a "}${item}?`, `Yes — ${item} is listed under ${heading}.`, item);
+            add(name, "amenity", `Does ${subject} have ${/^(a|an|the)\b/i.test(item) ? "" : "a "}${item}?`, `Yes — ${item} is listed under ${heading}.`, item,
+              { section: sectionIndex, block: blockIndex, item: itemIndex });
           }
         }
       }
@@ -117,20 +126,22 @@ for (const name of fs.readdirSync(corpusDir).filter((f) => f.endsWith(".aspx")).
       // Project Development Manager" then has more than one correct
       // answer, so the question carries all of them rather than becoming
       // two contradictory items.
-      for (const p of section.content.persons) {
-        if (p.role) (rolesOnPage.get(p.role) ?? rolesOnPage.set(p.role, []).get(p.role)).push(p);
-        if (p.name && p.email) add(name, "contact-email", `What is the email address for ${p.name} at ${subject}?`, p.email, `${p.name} — ${p.email}`);
+      for (const [personIndex, p] of section.content.persons.entries()) {
+        if (p.role) (rolesOnPage.get(p.role) ?? rolesOnPage.set(p.role, []).get(p.role)).push({ ...p, section: sectionIndex, personIndex });
+        if (p.name && p.email) add(name, "contact-email", `What is the email address for ${p.name} at ${subject}?`, p.email, `${p.name} — ${p.email}`,
+          { section: sectionIndex, person: personIndex, field: "email" });
       }
     }
 
     if (section.kind === "webpart" && section.content.type === "links") {
-      for (const item of section.content.items) {
+      for (const [itemIndex, item] of section.content.items.entries()) {
         if (!item.url || !/^https?:\/\//i.test(item.url)) continue;
         if (!item.title) continue;
         // Phrased around the label as it appears, because a page's link
         // list can legitimately name a different project (ARBORAGE lists
         // a Brentville page). The ground truth is still exact.
-        add(name, "external-link", `On the ${subject} page, what URL is listed for "${item.title}"?`, item.url, `${item.title} -> ${item.url}`);
+        add(name, "external-link", `On the ${subject} page, what URL is listed for "${item.title}"?`, item.url, `${item.title} -> ${item.url}`,
+          { section: sectionIndex, item: itemIndex, field: "url" });
       }
     }
   }
@@ -141,7 +152,8 @@ for (const name of fs.readdirSync(corpusDir).filter((f) => f.endsWith(".aspx")).
     const q = unique.length > 1
       ? `Who are the people listed as ${role} for ${subject}?`
       : `Who is the ${role} for ${subject}?`;
-    add(name, "contact-by-role", q, answer, unique.map((p) => p.name).join("; "));
+    add(name, "contact-by-role", q, answer, unique.map((p) => p.name).join("; "),
+      { people: unique.map((p) => ({ section: p.section, person: p.personIndex })) });
   }
 }
 
