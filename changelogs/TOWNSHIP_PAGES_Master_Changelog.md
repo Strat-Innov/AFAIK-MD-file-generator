@@ -1,4 +1,182 @@
 ## TOWNSHIP PAGES Master Changelog
+Posted: September 02, 2026 at 09:24 AM
+
+Changes since the previous generation:
+
+### Filinvest-Mimosa.aspx — Version 3
+<!-- modifiedAt:1787879894000 -->
+Editorial card
+* Content changed
+Other content
+* Content changed
+
+### City-De-Mare.aspx — Version 3
+<!-- modifiedAt:1787879912000 -->
+Other content
+* Content changed
+
+### FILINVEST-CITY.aspx — Version 3
+<!-- modifiedAt:1787879918000 -->
+Hero
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Divider
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Divider
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+People
+* Don Don Mari S. Ubaldo — FC and Township Head (New)
+* Aaron R. Dela Rosa — Marketing Manager (Removed)
+* Roselle Anne S. Sales — Assistant Marketing Manager (Removed)
+* Celina Gabrielle R. Lozare — Marketing Associate (Removed)
+People
+* Jose Rafael M. Yatco — Project Development Lead (New)
+* Apple F. Urmanita — Project Development Associate (New)
+* Frances Bonna C. Crisostomo — Senior Project Development Manager (New)
+* Carlos Jan P. Penas — Project Development Manager (New)
+* Kristine A. Mangaran — Project Development Associate (New)
+People
+* Tracey Elora B. San Pablo — Senior Project Development Manager (New)
+* Jose Rafael M. Yatco — Project Development Lead (New)
+* Jacob Karl G. Gonzalez — Project Development Associate (New)
+* Charlize Keri B. Hernandez — Project Development Associate (New)
+* Apple F. Urmanita — Project Development Associate (New)
+* Frances Bonna C. Crisostomo — Senior Project Development Manager (New)
+* Carlos Jan P. Penas — Project Development Manager (New)
+* Kristine A. Mangaran — Project Development Associate (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+---
+
+## TOWNSHIP PAGES Master Changelog
 Posted: July 21, 2026 at 05:17 PM
 
 Changes since the previous generation:
