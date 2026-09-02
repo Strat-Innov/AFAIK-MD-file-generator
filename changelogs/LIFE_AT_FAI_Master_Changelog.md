@@ -1,4 +1,187 @@
 ## LIFE AT FAI Master Changelog
+Posted: September 02, 2026 at 09:24 AM
+
+Changes since the previous generation:
+
+### PARKING-PRO-INC-(PPI).aspx — Version 3
+<!-- modifiedAt:1787879852000 -->
+Image
+* fileName: changed from "1817558707-image_2026-04-21_091033673.png" to "3154002726-Copy-of-Monday-Motivation-2026--5-_1787820653159.png"
+* imageSource: changed from "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)(2)(1)(2)(2)(2)(2)/copy-(6)-1817558707-image_2026-04-21_091033673.png" to "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)(2)(1)(2)(2)(2)(2)/3154002726-Copy-of-Monday-Motivation-2026--5-_1787820653159.png"
+People
+* Don Don Mari S. Ubaldo — FC and Township Head (New)
+* Adrian Russell J. Obien — Business Development Manager (New)
+* Carla Francesca L. Ceneta — Parking Support Assistant (Removed)
+* Gladys M. Biñas — Parking Support Lead (Removed)
+* Ma. Loraine S. Tanghal — Administrative Assistant (Removed)
+* Rogelio Jr. N. Ramos — Parking Support Specialist (Removed)
+
+### TECHNICAL-SUPPORT-GROUP.aspx — Version 3
+<!-- modifiedAt:1787879854000 -->
+Editorial card
+* Content changed
+People
+* Don Don Mari S. Ubaldo — FC and Township Head (New)
+* Adrilyn Maria Flor S. Adriano — Assistant Project Technical Manager (New)
+
+### OPERATIONS.aspx — Version 3
+<!-- modifiedAt:1787879856000 -->
+Image
+* fileName: changed from "1817558707-image_2026-04-21_091033673.png" to "1720144966-Copy-of-Monday-Motivation-2026--3-_1787820391464.png"
+* imageSource: changed from "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)(2)/copy-(1)-1817558707-image_2026-04-21_091033673.png" to "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)(2)/1720144966-Copy-of-Monday-Motivation-2026--3-_1787820391464.png"
+People
+* Levie C. Parohinog — Operations Head (New)
+* Haizelle C. Mariano — Assistant Operations Manager (New)
+* Arlene Joy G. Natan — Operations Lead (New)
+* Alvin R. Ramirez — Business Intelligence Specialist (Removed)
+* Apple A. Domingo — Registration Associate (Removed)
+* Coleen Pearl - Galang — Operations Assistant - External Liasion - Prestige (Removed)
+* Dick Anthony B. De Guzman — REGISTRATION SPECIALIST (Removed)
+* Dina C. Arizala — Registration Associate (Removed)
+* Jad Alfred B. Adora — Registration Associate (Removed)
+* Maylin A. Flores — REGISTRATION SPECIALIST (Removed)
+* Restytoto D. Peroy — Registration Associate (Removed)
+* Richele Anne S. Lotik — Registration Associate (Removed)
+
+### CRD.aspx — Version 3
+<!-- modifiedAt:1787879858000 -->
+Image
+* fileName: changed from "1817558707-image_2026-04-21_091033673.png" to "2843460801-Copy-of-Monday-Motivation-2026--2-_1787820247554.png"
+* imageSource: changed from "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)/1817558707-image_2026-04-21_091033673.png" to "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)/2843460801-Copy-of-Monday-Motivation-2026--2-_1787820247554.png"
+People
+* Michelle B. Lazatin — CUSTOMER RELATIONS GROUP HEAD (New)
+
+### FCAI.aspx — Version 3
+<!-- modifiedAt:1787879860000 -->
+Image
+* fileName: changed from "1817558707-image_2026-04-21_091033673.png" to "1539160958-Copy-of-Monday-Motivation-2026--1-.png"
+* imageSource: changed from "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)(2)(1)/copy-(2)-1817558707-image_2026-04-21_091033673.png" to "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)(2)(1)/1539160958-Copy-of-Monday-Motivation-2026--1-.png"
+People
+* Don Don Mari S. Ubaldo — FC and Township Head (New)
+* Roselyn A. Marlin — Facilities Administrative Associate (Removed)
+Other content
+* Content changed
+
+### SECURITY.aspx — Version 2
+<!-- modifiedAt:1787879860000 -->
+Image
+* fileName: changed from "1817558707-image_2026-04-21_091033673.png" to "3774967873-Copy-of-Monday-Motivation-2026.png"
+* imageSource: changed from "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)(2)(1)(2)(2)(2)/copy-(5)-1817558707-image_2026-04-21_091033673.png" to "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)(1)(2)(1)(2)(2)(2)/3774967873-Copy-of-Monday-Motivation-2026.png"
+People
+* Don Don Mari S. Ubaldo — FC and Township Head (New)
+* Jhaleen Karen C. Apas — Admin Assistant (Removed)
+* Haniel Kate M. Rigor — Security Specialist (Removed)
+* Cindy  Jovita — Access Control Assistant (Removed)
+Agent link
+* agentName: changed from "AFAIK Agent_copilots_header_crce9_louied" to "-AFAIK-_crce9_AFAIKMDNEWDATAA"
+* agentAuthor: changed from "John Louie D. Dichoso" to "Kirk Niel D. Ranches"
+
+### HUMAN-RESOURCES-AND-ADMIN.aspx — Version 4
+<!-- modifiedAt:1787879864000 -->
+People
+* Evangeline V. Herrera — HR Operations Head (New)
+* Jaezl May Ingeniero-Alvarez — HR Business Partner (New)
+* Ma. Angelica O. Pastor — HR Business Partner (New)
+Other content
+* Content changed
+
+### PROJECT-DEVELOPMENT-–-PRIMING-&-INNOVATION.aspx — Version 3
+<!-- modifiedAt:1787879876000 -->
+Editorial card
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Kristine A. Mangaran — Project Development Associate (Removed)
+
+### FINANCE.aspx — Version 3
+<!-- modifiedAt:1787879878000 -->
+People
+* Ronald F. Cuadro — FVP - Controller For Estate Management, High-End Projects, And C (New)
+* Anna Lorizze E. Marinas — Accounting Manager (New)
+* Bryan M. Quijano — Budget and Strategic Finance Manager (New)
+* Joseto M. Cortes — Accounting Manager (New)
+* Kristine Bernadette C. Citra — Accounting Manager (New)
+* Odeltha Odeza C. De Vera — Finance Manager (New)
+* Maria Lyka Gala-Fernandez — Accounting Manager (New)
+* Racquel B. Baltazar — Assistant Business Systems Intelligence Manager (New)
+* Princess Carla L. Cordero — Assistant Project Monitoring and Financial Run Manager (New)
+* Jocelyn U. Villacrucis — Senior Project Delivery Manager (Removed)
+* Joy E. Calumpong — Project Delivery Manager (Removed)
+* Karen D. Sim — Project Delivery Manager (Removed)
+* Maria Nikoletta D. Pili — Customer Service Manager (Removed)
+Agent link
+* agentName: changed from "AFAIK Agent_copilots_header_crce9_louied" to "-AFAIK-_crce9_AFAIKMDNEWDATAA"
+* agentAuthor: changed from "John Louie D. Dichoso" to "Kirk Niel D. Ranches"
+Other content
+* Content changed
+
+### EXTERNAL-AFFAIRS.aspx — Version 3
+<!-- modifiedAt:1787879880000 -->
+People
+* Don Don Mari S. Ubaldo — FC and Township Head (New)
+* Mary Lou P. Gilbuena — Admin Specialist (Removed)
+* Joyla A. Mesinas — Project Documentation Specialist (Removed)
+* Marnil D. Ilustrisimo — Project Documentation Assistant (Removed)
+* Nikke A. Del Rosario — Project Documentation Associate (Removed)
+
+### MARKETING.aspx — Version 5
+<!-- modifiedAt:1787879882000 -->
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Ma Carmencita R. Mogol — Marketing Manager (New)
+* Claudine Anne S. Arciaga — Marketing Manager (New)
+* Abi A. San Jose — Senior Marketing Manager (New)
+* Monique G. Pensotes — Marketing Manager (New)
+* Valine V. Aquino — Marketing Manager (New)
+* Sheila Therese I. Del Rosario — Senior Marketing Manager (New)
+* Roselle Anne S. Sales — Assistant Marketing Manager (Removed)
+* Norie Lei C. Laderas — Marketing Lead (Removed)
+* Celina Gabrielle R. Lozare — Marketing Associate (Removed)
+* Virgilio Cedrick C. Garcia — Administrative Associate (Removed)
+Other content
+* Content changed
+
+### SALES.aspx — Version 4
+<!-- modifiedAt:1787879886000 -->
+Image
+* fileName: changed from "92868878-image_2026-04-21_102700900.png" to "4178650792-viber_image_2026-08-14_15-44-52-726.jpg"
+* imageSource: changed from "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)/92868878-image_2026-04-21_102700900.png" to "/sites/FAIKnowledgeBase/SiteAssets/SitePages/ETCPLUS(RESOURCES)(1)(2)(2)(2)(2)/4178650792-viber_image_2026-08-14_15-44-52-726.jpg"
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+* Aldrin Joseph B. Hernandez — Assistant Sales Training Manager (Removed)
+
+### Strategy-and-Innovation.aspx — Version 3
+<!-- modifiedAt:1787879890000 -->
+Editorial card
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Anna P. Danganan — Project Development Manager (New)
+* John Louie D. Dichoso — Tech Business Partner (New)
+* Hannah Priscilla A. Literal — Data Analytics & Business Process Manager (New)
+* Kirk Niel D. Ranches — Data Analytics Specialist (New)
+Other content
+* Content changed
+
+### PD.aspx — Version 3
+<!-- modifiedAt:1787879912000 -->
+Editorial card
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Maria Angela M. Ongsip — Sr. Project Development Manager (New)
+* Abigael Mae D. Detablan — Project Development Manager (New)
+* Charles Emman V. Dolot — Project Development Manager (New)
+* Jomerlyn C. Borbon — Project Development Manager (New)
+People
+* Don Don Mari S. Ubaldo — FC and Township Head (New)
+* Gwen B. Sala — Deputy General Manager (New)
+Other content
+* Content changed
+
+---
+
+## LIFE AT FAI Master Changelog
 Posted: July 21, 2026 at 05:20 PM
 
 Changes since the previous generation:
