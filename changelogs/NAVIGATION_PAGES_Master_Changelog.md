@@ -1,4 +1,342 @@
 ## NAVIGATION PAGES Master Changelog
+Posted: September 02, 2026 at 09:24 AM
+
+Changes since the previous generation:
+
+### Employee-Playbook.aspx — Version 3
+<!-- modifiedAt:1787879850000 -->
+Quick links
+* FAI Employee Handbook (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/HR%20Core%20Process/FAIEmployeeHandbook%20(2).pdf) (New)
+* Dress Code Policy (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/HR%20Core%20Process/Done%202023%20FDC-P-00010%20Dress%20Code%20Policy.pdf) (New)
+Quick links
+* RAMCO – Timekeeping &amp; Payroll Management (https://ourlink.filinvest.com.ph/rvw/hub/index.html?_dc=1770271077598) (New)
+* Darwinbox – Talent &amp; Performance Management (https://filinvest.darwinbox.com/user/login) (New)
+* Ourlink – Workforce Monitoring (https://ourlinklitev2.filinvest.com.ph/Identity/Account/Login?ReturnUrl=/) (New)
+* Training Tracker (https://forms.cloud.microsoft/r/xcRtrtiqdv) (New)
+* FBSC Helpdesk (https://forms.office.com/pages/responsepage.aspx?id=thC3zUFwk0COb4CsAdbGWgPfV6Gl0IlJoiBxStzvFBlUQUdJM1dPUjkxWlY1TzU5WTJWV0Y1Q1gyUy4u&route=shorturl) (New)
+List
+* Content changed
+Other content
+* Content changed
+
+### Digital Library.aspx — Version 3
+<!-- modifiedAt:1787879862000 -->
+Quick links
+* Permits (/sites/FAIKnowledgeBase/SitePages/Permit.aspx) (New)
+* Sapphire (/sites/FAIKnowledgeBase/SitePages/SAPPHIRE.aspx) (New)
+* CALM (/sites/FAIKnowledgeBase/SitePages/CALM.aspx) (New)
+* FREBAS (/sites/FAIKnowledgeBase/SitePages/FREBAS.aspx) (New)
+* ETC PLUS (/sites/FAIKnowledgeBase/SitePages/ETCPLUS(RESOURCES).aspx) (New)
+* SAPPHIRE (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/SAPPHIRE.aspx) (Removed)
+* CALM (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/CALM.aspx) (Removed)
+* FREBAS (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/FREBAS.aspx) (Removed)
+* ETCPLUS(RESOURCES) (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/ETCPLUS(RESOURCES).aspx) (Removed)
+Quick links
+* PRIME (/sites/FAIKnowledgeBase/SitePages/PRIME.aspx) (New)
+Quick links
+* One Tech - Service Desk (https://accounts.zoho.com/samlauthrequest/847997117?serviceurl=https://onesupport.onetechfilinvest.com/app/847995850/HomePage.do&servicename=SDPOnDemand&portal_id=847997117&hide_signup=false) (New)
+Divider
+* Content changed
+Quick links
+* Budget Template Submission (/sites/FAIKnowledgeBase/SitePages/BUDGET-TEMPLATE-SUBMISSION.aspx) (New)
+* Request for Payment (RFP) (/sites/FAIKnowledgeBase/SitePages/Request-for-Payment-(RFP).aspx) (New)
+* Purchase Requisition (PR) (/sites/FAIKnowledgeBase/SitePages/Purchase-Requisition-(PR).aspx) (New)
+* Reimbursement Requests (/sites/FAIKnowledgeBase/SitePages/Reimbursement-Requests.aspx) (New)
+* Cash Advance (CA) (/sites/FAIKnowledgeBase/SitePages/Cash-Advance-(CA).aspx) (New)
+Quick links
+* Ramco (/sites/FAIKnowledgeBase/SitePages/Ramco.aspx) (New)
+* Darwinbox (/sites/FAIKnowledgeBase/SitePages/Darwinbox.aspx) (New)
+* OurLink (/sites/FAIKnowledgeBase/SitePages/OurLink.aspx) (New)
+Quick links
+* (docx) For Registration Expenses of SLO (/:w:/r/sites/FAIKnowledgeBase/_layouts/15/Doc.aspx?sourcedoc=%7bDB3E836F-EFB0-41F5-8F1C-E08CC96998A3%7d&file=PPM-FA211-007_Revolving%20Fund%20CA%20for%20Registration%20Expenses%20of%20SLO_rev1final.doc&action=default&mobileredirect=true) (New)
+* (PDF) Revolving Fund CA for Registration Expenses of SLO (1) 2 (1) (1).pdf (/sites/FAIKnowledgeBase/Shared%20Documents/Forms/AllItems.aspx?id=/sites/FAIKnowledgeBase/Shared%20Documents/Order%20Management%20System%20%28OMS%29%20for%20Operations/ACCOUNTING_PPM-FA211-007_Revolving%20Fund%20CA%20for%20Registration%20Expenses%20of%20SLO%20%281%29%202%20%281%29%20%281%29.pdf&parent=/sites/FAIKnowledgeBase/Shared%20Documents/Order%20Management%20System%20%28OMS%29%20for%20Operations) (New)
+Quick links
+* (docx) CWT Payment Thru Chinabank (/:w:/r/sites/FAIKnowledgeBase/_layouts/15/Doc.aspx?sourcedoc=%7bE56F3CBC-E5A9-40D9-96FC-C211997BEF14%7d&file=OMS-FIN-008_CWT%20Payment%20Thru%20Chinabank_4.6.21.doc&action=default&mobileredirect=true) (New)
+* (PDF) CWT Payment Thru Chinabank (/sites/FAIKnowledgeBase/Shared%20Documents/Forms/AllItems.aspx?id=/sites/FAIKnowledgeBase/Shared%20Documents/Order%20Management%20System%20%28OMS%29%20for%20Operations/OMS-FIN-008_CWT%20Payment%20Thru%20Chinabank_4.6.21-signed-signed%20%281%29.pdf&parent=/sites/FAIKnowledgeBase/Shared%20Documents/Order%20Management%20System%20%28OMS%29%20for%20Operations) (New)
+* (docx) Processing of Registration-related Payables_final (/:w:/r/sites/FAIKnowledgeBase/_layouts/15/Doc.aspx?sourcedoc=%7b47F46C0A-AB51-4AED-8B8E-E3D8C6A38EF4%7d&file=OMS-FIN-008_Processing%20of%20Registration-related%20Payables_final.docx&action=default&mobileredirect=true) (New)
+* (PDF) Processing of Registration-related Payables 1 1 (1).pdf (/sites/FAIKnowledgeBase/Shared%20Documents/Forms/AllItems.aspx?id=/sites/FAIKnowledgeBase/Shared%20Documents/Order%20Management%20System%20%28OMS%29%20for%20Operations/ACCOUNTING_OMS-FIN-008_Processing%20of%20Registration-related%20Payables%201%201%20%281%29.pdf&parent=/sites/FAIKnowledgeBase/Shared%20Documents/Order%20Management%20System%20%28OMS%29%20for%20Operations) (New)
+Quick links
+* Policy and Procedures for Procurement Special Requests (/sites/FAIKnowledgeBase/Shared%20Documents/Forms/AllItems.aspx?id=/sites/FAIKnowledgeBase/Shared%20Documents/Memo/Procurement/SCM-MEM-1697%20Policy%20and%20Procedures%20for%20Procurement%20Special%20Requests%20Signed%201.pdf&parent=/sites/FAIKnowledgeBase/Shared%20Documents/Memo/Procurement) (New)
+Quick links
+* Credit Card Automation Guide (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/Strategy%20and%20Innovation/PPG_MKTG_Credit%20Card%20Automation_040726.pdf) (New)
+* OneSupport Hub - Requestor Manual Ver2.1 (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/IT%20Core%20Process/OneSupport%20Hub%20-%20Requestor%20Manual%20Ver2.1.pdf) (New)
+* ETC Plus User Guide for PD (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/Strategy%20and%20Innovation/PPG_STIN_ETC%20Plus%20User%20Guide%20for%20PD_121925_v1.pdf) (New)
+* Permit System Phase 2 User Guide (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/External/Permit%20System%20Phase%202%20Userguide.pdf) (New)
+* ETC Plus User Guide for Sales (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/Strategy%20and%20Innovation/PPG_STIN_ETC%20Plus%20User%20Guide%20for%20Sales_121925_v1.pdf) (New)
+* RFP Approval Automation Guide (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/Strategy%20and%20Innovation/MKTG_PPG_RFP%20Approval%20Automation_040726_Signed.pdf) (New)
+* Genesys Admin Guide (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/CRD%20Core%20Process/Genesys%20Admin%20Guide.pdf) (New)
+* Sales- Exit Interview Form Automation Guide (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/Strategy%20and%20Innovation/PPG_SSLG_Digitalization%20of%20Exit%20Interview%20Form%20with%20Analytics_042323_Signed.pdf) (New)
+Quick links
+* Naming Convention Guidelines (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/2025%20Memo/PPG_STIN_Naming_Convention_Guidelines_072525_Signed.pdf) (New)
+* PD and S&amp;M Approval Matrix (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/2025%20Memo/Memo_PD%20and%20S%26M%20Approval%20Matrix.pdf) (New)
+* PD and S&amp;M Approval Matrix_REV1 (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/2025%20Memo/Memo_PD%20and%20S%26M%20Approval%20Matrix_REV_July1.pdf) (New)
+* PR and Paid Placements Policies Procedures and Guidelines (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/2025%20Memo/MKTG_PPG_PR%20and%20Paid%20Placements%20Policies%20Procedures%20and%20Guidelines_072325_Signed.pdf) (New)
+Quick links
+* Finance (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Operating Manual System (OMS) - FAI/Finance) (New)
+* Employees (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Operating Manual System (OMS) - FAI/Employees) (New)
+* Operations (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Operating Manual System (OMS) - FAI/Operations) (New)
+* Customer Journey (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Operating Manual System (OMS) - FAI/Customer Journey) (New)
+* Corporate Governance (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Operating Manual System (OMS) - FAI/Corporate Governance) (New)
+Divider
+* Content changed
+Quick links
+* Work Permit (/sites/FAIKnowledgeBase/SitePages/Work-Permit.aspx) (Removed)
+* Locator/Tenant Form (/sites/FAIKnowledgeBase/SitePages/Locator-Tenant-Form.aspx) (Removed)
+* Gate Pass (/sites/FAIKnowledgeBase/SitePages/Gate-Pass.aspx) (Removed)
+* OneSupport Hub - Requestor Manual Ver2.1 (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/IT%20Core%20Process/OneSupport%20Hub%20-%20Requestor%20Manual%20Ver2.1.pdf) (Removed)
+Quick links
+* Gate Pass (/sites/FAIKnowledgeBase/SitePages/Gate-Pass.aspx) (New)
+* Locator/Tenant Form (/sites/FAIKnowledgeBase/SitePages/Locator-Tenant-Form.aspx) (New)
+* Work Permit (/sites/FAIKnowledgeBase/SitePages/Work-Permit.aspx) (New)
+Other content
+* Content changed
+
+### Map.aspx — Version 3
+<!-- modifiedAt:1787879898000 -->
+Other content
+* Content changed
+
+### Project-Playbook.aspx — Version 3
+<!-- modifiedAt:1787879906000 -->
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Other content
+* Content changed
+
+### Home.aspx — Version 3
+<!-- modifiedAt:1787879908000 -->
+Edit image settings
+* fileName: 4022174428-2a38dccc-210c-401f-b062-f81be2190167.png (New)
+* imageSource: /sites/FAIKnowledgeBase/SiteAssets/SitePages/ITHelpdeskHome(1)/4022174428-2a38dccc-210c-401f-b062-f81be2190167.png (New)
+Quick links
+* Filinvest City (/sites/FAIKnowledgeBase/SitePages/FILINVEST-CITY.aspx) (New)
+* Employee Home Discount Program (https://mydreamhome.filinvest.com.ph/Identity/Account/Login?ReturnUrl=/ESP/UnitInformation.) (New)
+* PRIME (/sites/FAIKnowledgeBase/SitePages/PRIME.aspx) (New)
+* Employee Home Discount Program (/sites/FAIKnowledgeBase/Lists/Corporate%20Perks/DispForm.aspx?ID=8&e=4E3X0Z) (Removed)
+* Recap: HUMP DAY HUDDLE: MS CO-PILOT (https://teams.microsoft.com/l/meetingrecap?driveId=b%21pYNqWCKP1k-88MS1OCmGKz0VYZr0i6pMi2YplwQx01NcbSJ1uvn-SZPn5m5-yfD_&driveItemId=01SAQEQA3BUHHPD4KPCBH3QXWS7QXGFLGJ&sitePath=https://filinvest-my.sharepoint.com/:v:/g/personal/fai_hrad_filinvestcity_com/IQBhoc7x8U8QT7he0vwuYqzJAREwsR60U214ZAXtQGuJmEw&fileUrl=https://filinvest-my.sharepoint.com/personal/fai_hrad_filinvestcity_com/Documents/Recordings/HUMP+DAY+HUDDLE+MICROSOFT+CO-PILOT-20260225_135831-Meeting+Recording.mp4?web%3D1&iCalUid=040000008200E00074C5B7101A82E00800000000D1E14C610EA2DC0100000000000000001000000049B41CBD0D6A024A8CF8AA02BDCA5914&threadId=19:meeting_YWRmOWZjYWItZGI4Zi00YTZjLWExM2QtMTBmYzM1MDMyMjk3%40thread.v2&organizerId=f93829d2-d6e9-4e6b-b9bc-7007e3b0cb88&tenantId=cdb710b6-7041-4093-8e6f-80ac01d6c65a&callId=701300f1-2c7d-4788-a963-98e73b5eda05&threadType=Meeting&meetingType=Scheduled&subType=RecapSharingLink_RecapCore) (Removed)
+* PRIME (/sites/FAIKnowledgeBase/SitePages/Links.aspx#project-management-tools) (Removed)
+Editorial card
+* Content changed
+News
+* Content changed
+Other content
+* Content changed
+
+### Brands.aspx — Version 3
+<!-- modifiedAt:1787879910000 -->
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Hero
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Editorial card
+* Content changed
+Hero
+* Content changed
+Hero
+* Content changed
+
+### BUDGET-TEMPLATE-SUBMISSION.aspx — Version 3
+<!-- modifiedAt:1787879970000 -->
+Editorial card
+* Content changed
+Quick links
+* FY26 CAPEX Budget Template_blank (/sites/FAIKnowledgeBase/Shared%20Documents/Documents/FY26%20CAPEX%20Budget%20Template_blank.xlsx) (New)
+Other content
+* Content changed
+
+### Request-for-Payment-(RFP).aspx — Version 3
+<!-- modifiedAt:1787879978000 -->
+Hero
+* Content changed
+Quick links
+* MKTG_PPG_RFP Approval Automation_040726_Signed (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/Strategy%20and%20Innovation/MKTG_PPG_RFP%20Approval%20Automation_040726_Signed.pdf) (New)
+Agent link
+* agentName: changed from "AFAIK Agent_copilots_header_crce9_louied" to "-AFAIK-_crce9_AFAIKMDNEWDATAA"
+* agentAuthor: changed from "John Louie D. Dichoso" to "Kirk Niel D. Ranches"
+Other content
+* Content changed
+
+### About-Us.aspx — Version 3
+<!-- modifiedAt:1787879990000 -->
+Image
+* fileName: 2175622012-Untitled.png (New)
+* imageSource: /sites/FAIKnowledgeBase/SiteAssets/SitePages/About-Us/2175622012-Untitled.png (New)
+Other content
+* Content changed
+
+### FREBAS.aspx — Version 3
+<!-- modifiedAt:1787879994000 -->
+Editorial card
+* Content changed
+Divider
+* Content changed
+Divider
+* Content changed
+Divider
+* Content changed
+Divider
+* Content changed
+Other content
+* Content changed
+
+### CALM.aspx — Version 3
+<!-- modifiedAt:1787879998000 -->
+Editorial card
+* Content changed
+Divider
+* Content changed
+Other content
+* Content changed
+
+### SAPPHIRE.aspx — Version 3
+<!-- modifiedAt:1787880000000 -->
+Editorial card
+* Content changed
+Divider
+* Content changed
+Divider
+* Content changed
+Divider
+* Content changed
+Divider
+* Content changed
+Other content
+* Content changed
+
+### ETCPLUS(RESOURCES).aspx — Version 3
+<!-- modifiedAt:1787880018000 -->
+Editorial card
+* Content changed
+Quick links
+* PPG_STIN_ETC Plus User Guide for PD_121925_v1 (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Memo/Strategy and Innovation/PPG_STIN_ETC Plus User Guide for PD_121925_v1.pdf) (New)
+* PPG_STIN_ETC Plus User Guide for Sales_121925_v1 (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Memo/Strategy and Innovation/PPG_STIN_ETC Plus User Guide for Sales_121925_v1.pdf) (New)
+Agent link
+* agentName: changed from "AFAIK Agent_copilots_header_crce9_louied" to "-AFAIK-_crce9_AFAIKMDNEWDATAA"
+* agentAuthor: changed from "John Louie D. Dichoso" to "Kirk Niel D. Ranches"
+Other content
+* Content changed
+
+### PRIME.aspx — Version 3
+<!-- modifiedAt:1787880020000 -->
+Editorial card
+* Content changed
+Quick links
+* Filigree | Smartsheet (https://app.smartsheet.com/folders/ppQ8PvVPqHH5GcfJgWfRr7WFvfGMw4vwv7fH9CQ1) (New)
+* Offices &amp; RFOs | Smartsheet (https://app.smartsheet.com/folders/MPC6c8pGMHPGjpf8rq64m3XqpGHh2PpJG5FG2qV1) (New)
+* North Projects | Smartsheet (https://app.smartsheet.com/folders/4H7XwhxP8Vfgj2M7C655QRR6PMmrR2WVp99XFrP1) (New)
+* South Projects | Smartsheet (https://app.smartsheet.com/folders/F289GP6jPQW33f7Q6rjQhfvw4p48qGQJ9G4q4x31) (New)
+* Townships | Smartsheet (https://app.smartsheet.com/folders/ppQ8PvVPqHH5GcfJgWfRr7WFvfGMw4vwv7fH9CQ1) (New)
+* Strategy &amp; Innovation | Smartsheet (https://app.smartsheet.com/folders/ppQ8PvVPqHH5GcfJgWfRr7WFvfGMw4vwv7fH9CQ1) (New)
+* Marketing | Smartsheet (https://app.smartsheet.com/folders/ppQ8PvVPqHH5GcfJgWfRr7WFvfGMw4vwv7fH9CQ1) (New)
+Other content
+* Content changed
+
+### Purchase-Requisition-(PR).aspx — Version 3
+<!-- modifiedAt:1787880022000 -->
+Editorial card
+* Content changed
+Quick links
+* SCM-MEM-1697 Policy and Procedures for Procurement Special Requests Signed 1 (/sites/FAIKnowledgeBase/Shared%20Documents/Memo/Procurement/SCM-MEM-1697%20Policy%20and%20Procedures%20for%20Procurement%20Special%20Requests%20Signed%201.pdf) (New)
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+* Home Page (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/Home.aspx) (Removed)
+* Brand Page (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (Removed)
+* Project - Playbook Page (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (Removed)
+Agent link
+* agentName: changed from "AFAIK Agent_copilots_header_crce9_louied" to "-AFAIK-_crce9_AFAIKMDNEWDATAA"
+* agentAuthor: changed from "John Louie D. Dichoso" to "Kirk Niel D. Ranches"
+Other content
+* Content changed
+
+### Cash-Advance-(CA).aspx — Version 3
+<!-- modifiedAt:1787880024000 -->
+Editorial card
+* Content changed
+Quick links
+* CA Form (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Documents/CA Form.pdf) (New)
+Quick links
+* Home Page (/sites/FAIKnowledgeBase/SitePages/Home.aspx) (New)
+* Brand Page (/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (New)
+* Project - Playbook Page (/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (New)
+* Home Page (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/Home.aspx) (Removed)
+* Brand Page (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/Brands.aspx) (Removed)
+* Project - Playbook Page (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/SitePages/Project-Playbook.aspx) (Removed)
+Agent link
+* agentName: changed from "AFAIK Agent_copilots_header_crce9_louied" to "-AFAIK-_crce9_AFAIKMDNEWDATAA"
+* agentAuthor: changed from "John Louie D. Dichoso" to "Kirk Niel D. Ranches"
+Other content
+* Content changed
+
+### Reimbursement-Requests.aspx — Version 3
+<!-- modifiedAt:1787880028000 -->
+Editorial card
+* Content changed
+Quick links
+* Reimbursement (https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Documents/Reimbursement.xlsx) (New)
+Agent link
+* agentName: changed from "AFAIK Agent_copilots_header_crce9_louied" to "-AFAIK-_crce9_AFAIKMDNEWDATAA"
+* agentAuthor: changed from "John Louie D. Dichoso" to "Kirk Niel D. Ranches"
+Other content
+* Content changed
+
+### EventsPage.aspx — Version 3
+<!-- modifiedAt:1787880032000 -->
+Editorial card
+* Content changed
+
+---
+
+## NAVIGATION PAGES Master Changelog
 Posted: July 21, 2026 at 05:17 PM
 
 Changes since the previous generation:
