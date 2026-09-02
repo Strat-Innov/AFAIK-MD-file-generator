@@ -1,4 +1,284 @@
 ## PROJECT PLAYBOOK Master Changelog
+Posted: September 02, 2026 at 09:24 AM
+
+Changes since the previous generation:
+
+### THE-GLADES.aspx — Version 4
+<!-- modifiedAt:1787879922000 -->
+Hero
+* Content changed
+Divider
+* Content changed
+Divider
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Baby Lyn D. Atienza — Senior Marketing Manager (Removed)
+* Imajica May G. Cortez — Marketing Specialist (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Abi A. San Jose — Senior Marketing Manager (New)
+* Imajica May G. Cortez — Marketing Specialist (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### The-Village-Front.aspx — Version 3
+<!-- modifiedAt:1787879922000 -->
+Hero
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Claudine Anne S. Arciaga — Marketing Manager (Removed)
+* Laraine Faith I. Morata — Marketing Assistant (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Claudine Anne S. Arciaga — Marketing Manager (New)
+* Laraine Faith I. Morata — Marketing Assistant (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### PROMINENCE.aspx — Version 4
+<!-- modifiedAt:1787879930000 -->
+Hero
+* Content changed
+Divider
+* Content changed
+Divider
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Baby Lyn D. Atienza — Senior Marketing Manager (Removed)
+* Imajica May G. Cortez — Marketing Specialist (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Abi A. San Jose — Senior Marketing Manager (New)
+* Imajica May G. Cortez — Marketing Specialist (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### ARBORAGE.aspx — Version 4
+<!-- modifiedAt:1787879932000 -->
+Hero
+* Content changed
+Divider
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Baby Lyn D. Atienza — Senior Marketing Manager (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Abigael Mae D. Detablan — Project Development Manager (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Agent link
+* title: Chat with AFAIK Agent (New)
+* agentName: -AFAIK-_crce9_AFAIKMDNEWDATAA (New)
+* agentAuthor: Kirk Niel D. Ranches (New)
+Other content
+* Content changed
+
+### TWO-BOTANIKA.aspx — Version 4
+<!-- modifiedAt:1787879934000 -->
+Hero
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Apple S. Delos Reyes — Project Development Manager (Removed)
+* Pauline Regine — Project Development Manager (Removed)
+* Mira Louise M. Manalastas — Project Development Lead (Removed)
+People
+* Apple S. Delos Reyes — Project Development Manager (New)
+* Daniel H. Encinares — Project Development Manager (New)
+* Pauline Regine — Project Development Manager (New)
+* Mira Louise M. Manalastas — Project Development Lead (New)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Claudine Anne S. Arciaga — Marketing Manager (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### CELESTIA.aspx — Version 4
+<!-- modifiedAt:1787879936000 -->
+Hero
+* Content changed
+Divider
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Baby Lyn D. Atienza — Senior Marketing Manager (Removed)
+* Imajica May G. Cortez — Marketing Specialist (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Abi A. San Jose — Senior Marketing Manager (New)
+* Imajica May G. Cortez — Marketing Specialist (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### The-Crib-Alabang.aspx — Version 3
+<!-- modifiedAt:1787879938000 -->
+Hero
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Alyzza May F. Ramos — Corporate Sales & Leasing Manager (Removed)
+* Magell Maru D. Mejia — Lease and Marketing Specialist (Removed)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+* Alyzza May F. Ramos — Corporate Sales & Leasing Manager (New)
+* Magell Maru D. Mejia — Lease and Marketing Specialist (New)
+Other content
+* Content changed
+
+### STUDIO-N.aspx — Version 3
+<!-- modifiedAt:1787879940000 -->
+Hero
+* Content changed
+Divider
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Baby Lyn D. Atienza — Senior Marketing Manager (Removed)
+* Daryl Dee A. Flores — Marketing Assistant (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Abi A. San Jose — Senior Marketing Manager (New)
+* Daryl Dee A. Flores — Marketing Assistant (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### THE-LEVELS.aspx — Version 4
+<!-- modifiedAt:1787879942000 -->
+Hero
+* Content changed
+Divider
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Baby Lyn D. Atienza — Senior Marketing Manager (Removed)
+* Ma. Nicolette A. Sanchez — Marketing Associate (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Abi A. San Jose — Senior Marketing Manager (New)
+* Ma. Nicolette A. Sanchez — Marketing Associate (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### BOTANIKA-TOWER-1.aspx — Version 4
+<!-- modifiedAt:1787879942000 -->
+Hero
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Claudine Anne S. Arciaga — Marketing Manager (Removed)
+* Florianne A. Alvarez — Marketing Specialist - 1001 Parkway (Removed)
+People
+* Daniel H. Encinares — Project Development Manager (New)
+* Daryl Megan A. Opulencia — Project Development Associate (New)
+* Mira Louise M. Manalastas — Project Development Lead (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Claudine Anne S. Arciaga — Marketing Manager (New)
+* Florianne A. Alvarez — Marketing Specialist - 1001 Parkway (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### 1001-Parkway.aspx — Version 4
+<!-- modifiedAt:1787879950000 -->
+Hero
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Claudine Anne S. Arciaga — Marketing Manager (Removed)
+* Florianne A. Alvarez — Marketing Specialist - 1001 Parkway (Removed)
+People
+* Daniel H. Encinares — Project Development Manager (New)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Claudine Anne S. Arciaga — Marketing Manager (New)
+* Florianne A. Alvarez — Marketing Specialist - 1001 Parkway (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### GOLF-RIDGE.aspx — Version 4
+<!-- modifiedAt:1787879958000 -->
+Hero
+* Content changed
+Quick links
+* Golf Ridge Private Estate - Filigree (https://filigree.com.ph/properties/golf-ridge/#banner) (Removed)
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Claudine Anne S. Arciaga — Marketing Manager (Removed)
+* Laraine Faith I. Morata — Marketing Assistant (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Claudine Anne S. Arciaga — Marketing Manager (New)
+* Laraine Faith I. Morata — Marketing Assistant (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### ParkwayCorporateCenter.aspx — Version 3
+<!-- modifiedAt:1787879964000 -->
+Hero
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Baby Lyn D. Atienza — Senior Marketing Manager (Removed)
+* Carol Jeline G. Raquedan — Marketing Associate (Removed)
+People
+* Rula Yael D. Gongora — Assistant Vice President - Marketing (New)
+* Abi A. San Jose — Senior Marketing Manager (New)
+* Carol Jeline G. Raquedan — Marketing Associate (New)
+People
+* Melanie L. Glinofria — Sales Support and Leasing Group Head (New)
+Other content
+* Content changed
+
+### ENTRATA-RETAIL-CENTER.aspx — Version 3
+<!-- modifiedAt:1787879966000 -->
+Hero
+* Content changed
+Other content
+* Content changed
+
+### DAANG-HARI.aspx — Version 3
+<!-- modifiedAt:1787879968000 -->
+Hero
+* Content changed
+People
+* Daphne Odra-Sanchez — Senior Vice President - Residentials and Estates (New)
+* Aaron R. Dela Rosa — Marketing Manager (Removed)
+* Roselle Anne S. Sales — Assistant Marketing Manager (Removed)
+* Celina Gabrielle R. Lozare — Marketing Associate (Removed)
+People
+* Frances Bonna C. Crisostomo — Senior Project Development Manager (New)
+* Carlos Jan P. Penas — Project Development Manager (New)
+* Kristine A. Mangaran — Project Development Associate (New)
+Other content
+* Content changed
+
+---
+
+## PROJECT PLAYBOOK Master Changelog
 Posted: July 21, 2026 at 05:31 PM
 
 Changes since the previous generation:
