@@ -151,6 +151,14 @@ and that the archive's entries round-trip to the canonical digests.
 > builder passes a fixed snapshot clock (`2026-08-31T00:00:00Z`) so the
 > bytes are stable. Arm C carries no clock.
 
+> **Scope and pre-flight.** The benchmark now runs over a deliberately
+> selected **128-page** subset of the 133-page snapshot, and the
+> nine-question Copilot Studio pre-flight has been run.
+> [`SCOPE.md`](SCOPE.md) records the selection and the two open items it
+> leaves — the EMPLOYEE PLAYBOOK membership, and the fact that **the
+> 742-question set below is not valid for the 128-page scope and must be
+> regenerated**. [`PREFLIGHT.md`](PREFLIGHT.md) records the outcome.
+
 ## 2. The knowledge snapshot
 
 Every arm is built from **one fixed set: all 133 August 2026 pages**.
