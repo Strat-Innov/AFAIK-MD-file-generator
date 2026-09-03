@@ -26,3 +26,9 @@ benchmark-artifacts/
 # names disclose the internal site structure and this repository is
 # public — same reasoning as the question set above. See benchmark/SCOPE.md.
 benchmark/scope-128.json
+
+# Import-ready CSV export of the question set. Same content, same
+# reason: the contact questions' answers are employee names and work
+# email addresses, and this repository is public. The exporter is
+# committed, its output is not.
+benchmark/csv/
