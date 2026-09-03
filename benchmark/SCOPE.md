@@ -1,7 +1,9 @@
 # Benchmark scope — the selected 128-page set
 
-**Status: recorded, not fully enumerable.** Read §3 before running the
-full benchmark.
+**Status: NOT closed.** 123 of the 128 pages are enumerated exactly; the
+remaining five are one of two halves of a known ten-page set, and the
+export that would settle it has not been supplied. Read §2 and §3 before
+running the full benchmark.
 
 The generator, parser, optimizer, validator, benchmark-generation code
 and application code are unchanged by this document. It records a
@@ -28,6 +30,12 @@ not missing data, and must not be reported as data loss.
 | EMPLOYEE PLAYBOOK | 5 | **no — see §2** |
 | **Total** | **128** | 123 of 128 |
 
+The 123 enumerated filenames are listed per bucket in
+`benchmark/scope-128.json`. That file is **gitignored**: page names
+disclose the internal site structure and this repository is public, the
+same reasoning that keeps the corpus and the question set out. Regenerate
+it locally rather than committing it.
+
 All arms compare the same 128 pages. Arm A is the exception and §4
 explains why that matters.
 
@@ -52,9 +60,20 @@ Q2 and Q3: `FORTUNE-HILL.aspx` and `STUDIO-CITY.aspx` are out of scope.
 `THE-SIGNATURE.aspx` is a residential project page and almost certainly
 the third, but that is an inference, not a record.
 
-**To close this**, supply `EMPLOYEE-PLAYBOOK_Master.md` (or the Unsorted
-list) and the 128 can be enumerated exactly. Until then the scope is
-"123 named pages plus five of seven candidates".
+Reconciled with normalized filename comparison, so
+`PROJECT-DEVELOPMENT-#U2013-PRIMING-&-INNOVATION.aspx` (corpus spelling)
+and `PROJECT-DEVELOPMENT-–-PRIMING-&-INNOVATION.aspx` (export spelling)
+count as one page. Checks that passed: no page appears in two buckets,
+and every enumerated page exists in the snapshot.
+
+**To close this**, supply the EMPLOYEE PLAYBOOK bucket export — the
+Master file's `Total Files:` header and table of contents name its five
+pages outright — or the Unsorted list. Either one determines the other.
+An attempt to supply it did not reach this session; only the original
+`EmployeePlaybook.zip` (the 133-page corpus, not a bucket export) is
+present. **No filename below is assigned by arithmetic**: the split of
+the ten is not derivable from counts, and guessing it would put the
+wrong five pages in a benchmark that is meant to be reproducible.
 
 `LOCATORS` and `LIFE AT FAI` are taken as unchanged at 51 and 16: the
 counts match the earlier exports, and no re-export was supplied to

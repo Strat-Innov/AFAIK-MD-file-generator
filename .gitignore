@@ -22,3 +22,7 @@ benchmark/question-set.md
 # See benchmark/README.md.
 benchmark-artifacts/
 
+# Resolved benchmark scope manifest (bucket -> page filenames). Page
+# names disclose the internal site structure and this repository is
+# public — same reasoning as the question set above. See benchmark/SCOPE.md.
+benchmark/scope-128.json

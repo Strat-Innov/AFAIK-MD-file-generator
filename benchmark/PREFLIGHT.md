@@ -44,7 +44,7 @@ probes, not as calibrated depth probes.
 
 | Arm | Knowledge | PASS | PARTIAL | NOT RETRIEVED |
 |---|---|---:|---:|---:|
-| A | SharePoint only | 6 | 1 | 2 |
+| A | SharePoint only | 5 | 1 | 3 |
 | B | SharePoint + 6 Master MD files | 8 | 1 | 0 |
 | C | SharePoint + 6 AI-optimized MD files | 7 | 2 | 0 |
 
@@ -54,27 +54,30 @@ Non-PASS results, with the reason recorded:
 |---|---|---|---|
 | A | Q4 | NOT RETRIEVED | — |
 | A | Q5 | NOT RETRIEVED | — |
+| A | Q9 | NOT RETRIEVED | — |
 | A | Q6 | PARTIAL | Person and email retrieved; the role association was not explicitly established. |
 | B | Q7 | PARTIAL | The Facebook page identity was retrieved; the actual URL was not surfaced. |
 | C | Q7 | PARTIAL | The correct URL text was surfaced — `https://www.facebook.com/1001Parkway/` — but the rendered clickable target was malformed, the citation marker being folded into the href: `https://www.facebook.com/1001Parkway/**%5B1`. Retrieval correct, link output defective. |
 
-Arm A's Q9 is recorded as NOT RETRIEVED in the operator's count of two;
-the two NOT RETRIEVED results are Q4 and Q5 by the per-question detail
-above. **This is an inconsistency in the record and should be resolved
-against the raw transcripts before the numbers are cited anywhere.**
+Arm A therefore reconciles to nine: PASS on Q1, Q2, Q3, Q7, Q8;
+PARTIAL on Q6; NOT RETRIEVED on Q4, Q5, Q9. An earlier draft of this
+record carried 6 PASS / 2 NOT RETRIEVED, which did not reconcile against
+the per-question detail; the operator confirmed 5 / 1 / 3 and that is
+what stands.
 
 ## 3. What this does and does not show
 
 Supported by the run as recorded:
 
-- Both uploaded representations retrieved Q4 and Q5, which SharePoint
-  alone did not. On these two late-page location probes, uploading a
-  Master file changed a NOT RETRIEVED into a PASS.
-- Both representations retrieved the Wilcon Depot parking association
-  (Q9) — rate with its own schedule, not fused with the transportation
-  hub's `PHP 20.00` a few lines away on the same page. That is the
-  specific failure the generator's association validation exists to
-  prevent, holding at the Copilot layer.
+- SharePoint alone failed to retrieve Q4, Q5 and Q9; both uploaded
+  representations retrieved all three. Those are the two late-page
+  location probes and the structural-association probe — the three
+  hardest questions in the set, and the only three Arm A missed.
+- Q9 is the association probe specifically: the Wilcon Depot parking
+  rate with its own schedule, not fused with the transportation hub's
+  `PHP 20.00` a few lines away on the same page. That is the exact
+  failure the generator's association validation exists to prevent, and
+  it held at the Copilot layer in both arms.
 
 Not supported, and not to be claimed:
 
