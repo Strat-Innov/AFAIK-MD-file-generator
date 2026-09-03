@@ -387,12 +387,21 @@ export default function App() {
 
   const activeBucket = ["ManageTags", "Changelog", "Benchmark"].includes(selected) ? null : selected;
 
-  // The benchmark builds ONE snapshot from every file this session holds,
-  // Unsorted included: it deliberately ignores tags, because the corpus
-  // carries no tag assignment and inventing one would add a second
-  // variable to the experiment. Deduped the same way a bucket is, so a
-  // file dropped into two tags cannot appear twice in the artifact.
+  // Two benchmark packagings, both fed from this session's own state.
+  //
+  // The five-bucket package cuts on the production boundaries, so it is
+  // the bucket map itself — Unsorted excluded, because those files have
+  // no bucket to belong to, and passed separately so the workspace can
+  // refuse to build rather than quietly leave them out.
+  //
+  // The consolidated pair ignores tags entirely and pools everything,
+  // Unsorted included. Deduped the same way a bucket is, so a file
+  // dropped into two tags cannot appear twice in the artifact.
   const benchmarkFiles = dedupeKeepingLatest(Object.values(buckets).flat()).files;
+  const benchmarkBuckets = Object.fromEntries(
+    Object.entries(buckets).filter(([name, files]) => name !== UNSORTED && files.length > 0)
+  );
+  const unsortedFiles = buckets[UNSORTED] || [];
 
   const counts = Object.fromEntries(Object.entries(buckets).map(([k, v]) => [k, v.length]));
 
@@ -454,7 +463,9 @@ export default function App() {
           </>
         )}
         {selected === "Changelog" && <ChangelogDetailView tags={tags} />}
-        {selected === "Benchmark" && <BenchmarkExport files={benchmarkFiles} />}
+        {selected === "Benchmark" && (
+          <BenchmarkExport files={benchmarkFiles} bucketMap={benchmarkBuckets} unsortedFiles={unsortedFiles} />
+        )}
         {activeBucket && (
           <BucketView
             bucket={activeBucket}

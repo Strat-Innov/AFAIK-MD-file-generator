@@ -34,13 +34,61 @@ or knowing this directory exists:
 > Load the corpus → **Benchmark** in the sidebar → *Generate Benchmark
 > Artifacts* → *Download Both* → upload to Copilot Studio.
 
-*Download Both* gives one archive, `AUGUST-2026-COPILOT-BENCHMARK.zip`,
-holding `AUGUST-2026-CORPUS_Master_File.md` and
-`AUGUST-2026-CORPUS_AI_File.md`. Each arm can also be downloaded on its
-own, as can `manifest.json`.
+There are two packagings, and the workspace offers both. Both hold
+packaging constant across arms, which is what makes the comparison mean
+anything.
+
+#### The Copilot-safe package — recommended
+
+`AUGUST-2026-COPILOT-BENCHMARK.zip`, **5 files per arm**:
+
+```
+ARM-B/  PROJECT-PLAYBOOK_Master.md   TOWNSHIP-PAGES_Master.md
+        NAVIGATION-PAGES_Master.md   LOCATORS_Master.md
+        LIFE-AT-FAI-PAGE_Master.md
+ARM-C/  PROJECT-PLAYBOOK_AI.md       TOWNSHIP-PAGES_AI.md
+        NAVIGATION-PAGES_AI.md       LOCATORS_AI.md
+        LIFE-AT-FAI-PAGE_AI.md
+manifest.json
+```
+
+This is **not** a size-driven split of the consolidated file. Each Arm B
+file is the Master file that bucket already produces — the same
+`buildMaster(bucket, files, clock)` call `buildOutputs()` makes,
+differing only in the fixed snapshot clock — and each Arm C file is its
+AI-optimized counterpart. Same buckets, same pages, same file count per
+arm; representation is the only difference.
+
+It exists because the tenant's *Add knowledge* upload refuses a file
+above **16 MB**, and the consolidated Arm B is 37 MB. (Microsoft
+documents 512 MB for an uploaded knowledge source and 16 MB for Code
+Interpreter analysis; the upload path in front of us enforces the
+smaller number.) Measured over the August corpus the largest file is
+`NAVIGATION-PAGES_Master.md` at 13.52 MB — **80.6%** of the limit. Real
+headroom, but not generous: a few more large pages in that one bucket
+would push it over. The workspace refuses to hand over a package
+containing an oversized file rather than letting it fail on the upload
+screen.
+
+Because the corpus carries no tag assignment, the partition is implicit
+nowhere — the manifest records which pages went into which bucket, and a
+result is reproducible only against the partition it was built from. The
+workspace also refuses to build while any file is still **Unsorted**,
+since those pages belong to no bucket and would otherwise be silently
+left out.
+
+#### The consolidated arms — alternative
+
+`AUGUST-2026-CORPUS_Consolidated-Arms.zip`, one file per arm over all
+133 pages. Its checksums are the frozen ones this work was verified
+against, and it remains the right shape wherever a single large file can
+be uploaded. Each arm can also be downloaded on its own, as can
+`manifest.json`.
 
 The workspace shows the snapshot identity (name, generator, clock, file
-count, file-set SHA-256) and one card per arm: filename, size, page
+count, file-set SHA-256), a per-file table for the package (size,
+percentage of the upload limit, SHA-256), and for the consolidated pair
+one card per arm: filename, size, page
 count, SHA-256, and for Arm C the coverage result with its
 source / represented / untraceable unit counts. *Verify Artifacts*
 re-derives both digests from the bytes in hand and reports whether they
@@ -117,8 +165,8 @@ SHA-256 are recorded in the manifest.
 
 | | Arm A | Arm B | Arm C |
 |---|---|---|---|
-| **Knowledge source** | live SharePoint site only | SharePoint + consolidated MD | SharePoint + AI-optimized MD |
-| **Files uploaded** | none | `arm-b/AUGUST-2026-CORPUS_Master_File.md` | `arm-c/AUGUST-2026-CORPUS_AI_File.md` |
+| **Knowledge source** | live SharePoint site only | SharePoint + Master MD | SharePoint + AI-optimized MD |
+| **Files uploaded** | none | the five `ARM-B/*_Master.md` files | the five `ARM-C/*_AI.md` files |
 | **Pages represented** | 133 (live) | 133 | 133 |
 | **Representation** | SharePoint's own indexing | raw `.aspx` in fences + decoded canvas | extracted user-visible content |
 
@@ -134,16 +182,18 @@ SHA-256 are recorded in the manifest.
 **Varying — the single experimental variable:**
 
 - the knowledge representation uploaded alongside SharePoint: nothing,
-  Arm B's file, or Arm C's file
+  Arm B's files, or Arm C's files
 
-Arms B and C use **identical packaging** — one consolidated file each,
-covering the same 133 pages. That is deliberate: splitting one arm into
-per-page files and not the other would confound representation with
-chunking, and it would no longer be possible to say which caused a
-difference.
+Arms B and C use **identical packaging** — five files each, cut on the
+same production bucket boundaries, covering the same 133 pages. That is
+deliberate: splitting one arm differently from the other would confound
+representation with chunking, and it would no longer be possible to say
+which caused a difference. The five-bucket shape is also what the app
+actually produces, so the result speaks to the real workflow rather than
+to a packaging that exists only for the experiment.
 
-Remove the previous arm's uploaded file before loading the next, and
-confirm the agent's knowledge list is empty for Arm A.
+Remove the previous arm's uploaded files before loading the next — all
+five — and confirm the agent's knowledge list is empty for Arm A.
 
 ## 4. Scoring
 

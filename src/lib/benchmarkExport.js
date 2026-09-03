@@ -44,8 +44,33 @@ export const SNAPSHOT_CLOCK = new Date(Date.UTC(2026, 7, 31, 0, 0, 0));
 
 export const ARM_B_FILE = `${SNAPSHOT}_Master_File.md`;
 export const ARM_C_FILE = `${SNAPSHOT}_AI_File.md`;
-// Both arms in one download, so the pre-flight is a single click.
+/* ---- packaging ----
+ * Two shapes, both with identical packaging across arms:
+ *
+ *   the Copilot-safe package  5 files per arm, one per production
+ *                             bucket — the recommended package, and the
+ *                             only one this tenant's "Add knowledge"
+ *                             upload accepts, since it caps a file at
+ *                             16 MB and the consolidated Arm B is 37 MB
+ *   the consolidated arms     1 file per arm — kept because it is what
+ *                             the frozen checksums describe, and it is
+ *                             still the right shape wherever a single
+ *                             large file can be uploaded
+ */
 export const BENCHMARK_ZIP_FILE = `${SNAPSHOT.replace(/-CORPUS$/, "")}-COPILOT-BENCHMARK.zip`;
+export const CONSOLIDATED_ZIP_FILE = `${SNAPSHOT}_Consolidated-Arms.zip`;
+
+// Observed on the tenant: "Add knowledge" refuses a file above this.
+// Microsoft documents 512 MB for an uploaded knowledge source and 16 MB
+// for Code Interpreter analysis; the upload path in front of us enforces
+// the smaller number, so that is what the package is checked against.
+export const COPILOT_FILE_LIMIT = 16 * 1024 * 1024;
+
+// "LIFE AT FAI PAGE" -> "LIFE-AT-FAI-PAGE". The bucket name is the
+// person's own tag, so it is carried through rather than renamed.
+export function bucketSlug(name) {
+  return String(name).trim().replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toUpperCase();
+}
 
 /* ---- the artifacts the pre-flight was verified against ----
  * Hashes only — nothing here reproduces corpus content. They let the
@@ -194,4 +219,110 @@ export async function verifyArtifacts({ armB, armC }) {
 // marked stale the moment the staged files change underneath it.
 export function fileSetSignature(files) {
   return [...files].map((f) => f.name).sort().join("\u0000");
+}
+
+/* ------------------------------------------------------------------ *
+ * The Copilot-safe package: both arms, split along the SAME production
+ * bucket boundaries.
+ *
+ * This is not a size-driven split of the consolidated file. Each bucket
+ * is generated the way the app already generates that bucket —
+ * buildMaster(bucket, files, clock) and generateOptimized(bucket, files),
+ * the identical calls buildOutputs() makes — so a bucket's Arm B file is
+ * the production Master file for that tag, differing only in carrying
+ * the fixed snapshot clock instead of the wall clock.
+ *
+ * Because both arms are cut on the same boundaries and cover the same
+ * pages, packaging is held constant and representation remains the only
+ * variable, which is the whole point of the experiment.
+ *
+ * `bucketMap` is { [bucketName]: files[] } — the app's own bucket state,
+ * which is the only authoritative record of the boundaries. The corpus
+ * carries no tag assignment, so the partition is recorded in the
+ * manifest: a result is reproducible only against the partition it was
+ * built from.
+ * ------------------------------------------------------------------ */
+export async function buildBucketPackage(bucketMap, { builtAt = new Date() } = {}) {
+  const buckets = Object.entries(bucketMap)
+    .map(([name, files]) => ({ name, files: files || [] }))
+    .filter((b) => b.files.length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const allNames = buckets.flatMap((b) => b.files.map((f) => f.name)).sort();
+  const filesSha256 = await sha256(allNames.join("\n"));
+
+  const armB = [];
+  const armC = [];
+  const failed = [];
+  const totals = { sourceUnits: 0, representedUnits: 0, untraceableUnits: 0 };
+
+  for (const bucket of buckets) {
+    const slug = bucketSlug(bucket.name);
+    const master = buildMaster(bucket.name, bucket.files, SNAPSHOT_CLOCK);
+    armB.push({
+      arm: "B", bucket: bucket.name, filename: `${slug}_Master.md`, file: `ARM-B/${slug}_Master.md`,
+      md: master, bytes: byteLength(master), sha256: await sha256(master), pages: bucket.files.length,
+    });
+
+    const optimized = generateOptimized(bucket.name, bucket.files);
+    if (optimized.status !== "PASS") failed.push({ bucket: bucket.name, result: optimized });
+    totals.sourceUnits += optimized.totals.sourceUnits;
+    totals.representedUnits += optimized.totals.representedUnits;
+    totals.untraceableUnits += optimized.totals.unmatched;
+    armC.push({
+      arm: "C", bucket: bucket.name, filename: `${slug}_AI.md`, file: `ARM-C/${slug}_AI.md`,
+      md: optimized.md, bytes: optimized.status === "PASS" ? byteLength(optimized.md) : 0,
+      sha256: optimized.status === "PASS" ? await sha256(optimized.md) : null,
+      pages: optimized.pages.length,
+      validation: {
+        status: optimized.status,
+        sourceUnits: optimized.totals.sourceUnits,
+        representedUnits: optimized.totals.representedUnits,
+        untraceableUnits: optimized.totals.unmatched,
+      },
+    });
+  }
+
+  const status = failed.length === 0 ? "PASS" : "FAIL";
+  // Checked before the package is offered, not after it is uploaded.
+  const oversize = [...armB, ...armC].filter((a) => a.bytes > COPILOT_FILE_LIMIT);
+  const pages = buckets.reduce((n, b) => n + b.files.length, 0);
+
+  const manifest = {
+    snapshot: SNAPSHOT,
+    packaging: "five-bucket",
+    generatorVersion: GENERATOR_VERSION,
+    snapshotClock: SNAPSHOT_CLOCK.toISOString(),
+    builtAt: builtAt.toISOString(), // informational only; not part of any checksum
+    corpusPages: pages,
+    fileSizeLimit: COPILOT_FILE_LIMIT,
+    // The boundaries this package was cut on. Without these a result
+    // cannot be reproduced, since the corpus carries no tag assignment.
+    buckets: buckets.map((b) => ({ name: b.name, slug: bucketSlug(b.name), pages: b.files.map((f) => f.name).sort() })),
+    arms: {
+      B: {
+        description: "Master representation, one file per production bucket",
+        files: armB.map(({ arm, md, ...rest }) => rest),
+      },
+      C: {
+        description: "AI-optimized representation, the same buckets — published only on a validation PASS",
+        files: armC.map(({ arm, md, ...rest }) => rest),
+        validation: { status, ...totals },
+      },
+    },
+    files: allNames,
+    filesSha256,
+  };
+
+  return { snapshot: SNAPSHOT, generatorVersion: GENERATOR_VERSION, buckets, armB, armC, status, failed, totals, oversize, pages, filesSha256, manifest };
+}
+
+// The archive laid out for upload: ARM-B/ and ARM-C/ side by side, plus
+// the manifest that says what each file is and what it hashes to.
+export function packageEntries(pkg) {
+  return [
+    ...pkg.armB.map((a) => ({ name: a.file, text: a.md })),
+    ...pkg.armC.map((a) => ({ name: a.file, text: a.md })),
+    { name: "manifest.json", text: JSON.stringify(pkg.manifest, null, 2) },
+  ];
 }

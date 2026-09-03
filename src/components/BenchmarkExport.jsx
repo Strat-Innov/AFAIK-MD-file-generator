@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import {
   Download, FlaskConical, Loader2, ShieldCheck, ShieldAlert, Check, X,
-  AlertTriangle, RefreshCw, FileArchive, Fingerprint, Package,
+  AlertTriangle, RefreshCw, FileArchive, Fingerprint, Package, Layers,
 } from "lucide-react";
 import {
-  buildBenchmarkArtifacts, compareToCanonical, verifyArtifacts, fileSetSignature,
-  CANONICAL, SNAPSHOT, SNAPSHOT_CLOCK, BENCHMARK_ZIP_FILE,
+  buildBenchmarkArtifacts, buildBucketPackage, packageEntries, compareToCanonical,
+  verifyArtifacts, fileSetSignature, CANONICAL, SNAPSHOT, SNAPSHOT_CLOCK,
+  BENCHMARK_ZIP_FILE, CONSOLIDATED_ZIP_FILE, COPILOT_FILE_LIMIT,
 } from "../lib/benchmarkExport";
 import { createZip } from "../lib/zip";
 import { GENERATOR_VERSION } from "../lib/version";
@@ -141,7 +142,201 @@ function ArmCard({ title, subtitle, artifact, matchesCanonical, verified, accent
   );
 }
 
-export default function BenchmarkExport({ files }) {
+/* ------------------------------------------------------------------ *
+ * The recommended package: both arms cut on the same five production
+ * bucket boundaries, so no file approaches the 16 MB the tenant's
+ * "Add knowledge" upload enforces, and packaging stays constant across
+ * arms — 5 files each, same buckets, same pages. Only the
+ * representation differs, which is what the experiment is measuring.
+ * ------------------------------------------------------------------ */
+function PackageSection({ bucketMap, unsortedFiles }) {
+  const [state, setState] = useState("idle");
+  const [pkg, setPkg] = useState(null);
+  const [zipping, setZipping] = useState(false);
+  const [error, setError] = useState("");
+
+  const buckets = Object.entries(bucketMap || {});
+  const staged = buckets.reduce((n, [, f]) => n + f.length, 0);
+  const orphans = unsortedFiles || [];
+  const signature = fileSetSignature(buckets.flatMap(([name, f]) => f.map((x) => `${name}\u0001${x.name}`)));
+  const stale = Boolean(pkg) && pkg.signature !== signature;
+
+  const generate = async () => {
+    setState("working");
+    setError("");
+    setPkg(null);
+    await new Promise((r) => setTimeout(r, 0));
+    try {
+      const built = await buildBucketPackage(bucketMap);
+      setPkg({ ...built, signature });
+      setState("done");
+    } catch (e) {
+      setError(e.message || String(e));
+      setState("error");
+    }
+  };
+
+  const downloadPackage = async () => {
+    setZipping(true);
+    try {
+      const zip = await createZip(packageEntries(pkg), { modifiedAt: SNAPSHOT_CLOCK });
+      saveBlob(BENCHMARK_ZIP_FILE, new Blob([zip], { type: "application/zip" }));
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setZipping(false);
+    }
+  };
+
+  const pass = pkg?.status === "PASS";
+  const oversize = pkg?.oversize?.length ?? 0;
+  // Every reason the package must not be handed over, checked here
+  // rather than discovered on the upload screen.
+  const blocked = !pkg || stale || !pass || oversize > 0 || orphans.length > 0;
+
+  return (
+    <div className="space-y-4">
+      <Card
+        title="Copilot-safe benchmark package"
+        right={
+          <button
+            onClick={generate}
+            disabled={state === "working" || staged === 0 || orphans.length > 0}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm px-3.5 py-2 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+          >
+            {state === "working" ? <Loader2 className="h-4 w-4 animate-spin" /> : pkg ? <RefreshCw className="h-4 w-4" /> : <Layers className="h-4 w-4" />}
+            {state === "working" ? "Generating…" : pkg ? "Regenerate" : "Generate Package"}
+          </button>
+        }
+      >
+        <p className="text-sm font-medium text-slate-700 mb-1">
+          {buckets.length} files per arm — identical packaging
+        </p>
+        <p className="text-xs text-slate-500 mb-3">
+          Both arms are split on the <em>production</em> bucket boundaries — each Arm B file is the Master file that
+          bucket already produces, each Arm C file its AI-optimized counterpart. Same buckets, same pages, same file
+          count. Representation is the only thing that differs, and every file stays under the{" "}
+          {(COPILOT_FILE_LIMIT / 1024 / 1024).toFixed(0)} MB the upload accepts.
+        </p>
+
+        <Row label="Snapshot">{SNAPSHOT}</Row>
+        <Row label="Buckets">{buckets.length ? buckets.map(([n]) => n).sort().join(", ") : "—"}</Row>
+        <Row label="Pages staged">{staged}</Row>
+        <Row label="File-set SHA-256">{pkg ? pkg.filesSha256 : "— generate to compute"}</Row>
+
+        {orphans.length > 0 && (
+          <p className="mt-3 text-xs text-rose-700">
+            <span className="font-semibold">{orphans.length} file(s) are still Unsorted.</span> They belong to no
+            bucket, so the package would silently leave them out. Assign them first — the package is only meaningful
+            if it covers every page.
+          </p>
+        )}
+        {staged === 0 && orphans.length === 0 && (
+          <p className="mt-3 text-xs text-amber-700">
+            No files sorted into buckets this session. Drop the corpus above so it routes into the five buckets.
+          </p>
+        )}
+        {state === "working" && (
+          <p className="mt-3 text-xs text-slate-500">Generating and validating {staged} pages across {buckets.length} buckets…</p>
+        )}
+        {state === "error" && <p className="mt-3 text-xs text-rose-700">Generation failed: {error}</p>}
+        {stale && (
+          <p className="mt-3 text-xs text-amber-700">
+            The staged files changed since this build — regenerate before downloading.
+          </p>
+        )}
+      </Card>
+
+      {pkg && (
+        <>
+          <Card
+            title="Package contents"
+            right={pass ? <ShieldCheck className="h-4 w-4 text-emerald-600" /> : <ShieldAlert className="h-4 w-4 text-rose-600" />}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-left text-slate-500 border-b border-slate-100">
+                    <th className="font-medium py-1.5 pr-3">File</th>
+                    <th className="font-medium py-1.5 pr-3 text-right">Pages</th>
+                    <th className="font-medium py-1.5 pr-3 text-right">Size</th>
+                    <th className="font-medium py-1.5 pr-3 text-right">of limit</th>
+                    <th className="font-medium py-1.5">SHA-256</th>
+                  </tr>
+                </thead>
+                <tbody className="font-mono">
+                  {[...pkg.armB, ...pkg.armC].map((a) => {
+                    const pct = (a.bytes / COPILOT_FILE_LIMIT) * 100;
+                    const over = a.bytes > COPILOT_FILE_LIMIT;
+                    return (
+                      <tr key={a.file} className="border-b border-slate-50 last:border-0">
+                        <td className="py-1 pr-3 text-slate-700">{a.file}</td>
+                        <td className="py-1 pr-3 text-right text-slate-600">{a.pages}</td>
+                        <td className="py-1 pr-3 text-right text-slate-600">{a.bytes.toLocaleString()}</td>
+                        <td className={"py-1 pr-3 text-right " + (over ? "text-rose-700 font-semibold" : pct > 75 ? "text-amber-700" : "text-slate-500")}>
+                          {pct.toFixed(1)}%
+                        </td>
+                        <td className="py-1 text-slate-500 break-all">{a.sha256 ? a.sha256.slice(0, 24) + "…" : "blocked"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 space-y-1">
+              <Row label="Pages covered">{pkg.pages}</Row>
+              <Row label="Arm C coverage" tone={pass ? "text-slate-700" : "text-rose-700 font-semibold"}>
+                {pkg.status} — {pkg.totals.representedUnits.toLocaleString()} / {pkg.totals.sourceUnits.toLocaleString()} represented, {pkg.totals.untraceableUnits} untraceable
+              </Row>
+              <Row label="Largest file" tone={oversize ? "text-rose-700 font-semibold" : "text-slate-700"}>
+                {Math.max(...pkg.armB.map((a) => a.bytes)).toLocaleString()} bytes ·{" "}
+                {((Math.max(...pkg.armB.map((a) => a.bytes)) / COPILOT_FILE_LIMIT) * 100).toFixed(1)}% of the limit
+              </Row>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 pt-3">
+              <button
+                onClick={downloadPackage}
+                disabled={blocked || zipping}
+                title={
+                  orphans.length ? "Unsorted files must be assigned first"
+                    : stale ? "The staged files changed — regenerate first"
+                    : !pass ? "A bucket failed validation — Arm C is withheld"
+                    : oversize ? "A file exceeds the upload limit"
+                    : `Download ${BENCHMARK_ZIP_FILE}`
+                }
+                className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm px-3.5 py-2 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
+              >
+                {zipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileArchive className="h-4 w-4" />}
+                {zipping ? "Packaging…" : "Download Package"}
+              </button>
+              <span className="text-xs text-slate-500 font-mono">{BENCHMARK_ZIP_FILE}</span>
+            </div>
+            {oversize > 0 && (
+              <p className="mt-3 text-xs text-rose-700">
+                {oversize} file(s) exceed the {(COPILOT_FILE_LIMIT / 1024 / 1024).toFixed(0)} MB upload limit:{" "}
+                {pkg.oversize.map((a) => a.file).join(", ")}. The package is withheld — uploading it would fail on the
+                same screen the consolidated Arm B failed on.
+              </p>
+            )}
+            {!pass && (
+              <div className="mt-3 rounded-lg border border-rose-200 bg-rose-50 p-3">
+                <p className="text-xs text-rose-700">
+                  {pkg.failed.length} bucket(s) failed validation, so the Arm C half of the package is withheld:{" "}
+                  {pkg.failed.map((f) => f.bucket).join(", ")}.
+                </p>
+                <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded border border-rose-100 bg-white p-2 text-[11px] text-rose-800">
+                  {pkg.failed.map((f) => formatBucketReport(f.bucket, f.result)).join("\n\n")}
+                </pre>
+              </div>
+            )}
+          </Card>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
   const [state, setState] = useState("idle"); // idle | working | done | error
   const [built, setBuilt] = useState(null);
   const [verified, setVerified] = useState(null);
@@ -197,7 +392,7 @@ export default function BenchmarkExport({ files }) {
         ],
         { modifiedAt: SNAPSHOT_CLOCK }
       );
-      saveBlob(BENCHMARK_ZIP_FILE, new Blob([zip], { type: "application/zip" }));
+      saveBlob(CONSOLIDATED_ZIP_FILE, new Blob([zip], { type: "application/zip" }));
     } catch (e) {
       setError(e.message || String(e));
     } finally {
@@ -249,9 +444,27 @@ export default function BenchmarkExport({ files }) {
             </div>
           </div>
           <p className="text-xs text-slate-500">
-            Benchmark packaging uses one consolidated file per arm so the Copilot Studio experiment changes
-            representation, not file packaging.
+            Benchmark packaging is identical across arms so the Copilot Studio experiment changes representation, not
+            file packaging.
           </p>
+        </div>
+      </div>
+
+      <PackageSection bucketMap={bucketMap} unsortedFiles={unsortedFiles} />
+
+      {/* ---- the single-file pair: what the frozen checksums describe ---- */}
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex items-center gap-2 border-b border-slate-100 p-4">
+          <Package className="h-4 w-4 text-slate-500" />
+          <span className="text-sm font-semibold text-slate-800">Consolidated arms — one file each</span>
+          <span className="ml-auto text-xs text-slate-400">alternative</span>
+        </div>
+        <div className="p-4 text-xs text-slate-500">
+          The original packaging: all {CANONICAL.pages} pages in a single file per arm. Its checksums are the frozen
+          ones this work was verified against, and it is still the right shape wherever a single large file can be
+          uploaded. It is <span className="font-semibold text-slate-700">not</span> usable on the Add-knowledge screen
+          in this tenant — Arm B is {(37176764 / 1024 / 1024).toFixed(1)} MB against a{" "}
+          {(COPILOT_FILE_LIMIT / 1024 / 1024).toFixed(0)} MB cap. Use the package above for the experiment.
         </div>
       </div>
 
@@ -354,7 +567,7 @@ export default function BenchmarkExport({ files }) {
                 title={
                   !pass ? "Arm C is blocked by validation — download Arm B on its own"
                     : stale ? "The staged files changed — regenerate first"
-                    : `Download ${BENCHMARK_ZIP_FILE}`
+                    : `Download ${CONSOLIDATED_ZIP_FILE}`
                 }
                 className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm px-3.5 py-2 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
               >
@@ -378,7 +591,7 @@ export default function BenchmarkExport({ files }) {
               </button>
             </div>
             <p className="mt-3 text-xs text-slate-500">
-              <span className="font-mono">{BENCHMARK_ZIP_FILE}</span> contains{" "}
+              <span className="font-mono">{CONSOLIDATED_ZIP_FILE}</span> contains{" "}
               <span className="font-mono">{built.armB.filename}</span> and{" "}
               <span className="font-mono">{built.armC.filename}</span> — the two files to upload, one per arm.
             </p>
