@@ -154,10 +154,10 @@ and that the archive's entries round-trip to the canonical digests.
 > **Scope and pre-flight.** The benchmark now runs over a deliberately
 > selected **128-page** subset of the 133-page snapshot, and the
 > nine-question Copilot Studio pre-flight has been run.
-> [`SCOPE.md`](SCOPE.md) records the selection and the two open items it
-> leaves — the EMPLOYEE PLAYBOOK membership, and the fact that **the
-> 742-question set below is not valid for the 128-page scope and must be
-> regenerated**. [`PREFLIGHT.md`](PREFLIGHT.md) records the outcome.
+> [`SCOPE.md`](SCOPE.md) records the selection, the five pages excluded
+> by intent, and the regeneration of the question set from 742 to
+> **638** against the 128. [`PREFLIGHT.md`](PREFLIGHT.md) records the
+> pre-flight outcome.
 
 ## 2. The knowledge snapshot
 
@@ -285,12 +285,12 @@ the exact thing being measured.
 
 ## 7. The question set
 
-**742 questions over 133 pages**, all with verbatim source answers. See
+**638 questions over the 128 in-scope pages**, all with verbatim source answers. See
 [`CURATION.md`](CURATION.md) for verified composition, known weaknesses,
 and what to exclude or supplement before a headline number is quoted.
 
 Read results **per category**, not as one aggregate. A difference of a
-few percent across 742 questions is noise; a consistent difference
+few percent across 638 questions is noise; a consistent difference
 within `unit-price`, `unit-area` and `contact-by-role` is the signal,
 because those depend on facts staying next to each other.
 

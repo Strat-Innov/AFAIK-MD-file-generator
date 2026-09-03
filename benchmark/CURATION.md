@@ -1,5 +1,15 @@
 # Question-set curation report
 
+> **Superseded in part.** This report was written against the
+> 742-question set. That set has since been regenerated against the
+> 128-page benchmark scope and is now **638 questions**
+> (see [`SCOPE.md`](SCOPE.md)). The findings below still describe the
+> generation rules, which are unchanged, but every count refers to the
+> old set and any finding anchored on `FORTUNE-HILL.aspx`,
+> `STUDIO-CITY.aspx` or `THE-SIGNATURE.aspx` is now moot — those pages
+> are out of scope. **Re-run the curation review against the 638-set
+> before acting on it.**
+
 **Nothing in this report has been applied.** The 742-question set is
 unchanged and its core is checksum-pinned by `test/benchmark.test.js`.
 This records what verification found, what it means for the experiment,

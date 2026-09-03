@@ -6,7 +6,7 @@ import os from "node:os";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { normalizeAnswer, tokens, matchAnswer, hasCitation } from "../scripts/lib/equivalence.mjs";
-import { HAS_CORPUS } from "./helpers.js";
+import { HAS_CORPUS, corpusFiles } from "./helpers.js";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sha = (s) => crypto.createHash("sha256").update(s, "utf8").digest("hex");
@@ -136,18 +136,19 @@ describe.skipIf(!HAS_CORPUS)("question set", () => {
   const setPath = path.join(root, "benchmark/question-set.json");
   const load = () => JSON.parse(fs.readFileSync(setPath, "utf8"));
 
-  // Pinned so a change to the builder cannot silently alter the benchmark.
-  // See benchmark/CURATION.md — curation is proposed, not applied.
-  const CORE_SHA = "e6e49d2fad996278a915f3d112be5c5cd5282d2cf3a32617c1deebee025a9be4";
+  // Pinned so a change to the builder cannot silently alter the
+  // benchmark. Regenerated against the 128-page scope (benchmark/SCOPE.md);
+  // curation is still proposed, not applied — see benchmark/CURATION.md.
+  const CORE_SHA = "ed410946f7dc284c9693cf9a2925b508e2f22140ec9b7d3722ddbe8d8d9507b6";
   const core = (qs) => qs.map((q) => [q.id, q.page, q.kind, q.question, q.answer].join(" | ")).join("\n");
 
-  it("still holds exactly the 742 verified questions", () => {
+  it("still holds exactly the 638 verified questions", () => {
     const { questions } = load();
-    expect(questions).toHaveLength(742);
+    expect(questions).toHaveLength(638);
     expect(sha(core(questions))).toBe(CORE_SHA);
   });
 
-  it("rebuilds to the same 742 questions", () => {
+  it("rebuilds to the same 638 questions", () => {
     const out = tmp("qs");
     run("scripts/build-question-set.mjs", out);
     const rebuilt = JSON.parse(fs.readFileSync(path.join(out, "question-set.json"), "utf8")).questions;
@@ -163,6 +164,27 @@ describe.skipIf(!HAS_CORPUS)("question set", () => {
     }
     expect(new Set(questions.map((q) => q.id)).size).toBe(questions.length);
     expect(new Set(questions.map((q) => q.question)).size).toBe(questions.length);
+  });
+
+  // The scope is the benchmark's premise: a question about an excluded
+  // page asks Arms B and C about a page they do not contain, while Arm A
+  // still holds all 133 — so it reads as an Arm A win that has nothing
+  // to do with representation.
+  it("asks only about pages inside the 128-page scope", () => {
+    const { meta, questions } = load();
+    const norm = (n) => n.replace(/#U2013/g, "\u2013");
+    const excluded = new Set(meta.excludedPages.map(norm));
+    const corpus = new Set(corpusFiles().map(norm));
+
+    expect(meta.corpusPages).toBe(128);
+    expect(meta.snapshotPages).toBe(133);
+    expect(excluded.size).toBe(5);
+
+    const pages = new Set(questions.map((q) => norm(q.page)));
+    for (const p of pages) {
+      expect(excluded.has(p), `${p} is excluded but carries questions`).toBe(false);
+      expect(corpus.has(p), `${p} is not in the snapshot`).toBe(true);
+    }
   });
 
   it("locates every question in real page structure", () => {

@@ -31,6 +31,42 @@ const { GENERATOR_VERSION } = await import(path.join(root, "src/lib/version.js")
 const corpusDir = path.join(root, "test/corpus");
 const outDir = process.argv[2] || path.join(root, "benchmark");
 
+/* ---- benchmark scope ----
+ * The benchmark runs over 128 of the snapshot's 133 pages: the six
+ * production buckets as tagged. Five pages were left Unsorted and are
+ * excluded BY INTENT — see benchmark/SCOPE.md. Questions anchored on
+ * them would ask Arms B and C about pages they do not contain, while
+ * Arm A (live SharePoint) still holds all 133, so an excluded page
+ * reads as an Arm A win that has nothing to do with representation.
+ *
+ * Exclusion happens at intake, before any question is generated. No
+ * generated question is edited or filtered afterwards, so the
+ * deterministic generation rules are exactly what they were. */
+const EXCLUDED_PAGES = [
+  "Page.aspx",
+  "Lost-Page.aspx",
+  "THE-SIGNATURE.aspx",
+  "FORTUNE-HILL.aspx",
+  "STUDIO-CITY.aspx",
+];
+
+// Command-line `unzip` escapes the en dash in one corpus filename as
+// "#U2013" while the browser keeps it, so scope matching normalizes.
+// This affects name comparison only — nothing about page content.
+const normalizeName = (n) => n.replace(/#U2013/g, "\u2013");
+const excluded = new Set(EXCLUDED_PAGES.map(normalizeName));
+const inScope = (name) => !excluded.has(normalizeName(name));
+
+const corpusNames = fs.readdirSync(corpusDir).filter((f) => f.endsWith(".aspx")).sort();
+const scopedNames = corpusNames.filter(inScope);
+const missingExclusions = EXCLUDED_PAGES.filter(
+  (n) => !corpusNames.some((c) => normalizeName(c) === normalizeName(n))
+);
+if (missingExclusions.length) {
+  console.error(`Excluded page(s) not present in the corpus: ${missingExclusions.join(", ")}`);
+  process.exit(1);
+}
+
 const PRICE = /[₱$]\s?[\d.,]+\s*[MK]?/;
 const AREA = /\b[\d.,]+\s*(?:–|-|to)?\s*[\d.,]*\s*sqm\b/i;
 // A "Label: value" line, where the label reads like a field name.
@@ -65,7 +101,7 @@ const titleOf = (page) => {
   return page.name.replace(/\.aspx$/i, "");
 };
 
-for (const name of fs.readdirSync(corpusDir).filter((f) => f.endsWith(".aspx")).sort()) {
+for (const name of scopedNames) {
   const page = parsePage(fs.readFileSync(path.join(corpusDir, name), "utf8"), { name, path: name });
   const subject = titleOf(page);
   let heading = "";
@@ -180,12 +216,20 @@ for (const name of fs.readdirSync(corpusDir).filter((f) => f.endsWith(".aspx")).
 }
 
 fs.mkdirSync(outDir, { recursive: true });
-const meta = { generatorVersion: GENERATOR_VERSION, builtAt: new Date().toISOString(), corpusPages: fs.readdirSync(corpusDir).filter((f) => f.endsWith(".aspx")).length, questionCount: questions.length };
+const meta = {
+  generatorVersion: GENERATOR_VERSION,
+  builtAt: new Date().toISOString(),
+  scope: "128-page benchmark scope — see benchmark/SCOPE.md",
+  snapshotPages: corpusNames.length,
+  corpusPages: scopedNames.length,
+  excludedPages: [...excluded].sort(),
+  questionCount: questions.length,
+};
 fs.writeFileSync(path.join(outDir, "question-set.json"), JSON.stringify({ meta, questions }, null, 1));
 
 const byKind = {};
 for (const q of questions) (byKind[q.kind] ??= []).push(q);
-let md = `# Retrieval question set\n\nGenerated from the August corpus by \`scripts/build-question-set.mjs\` against generator v${meta.generatorVersion}.\nEvery answer is a verbatim source value.\n\n- Pages: ${meta.corpusPages}\n- Questions: ${meta.questionCount}\n\n`;
+let md = `# Retrieval question set\n\nGenerated from the August corpus by \`scripts/build-question-set.mjs\` against generator v${meta.generatorVersion}.\nEvery answer is a verbatim source value.\n\n- Pages in scope: ${meta.corpusPages} of ${meta.snapshotPages} (see benchmark/SCOPE.md)\n- Excluded by intent: ${meta.excludedPages.join(", ")}\n- Questions: ${meta.questionCount}\n\n`;
 for (const [kind, qs] of Object.entries(byKind).sort((a, b) => b[1].length - a[1].length)) {
   md += `## ${kind} (${qs.length})\n\n`;
   for (const q of qs.slice(0, 5)) md += `- **${q.question}**\n  - expected: \`${q.answer}\`\n  - page: \`${q.page}\`\n`;
@@ -194,7 +238,7 @@ for (const [kind, qs] of Object.entries(byKind).sort((a, b) => b[1].length - a[1
 }
 fs.writeFileSync(path.join(outDir, "question-set.md"), md);
 
-console.log(`pages: ${meta.corpusPages}   questions: ${meta.questionCount}`);
+console.log(`pages: ${meta.corpusPages} of ${meta.snapshotPages} in scope   questions: ${meta.questionCount}`);
 for (const [kind, qs] of Object.entries(byKind).sort((a, b) => b[1].length - a[1].length)) {
   console.log(`  ${kind.padEnd(20)} ${String(qs.length).padStart(5)}`);
 }
