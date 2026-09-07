@@ -1,4 +1,45 @@
-# Generator contract — v1.0.0 (frozen 2026-08-28)
+# Generator contract — v1.1.0 (frozen 2026-09-03)
+
+## Version history
+
+| Version | Frozen | Change |
+|---|---|---|
+| 1.1.0 | 2026-09-03 | Link destinations containing whitespace are emitted in CommonMark's angle-bracket form. |
+| 1.0.0 | 2026-08-28 | Initial frozen contract. |
+
+### 1.1.0 — whitespace in link destinations
+
+A CommonMark link destination cannot contain unescaped whitespace:
+`[Employees](https://…/Shared Documents/…)` does not parse as a link at
+all, it survives as literal text. SharePoint stores some URLs unencoded
+— `serverProcessedContent.links` carries the `%20` form while the web
+part's own JSON carries raw spaces, and the extractor reads the JSON —
+so **11 destinations across 5 pages** were reaching Copilot Studio as
+text rather than as links. Confirmed against a real CommonMark parser,
+not inferred.
+
+The fix is delimiters only. `optimizedMd.js` wraps such a destination in
+`<…>`; the URL is emitted byte for byte either way, and a destination
+already containing `<` or `>` is left alone rather than corrupted.
+Removing the added delimiters from a v1.1.0 document reproduces the
+v1.0.0 document exactly — the whole change is 22 bytes across the
+corpus.
+
+`contentUnits.js` gained one character alongside it. Its normalizer
+stripped `>` but not `<`, so an angle-bracketed URL tokenized as
+`<https` and stopped matching the same URL written bare — a formatting
+difference reading as a content difference, which is the one thing that
+function exists to prevent. Both are now stripped as Markdown syntax.
+
+**Arm C artifacts are not comparable across this boundary.** The
+638-question Arm C run made against v1.0.0 (`a911dac6…`) stands as
+historical evidence for that representation and must not be merged
+numerically with any v1.1.0 result. Superseded checksums are kept in
+`ARM_C_HISTORY` in `src/lib/benchmarkExport.js`.
+
+Unchanged by 1.1.0: extraction, the Master representation (Arm B is
+byte-identical, `6001b876…`), the coverage model, the benchmark
+questions and their expected answers.
 
 This records what the generator guarantees, what it does **not**, and
 what must be re-verified before any change to it lands. It exists so a

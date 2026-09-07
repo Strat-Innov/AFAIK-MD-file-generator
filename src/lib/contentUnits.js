@@ -31,6 +31,14 @@ import { decodeEntitiesOnce, isImageAssetUrl } from "./webparts.js";
 // Tolerates formatting differences — Markdown syntax, whitespace, HTML
 // line breaks, quote/dash variants, non-breaking spaces — while leaving
 // factual values (numbers, currency, units, URLs) intact.
+//
+// `<` and `>` are both stripped as Markdown syntax: `>` is the
+// blockquote marker, and `<…>` is CommonMark's delimiter for a link
+// destination that contains spaces. Stripping one but not the other
+// made an angle-bracketed URL tokenize as `<https` and fail to match
+// the same URL written bare — a formatting difference reading as a
+// content difference, which is the one thing this function exists to
+// prevent.
 export function normalize(s) {
   return String(s)
     .normalize("NFKC")
@@ -38,7 +46,7 @@ export function normalize(s) {
     .replace(/[‐-―−]/g, "-")
     .replace(/[‘’‛]/g, "'")
     .replace(/[“”]/g, '"')
-    .replace(/[*_`~#>|\\[\]()]/g, " ")
+    .replace(/[*_`~#<>|\\[\]()]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();

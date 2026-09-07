@@ -17,6 +17,20 @@ import { GENERATOR_VERSION } from "./version.js";
 
 const esc = (s) => s.replace(/([*_`[\]])/g, "\\$1");
 
+// A CommonMark link destination cannot contain unescaped whitespace: a
+// bare `[Employees](https://…/Shared Documents/…)` does not parse as a
+// link at all, it survives as literal text. SharePoint stores some URLs
+// unencoded — `serverProcessedContent.links` carries the %20 form while
+// the web part's own JSON carries raw spaces — and the extractor reads
+// the JSON, so those destinations reach us with spaces intact.
+//
+// The angle-bracket form is CommonMark's answer to exactly this. The
+// URL is emitted byte-for-byte either way; only the delimiters differ,
+// so nothing about the source content changes. Destinations containing
+// a literal < or > cannot be wrapped (0 in the corpus) and are left as
+// they are rather than silently altered.
+const mdDest = (url) => (/\s/.test(url) && !/[<>]/.test(url) ? `<${url}>` : url);
+
 function headingPrefix(level, minLevel, isTitle) {
   if (isTitle) return "#";
   return "#".repeat(Math.min(6, 2 + Math.max(0, level - minLevel)));
@@ -52,7 +66,7 @@ function renderTextSection(section, { titleTaken }) {
 function renderWebPart(content) {
   const c = content;
   if (c.type === "links") {
-    const items = c.items.map((i) => (i.url ? `- [${esc(i.title || i.url)}](${i.url})` : `- ${esc(i.title)}`));
+    const items = c.items.map((i) => (i.url ? `- [${esc(i.title || i.url)}](${mdDest(i.url)})` : `- ${esc(i.title)}`));
     return [c.title ? `## ${c.title}` : "", items.join("\n")].filter(Boolean).join("\n\n");
   }
   if (c.type === "people") {

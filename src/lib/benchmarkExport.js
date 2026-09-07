@@ -82,9 +82,28 @@ export const CANONICAL = {
   pages: 133,
   filesSha256: "d76c3e6ccf26e449399cc21078f7a72b224a7bd9b022c7ba053e9ede83d8a610",
   armBSha256: "6001b8760126a6e479d75c335e2f7f2af9ebef77ae68d0f92b1873173d011e87",
-  armCSha256: "a911dac67115ce08e359df94607fe0c009c063a6a89ded86d65ca7665eabc56a",
+  armCSha256: "103a6ec97acc6d78b6648d183f1883b25c165188be63f956f39a203b4b7dd124",
   sourceUnits: 4791,
 };
+
+/* Arm C's representation history. A benchmark result is only meaningful
+ * against the representation it was run on, so superseded checksums are
+ * kept rather than overwritten: a result recorded against v1.0 must
+ * never be merged numerically with one recorded against v1.1.
+ *
+ * Arm B is deliberately absent — it has not changed and must not. */
+export const ARM_C_HISTORY = [
+  {
+    version: "1.0.0",
+    sha256: "a911dac67115ce08e359df94607fe0c009c063a6a89ded86d65ca7665eabc56a",
+    bytes: 279634,
+    supersededOn: "2026-09-03",
+    reason:
+      "11 link destinations across 5 pages contained raw spaces and did not parse as CommonMark links, " +
+      "reaching Copilot as literal text. The 638-question Arm C run made against this artifact stands as " +
+      "historical evidence for v1.0 and is not comparable with v1.1.",
+  },
+];
 
 // WebCrypto rather than node:crypto so the one implementation runs in
 // both front-ends. Present in every browser on a secure context and in

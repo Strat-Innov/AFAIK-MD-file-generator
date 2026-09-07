@@ -8,6 +8,13 @@
  * because a benchmark result is only meaningful against a known
  * generator.
  *
+ * 1.1.0 — link destinations containing whitespace are emitted in
+ * CommonMark's angle-bracket form. A bare `[x](http://a b)` does not
+ * parse as a link at all, so 11 URLs across 5 pages were reaching
+ * Copilot as literal text. The URLs themselves are unchanged; only the
+ * delimiters are. Arm C artifacts built before this are not comparable
+ * with ones built after it.
+ *
  * Bump MINOR when extraction or rendering changes what a correct
  * document contains. Bump PATCH for fixes that cannot change the
  * output of an already-passing page. Either way, re-run the full
@@ -15,5 +22,5 @@
  * GENERATOR-CONTRACT.md.
  * ------------------------------------------------------------------ */
 
-export const GENERATOR_VERSION = "1.0.0";
-export const GENERATOR_FROZEN_ON = "2026-08-28";
+export const GENERATOR_VERSION = "1.1.0";
+export const GENERATOR_FROZEN_ON = "2026-09-03";
