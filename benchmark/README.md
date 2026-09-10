@@ -223,6 +223,82 @@ Keep `retrieval_failure` and `hallucination` apart. A miss is a gap; a
 confident wrong answer is a hazard, and averaging them into one
 "incorrect" number hides the difference that matters most.
 
+### URL question scoring — preregistered
+
+> **This rule is fixed before Arm A and Arm B are run.** Arm C's
+> 638-question runs are already complete; Arm A and Arm B are not. The
+> stratification below is declared now, against known artifacts and an
+> unknown result, precisely so that it cannot later be mistaken for a
+> post-hoc exclusion chosen because it flattered one arm.
+
+All **96** external-link questions stay in the benchmark. None is
+deleted, and none is quietly rescored as something else.
+
+#### The four codes
+
+| Code | Meaning |
+|---|---|
+| `URL-OK` | The complete, usable URL is present in the copied response text, equal to the expected URL after the documented normalization above. |
+| `URL-TRUNC` | The correct URL was identified and the consumer truncated it. The copied response is a **strict prefix** of the expected URL, and the requested label was correctly identified. Correct content retrieval, failed URL usability. |
+| `URL-RENDER` | The complete expected URL is present in the copied response text, but the rendered clickable anchor differs from it. Correct content retrieval, defective consumer rendering. |
+| `URL-MISS` | The URL was not correctly retrieved — wrong URL, wrong label, wrong entity, invented URL, or nothing usable. |
+
+Two numbers are reported, never one:
+
+```
+CONTENT RETRIEVAL  =  URL-OK + URL-TRUNC + URL-RENDER
+URL USABILITY      =  URL-OK
+```
+
+Collapsing them would let a consumer-side URL-handling limitation be
+read as a defect in a representation that carried the URL correctly.
+
+#### Capture rule
+
+Adjudicate from the **copied response text**, taken directly from the
+agent's answer.
+
+Do **not** adjudicate from *Copy link address*, the rendered anchor
+target, the result of navigating the link, or the accessibility text
+attached to a link. In testing, reading the rendered anchor produced a
+false PARTIAL: the anchor's accessible name contributed
+`Opens in a new window; external.` to what looked like a URL. The copied
+response text is the primary evidence for `URL-OK` and `URL-TRUNC`. If
+that text is correct but the anchor is malformed, the code is
+`URL-RENDER`.
+
+#### Comparability stratification — 85 headline, 11 confounded
+
+| Stratum | Count | Use |
+|---|---:|---|
+| Comparable URL questions | **85** | headline Arm B vs Arm C comparison |
+| Whitespace-URL confounded | **11** | reported separately, never in the headline |
+
+The 11 are `q0121`, `q0192`–`q0196`, `q0239`, `q0240`, `q0476`, `q0477`,
+`q0478` — every question whose expected answer is a SharePoint URL
+containing raw spaces.
+
+They are separated because **the arms do not carry equivalent inputs for
+them.** SharePoint stores these URLs twice: percent-encoded in
+`serverProcessedContent.links`, and with raw spaces in the web part's own
+JSON. Arm B preserves the raw `.aspx` and therefore contains **both**
+forms; Arm C extracts the JSON and contains **only** the raw-space form.
+Measured on the Finance URL:
+
+| | raw-space form | `%20` form |
+|---|---:|---:|
+| Arm B | 2 | **2** |
+| Arm C | 1 | **0** |
+
+A consumer that truncates a URL at whitespace can therefore answer these
+from Arm B and cannot from Arm C — for reasons that have nothing to do
+with representation quality. Any difference on these 11 measures source
+encoding, not the variable under test.
+
+Report them as the **"Whitespace-URL confounded stratum"**. They are not
+invalid questions, they are not removed from the benchmark, and they are
+not scored as ordinary comparable URL questions.
+
 ### Equivalence rules
 
 Permissive about formatting, strict about values.
