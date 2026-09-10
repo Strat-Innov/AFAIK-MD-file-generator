@@ -5,9 +5,11 @@ import {
 } from "lucide-react";
 import {
   buildBenchmarkArtifacts, buildBucketPackage, packageEntries, compareToCanonical,
-  verifyArtifacts, fileSetSignature, CANONICAL, SNAPSHOT, SNAPSHOT_CLOCK,
-  BENCHMARK_ZIP_FILE, CONSOLIDATED_ZIP_FILE, COPILOT_FILE_LIMIT,
+  verifyArtifacts, CANONICAL, BENCHMARK_ZIP_FILE,
+  CONSOLIDATED_ZIP_FILE, COPILOT_FILE_LIMIT, SNAPSHOT,
 } from "../lib/benchmarkExport";
+import { detectSnapshot, UNREGISTERED } from "../lib/snapshots";
+import { stagedKey, fileId } from "../lib/stagedKey";
 import { createZip } from "../lib/zip";
 import { GENERATOR_VERSION } from "../lib/version";
 import { formatBucketReport } from "../lib/generate";
@@ -142,6 +144,67 @@ function ArmCard({ title, subtitle, artifact, matchesCanonical, verified, accent
   );
 }
 
+/* Identifies the loaded corpus by content. Never by the calendar: the
+ * month someone happens to be working in says nothing about which
+ * export they just loaded. Re-runs whenever the staged files change, so
+ * the panel can never show a stale snapshot from an earlier drop. */
+function useDetectedSnapshot(files) {
+  const [detection, setDetection] = useState(null);
+  const [detecting, setDetecting] = useState(false);
+  const staged = files || [];
+  // Keyed on the staged objects, not their names: a snapshot swap that
+  // revises page content while keeping every filename is exactly the
+  // case a names-only key cannot see, and it is the case that would
+  // leave a stale identity on screen.
+  const signature = stagedKey(staged);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (staged.length === 0) { setDetection(null); return; }
+    setDetecting(true);
+    detectSnapshot(staged)
+      .then((d) => { if (!cancelled) setDetection(d); })
+      .finally(() => { if (!cancelled) setDetecting(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature]);
+
+  return { detection, detecting, registered: detection?.status === "registered", snapshot: detection?.snapshot ?? null };
+}
+
+// One block, used by both panels, so neither can render identity in a
+// different shape from the other. They can still report different
+// identities, and should: the package is built from the bucketed files
+// only, so pages left in Unsorted are part of the arms' corpus and not
+// part of the package's.
+function SnapshotIdentity({ detection, detecting, staged }) {
+  if (detecting) return <Row label="Snapshot">identifying…</Row>;
+  if (!detection) return <Row label="Snapshot">— load a corpus to identify it</Row>;
+  const s = detection.snapshot;
+  const id = detection.identity;
+  return (
+    <>
+      <Row label="Snapshot" tone={s ? "text-slate-700" : "text-amber-700 font-semibold"}>
+        {s ? s.name : UNREGISTERED}
+      </Row>
+      {s && <Row label="Generator">{s.generator}</Row>}
+      {s && <Row label="Snapshot clock">{s.clock}</Row>}
+      {s && <Row label="Benchmark pages">{s.benchmarkPages}</Row>}
+      <Row
+        label="Source files"
+        tone={!s || id.sourceFiles === s.sourceFiles ? "text-slate-700" : "text-amber-700 font-semibold"}
+      >
+        {id.sourceFiles} loaded{s ? ` · ${s.sourceFiles} expected` : ""}
+      </Row>
+      <Row label="Content SHA-256">{id.contentSha256}</Row>
+      <Row label="File-set SHA-256">{id.fileSetSha256}</Row>
+      {id.duplicates.length > 0 && (
+        <Row label="Duplicate names" tone="text-rose-700 font-semibold">{id.duplicates.join(", ")}</Row>
+      )}
+    </>
+  );
+}
+
 /* ------------------------------------------------------------------ *
  * The recommended package: both arms cut on the same five production
  * bucket boundaries, so no file approaches the 16 MB the tenant's
@@ -158,7 +221,15 @@ function PackageSection({ bucketMap, unsortedFiles }) {
   const buckets = Object.entries(bucketMap || {});
   const staged = buckets.reduce((n, [, f]) => n + f.length, 0);
   const orphans = unsortedFiles || [];
-  const signature = fileSetSignature(buckets.flatMap(([name, f]) => f.map((x) => `${name}\u0001${x.name}`)));
+  const allStaged = buckets.flatMap(([, f]) => f);
+  const { detection, detecting, registered } = useDetectedSnapshot(allStaged);
+  // Bucket placement and file content both matter here: re-sorting a
+  // page changes which file it lands in, and re-reading it changes what
+  // that file says. Either invalidates a built package.
+  const signature = buckets
+    .flatMap(([name, f]) => f.map((x) => `${name}\u0001${x.name}\u0001${fileId(x)}`))
+    .sort()
+    .join("\u0000");
   const stale = Boolean(pkg) && pkg.signature !== signature;
 
   const generate = async () => {
@@ -179,7 +250,7 @@ function PackageSection({ bucketMap, unsortedFiles }) {
   const downloadPackage = async () => {
     setZipping(true);
     try {
-      const zip = await createZip(packageEntries(pkg), { modifiedAt: SNAPSHOT_CLOCK });
+      const zip = await createZip(packageEntries(pkg), { modifiedAt: new Date(detection.snapshot.clock) });
       saveBlob(BENCHMARK_ZIP_FILE, new Blob([zip], { type: "application/zip" }));
     } catch (e) {
       setError(e.message || String(e));
@@ -201,7 +272,7 @@ function PackageSection({ bucketMap, unsortedFiles }) {
         right={
           <button
             onClick={generate}
-            disabled={state === "working" || staged === 0 || orphans.length > 0}
+            disabled={state === "working" || staged === 0 || orphans.length > 0 || !registered}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm px-3.5 py-2 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             {state === "working" ? <Loader2 className="h-4 w-4 animate-spin" /> : pkg ? <RefreshCw className="h-4 w-4" /> : <Layers className="h-4 w-4" />}
@@ -219,11 +290,18 @@ function PackageSection({ bucketMap, unsortedFiles }) {
           {(COPILOT_FILE_LIMIT / 1024 / 1024).toFixed(0)} MB the upload accepts.
         </p>
 
-        <Row label="Snapshot">{SNAPSHOT}</Row>
+        <SnapshotIdentity detection={detection} detecting={detecting} staged={allStaged} />
         <Row label="Buckets">{buckets.length ? buckets.map(([n]) => n).sort().join(", ") : "—"}</Row>
         <Row label="Pages staged">{staged}</Row>
-        <Row label="File-set SHA-256">{pkg ? pkg.filesSha256 : "— generate to compute"}</Row>
 
+        {detection && !registered && (
+          <p className="mt-3 text-xs text-amber-700">
+            <span className="font-semibold">This corpus matches no registered snapshot.</span> A frozen benchmark
+            package can only be built from a registered one, so generation is blocked. Register the snapshot in{" "}
+            <span className="font-mono">src/lib/snapshots.js</span> once its identity is confirmed — nothing here will
+            guess a name, a month or a clock for it.
+          </p>
+        )}
         {orphans.length > 0 && (
           <p className="mt-3 text-xs text-rose-700">
             <span className="font-semibold">{orphans.length} file(s) are still Unsorted.</span> They belong to no
@@ -345,7 +423,8 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
   const [error, setError] = useState("");
 
   const staged = files || [];
-  const signature = fileSetSignature(staged);
+  const { detection, detecting, registered } = useDetectedSnapshot(staged);
+  const signature = stagedKey(staged);
   // A build describes the files it was made from. If those change, the
   // numbers on screen stop describing anything downloadable, so the
   // result is marked stale and the buttons wait for a regenerate rather
@@ -363,7 +442,7 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
     await new Promise((r) => setTimeout(r, 0));
     try {
       const result = await buildBenchmarkArtifacts(staged);
-      setBuilt({ ...result, signature: fileSetSignature(staged) });
+      setBuilt({ ...result, signature: stagedKey(staged) });
       setState("done");
     } catch (e) {
       setError(e.message || String(e));
@@ -390,7 +469,7 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
           { name: built.armB.filename, text: built.armB.md },
           { name: built.armC.filename, text: built.armC.md },
         ],
-        { modifiedAt: SNAPSHOT_CLOCK }
+        { modifiedAt: new Date(detection.snapshot.clock) }
       );
       saveBlob(CONSOLIDATED_ZIP_FILE, new Blob([zip], { type: "application/zip" }));
     } catch (e) {
@@ -474,7 +553,7 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
         right={
           <button
             onClick={generate}
-            disabled={state === "working" || staged.length === 0}
+            disabled={state === "working" || staged.length === 0 || !registered}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm px-3.5 py-2 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             {state === "working" ? <Loader2 className="h-4 w-4 animate-spin" /> : built ? <RefreshCw className="h-4 w-4" /> : <FlaskConical className="h-4 w-4" />}
@@ -482,18 +561,16 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
           </button>
         }
       >
-        <Row label="Snapshot">{SNAPSHOT}</Row>
-        <Row label="Generator">{built?.generatorVersion || GENERATOR_VERSION}</Row>
-        <Row label="Snapshot clock">{SNAPSHOT_CLOCK.toISOString()}</Row>
-        <Row
-          label="Source files"
-          tone={staged.length === CANONICAL.pages ? "text-slate-700" : "text-amber-700 font-semibold"}
-        >
-          {staged.length} loaded · {CANONICAL.pages} expected
-        </Row>
-        <Row label="File-set SHA-256">{built ? built.filesSha256 : "— generate to compute"}</Row>
-        {built && <div className="pt-3"><Pill ok={match.files} yes="canonical August snapshot" no="not the canonical August snapshot" /></div>}
+        <SnapshotIdentity detection={detection} detecting={detecting} staged={staged} />
+        {built && <div className="pt-3"><Pill ok={match.files} yes={`canonical ${SNAPSHOT} file set`} no={`not the canonical ${SNAPSHOT} file set`} /></div>}
 
+        {detection && !registered && (
+          <p className="mt-3 text-xs text-amber-700">
+            <span className="font-semibold">This corpus matches no registered snapshot.</span> Its content hash is
+            shown above. Frozen artifacts are only built from registered snapshots, so generation is blocked rather
+            than stamped with a name this corpus has not earned.
+          </p>
+        )}
         {staged.length === 0 && (
           <p className="mt-3 text-xs text-amber-700">
             Nothing loaded this session. Drop the corpus above first — all {CANONICAL.pages} pages, or the .zip. Every

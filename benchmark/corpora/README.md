@@ -26,3 +26,38 @@ snapshot name and clock, so a historical snapshot can be rebuilt and
 checked. `test/snapshots.test.js` asserts exactly that: every archived
 snapshot must rebuild to the digests recorded for it. Those tests skip
 when the corpora are absent.
+
+## The registry
+
+`src/lib/snapshots.js` is the single source of truth for which snapshots
+exist and what each one is. Everything downstream — the name and clock on
+screen, the header inside each artifact, `CANONICAL`, `SNAPSHOT_HISTORY`
+— is derived from it. Nothing anywhere infers a snapshot from the
+calendar.
+
+A loaded corpus is identified by hashing it, not by its filenames and not
+by the date:
+
+- `contentSha256` — over `name + content-digest` for every page, sorted.
+  This is the identity detection matches on. Change one character of one
+  page and it changes.
+- `fileSetSha256` — the older names-only signature. Kept because the
+  historical manifests are keyed on it, and reported alongside so a
+  mismatch between the two is visible; never used to decide identity.
+
+A corpus matching no registered `contentSha256` is reported as
+**UNREGISTERED SNAPSHOT** and artifact generation is blocked. It is never
+given a guessed name, month or clock.
+
+### Registering a new snapshot
+
+1. Archive the pages under `benchmark/corpora/<name>/`.
+2. Read its `contentSha256` and `fileSetSha256` off the Benchmark screen
+   (they are shown for an unregistered corpus precisely so this step
+   needs no extra tooling).
+3. Add the entry to `SNAPSHOTS` in `src/lib/snapshots.js`, with the
+   artifact digests and source-unit count for the arms built from it, and
+   flip the previous `frozen` entry to `superseded`. Exactly one entry may
+   be `frozen`; the module refuses to load otherwise.
+4. Run `npm test` — the archived snapshots are rebuilt and checked
+   against the digests recorded for them.

@@ -2,9 +2,9 @@
  * BENCHMARK EXPORT — the canonical Arm B / Arm C recipe.
  *
  * The app's normal output is one Master file per bucket: five files for
- * the August corpus, each stamped with the wall clock at the moment it
- * was generated. That is the right production packaging, and it is not
- * what the retrieval benchmark can use.
+ * the active corpus snapshot, each stamped with the wall clock at the
+ * moment it was generated. That is the right production packaging, and
+ * it is not what the retrieval benchmark can use.
  *
  * The benchmark compares REPRESENTATION, so packaging has to be held
  * constant across arms: one consolidated file each, over the identical
@@ -35,12 +35,19 @@
 import { buildMaster } from "./masterMd.js";
 import { generateOptimized } from "./generate.js";
 import { GENERATOR_VERSION } from "./version.js";
+import { sha256, byteLength } from "./digest.js";
+import { ACTIVE_SNAPSHOT, SUPERSEDED_SNAPSHOTS, detectSnapshot, snapshotIdentityOf } from "./snapshots.js";
+
+export { sha256, byteLength };
 
 /* ---- frozen snapshot identity ----
  * Changing any of these changes what a benchmark result means, so they
  * are pinned here rather than passed in. See GENERATOR-CONTRACT.md. */
-export const SNAPSHOT = "SEPTEMBER-2026-CORPUS";
-export const SNAPSHOT_CLOCK = new Date(Date.UTC(2026, 8, 9, 0, 0, 0));
+/* Derived from the registry — src/lib/snapshots.js is the only place a
+ * snapshot constant is written down. These name the ACTIVE snapshot and
+ * remain the defaults for callers that do not detect. */
+export const SNAPSHOT = ACTIVE_SNAPSHOT.name;
+export const SNAPSHOT_CLOCK = new Date(ACTIVE_SNAPSHOT.clock);
 
 export const ARM_B_FILE = `${SNAPSHOT}_Master_File.md`;
 export const ARM_C_FILE = `${SNAPSHOT}_AI_File.md`;
@@ -79,11 +86,11 @@ export function bucketSlug(name) {
  * necessarily a defect: it means the input file set differs from the
  * one these were built from, and the export reports which. */
 export const CANONICAL = {
-  pages: 134,
-  filesSha256: "69cdbacdd9fb49b4078cc0978e355359e65793683628e7ed1ccb866495090119",
-  armBSha256: "409af018d1659277f8b5acf04ffe6532802bcee7fda0499137d5d24036ad2ad6",
-  armCSha256: "b0408d31751f4f4e964d4dd221ec921809f2944be67ce4587f0b3c4928bc1e5c",
-  sourceUnits: 4864,
+  pages: ACTIVE_SNAPSHOT.sourceFiles,
+  filesSha256: ACTIVE_SNAPSHOT.fileSetSha256,
+  armBSha256: ACTIVE_SNAPSHOT.armBSha256,
+  armCSha256: ACTIVE_SNAPSHOT.armCSha256,
+  sourceUnits: ACTIVE_SNAPSHOT.sourceUnits,
 };
 
 /* Superseded snapshots. A benchmark result is only meaningful against
@@ -93,24 +100,20 @@ export const CANONICAL = {
  * corpus is at benchmark/corpora/<snapshot>/, and buildBenchmarkArtifacts
  * accepts the snapshot name and clock as overrides so the artifacts can
  * be rebuilt and checked against these digests. */
-export const SNAPSHOT_HISTORY = [
-  {
-    snapshot: "AUGUST-2026-CORPUS",
-    clock: "2026-08-31T00:00:00.000Z",
-    corpus: "benchmark/corpora/august-2026",
-    pages: 133,
-    benchmarkPages: 128,
-    questions: 638,
-    filesSha256: "d76c3e6ccf26e449399cc21078f7a72b224a7bd9b022c7ba053e9ede83d8a610",
-    armBSha256: "6001b8760126a6e479d75c335e2f7f2af9ebef77ae68d0f92b1873173d011e87",
-    armCSha256: "103a6ec97acc6d78b6648d183f1883b25c165188be63f956f39a203b4b7dd124",
-    sourceUnits: 4791,
-    supersededOn: "2026-09-10",
-    reason:
-      "September export: 62 of 133 pages changed content and one page was added. Historical " +
-      "evidence for the Arm C v1.0 and v1.1 diagnostic runs; not comparable with September results.",
-  },
-];
+export const SNAPSHOT_HISTORY = SUPERSEDED_SNAPSHOTS.map((s) => ({
+  snapshot: s.name,
+  clock: s.clock,
+  corpus: s.archive,
+  pages: s.sourceFiles,
+  benchmarkPages: s.benchmarkPages,
+  questions: s.questions,
+  filesSha256: s.fileSetSha256,
+  armBSha256: s.armBSha256,
+  armCSha256: s.armCSha256,
+  sourceUnits: s.sourceUnits,
+  supersededOn: s.supersededOn,
+  reason: s.note,
+}));
 
 /* Arm C's representation history. A benchmark result is only meaningful
  * against the representation it was run on, so superseded checksums are
@@ -131,16 +134,6 @@ export const ARM_C_HISTORY = [
   },
 ];
 
-// WebCrypto rather than node:crypto so the one implementation runs in
-// both front-ends. Present in every browser on a secure context and in
-// Node >= 18.
-export async function sha256(text) {
-  const bytes = new TextEncoder().encode(text);
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-export const byteLength = (text) => new TextEncoder().encode(text).length;
 
 /**
  * Builds both benchmark arms from one file list.
@@ -154,21 +147,27 @@ export const byteLength = (text) => new TextEncoder().encode(text).length;
  * the CLI's corpus reader both use. Order is irrelevant: buildMaster()
  * and generateOptimized() each sort by lowercased filename.
  */
-export async function buildBenchmarkArtifacts(
-  files,
-  { builtAt = new Date(), snapshot = SNAPSHOT, clock = SNAPSHOT_CLOCK } = {}
-) {
+export async function buildBenchmarkArtifacts(files, { builtAt = new Date(), snapshot, clock } = {}) {
+  // Identity comes from the corpus itself. An explicit snapshot/clock
+  // overrides it — that is how a superseded snapshot gets rebuilt from
+  // its archive — but nothing here ever falls back to the active
+  // snapshot's name for a corpus that is not it.
+  const detection = await detectSnapshot(files);
+  const detected = snapshotIdentityOf(detection);
+  const activeName = snapshot ?? detected.name;
+  const activeClock = clock ?? detected.clock;
+
   const names = [...files].map((f) => f.name).sort();
   const filesSha256 = await sha256(names.join("\n"));
 
-  const masterMd = buildMaster(snapshot, files, clock);
-  const optimized = generateOptimized(snapshot, files);
+  const masterMd = buildMaster(activeName, files, activeClock);
+  const optimized = generateOptimized(activeName, files);
   const pass = optimized.status === "PASS";
 
   const armB = {
     arm: "B",
-    file: `arm-b/${snapshot}_Master_File.md`,
-    filename: `${snapshot}_Master_File.md`,
+    file: `arm-b/${activeName}_Master_File.md`,
+    filename: `${activeName}_Master_File.md`,
     md: masterMd,
     bytes: byteLength(masterMd),
     sha256: await sha256(masterMd),
@@ -176,8 +175,8 @@ export async function buildBenchmarkArtifacts(
   };
   const armC = {
     arm: "C",
-    file: `arm-c/${snapshot}_AI_File.md`,
-    filename: `${snapshot}_AI_File.md`,
+    file: `arm-c/${activeName}_AI_File.md`,
+    filename: `${activeName}_AI_File.md`,
     md: optimized.md,
     bytes: pass ? byteLength(optimized.md) : 0,
     sha256: pass ? await sha256(optimized.md) : null,
@@ -191,9 +190,11 @@ export async function buildBenchmarkArtifacts(
   };
 
   const manifest = {
-    snapshot,
+    snapshot: activeName,
+    snapshotRegistered: detection.status === "registered",
     generatorVersion: GENERATOR_VERSION,
-    snapshotClock: clock.toISOString(),
+    snapshotClock: activeClock.toISOString(),
+    contentSha256: detection.identity.contentSha256,
     builtAt: builtAt.toISOString(), // informational only; not part of any checksum
     corpusPages: files.length,
     arms: {
@@ -219,7 +220,7 @@ export async function buildBenchmarkArtifacts(
     filesSha256,
   };
 
-  return { snapshot, generatorVersion: GENERATOR_VERSION, armB, armC, optimized, manifest, filesSha256 };
+  return { snapshot: activeName, detection, generatorVersion: GENERATOR_VERSION, armB, armC, optimized, manifest, filesSha256 };
 }
 
 /**

@@ -17,6 +17,7 @@ import {
   BENCHMARK_ZIP_FILE,
   sha256,
 } from "../src/lib/benchmarkExport.js";
+import { UNREGISTERED_ID } from "../src/lib/snapshots.js";
 import { createZip } from "../src/lib/zip.js";
 import { buildMaster } from "../src/lib/masterMd.js";
 import { generateOptimized } from "../src/lib/generate.js";
@@ -71,13 +72,31 @@ describe("benchmark export leaves production packaging alone", () => {
   });
 
   it("packages under the snapshot name, not the bucket name, on a fixed clock", async () => {
-    const { armB, armC } = await buildBenchmarkArtifacts(files);
+    // These two synthetic pages are not a registered corpus, so the
+    // identity has to be supplied; what is under test here is that the
+    // packaging header comes from the snapshot identity rather than the
+    // bucket tag, and that the clock is the snapshot's, not wall time.
+    const { armB, armC } = await buildBenchmarkArtifacts(files, {
+      snapshot: SNAPSHOT,
+      clock: SNAPSHOT_CLOCK,
+    });
     expect(armB.md).toContain(`# ${SNAPSHOT} — ASPx Codebase Master File`);
     expect(armB.md).toContain("Generated on: 09/09/2026");
     expect(armC.md.startsWith(`# ${SNAPSHOT}\n`)).toBe(true);
     // ...and the bucket file, built the ordinary way, still carries its
     // own name and its own clock.
     expect(buildMaster("TAG", files, clock)).toContain("# TAG — ASPx Codebase Master File");
+  });
+
+  it("does not borrow the active snapshot identity for an unrecognised corpus", async () => {
+    const { armB, armC, manifest, detection } = await buildBenchmarkArtifacts(files);
+    expect(detection.status).toBe("unregistered");
+    expect(detection.snapshot).toBeNull();
+    expect(manifest.snapshotRegistered).toBe(false);
+    expect(manifest.snapshot).toBe(UNREGISTERED_ID);
+    expect(armB.md).not.toContain(SNAPSHOT);
+    expect(armC.md).not.toContain(SNAPSHOT);
+    expect(armB.md).toContain(`# ${UNREGISTERED_ID} — ASPx Codebase Master File`);
   });
 
   it("is deterministic: two builds of the same files agree byte-for-byte", async () => {
