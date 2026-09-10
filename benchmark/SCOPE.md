@@ -1,4 +1,13 @@
-# Benchmark scope — the selected 128-page set
+# Benchmark scope
+
+Two snapshots exist. **August 2026** is frozen historical evidence —
+it produced Arm C v1.1 and the 638-question set. **September 2026** is
+the snapshot the remaining arms will run on. Results are never merged
+across them.
+
+---
+
+# August 2026 — the selected 128-page set
 
 **Status: closed.** All six buckets are enumerated, the five excluded
 pages are named, and the question set has been regenerated against the
@@ -133,3 +142,94 @@ The nine-question pre-flight is unaffected: after the Q2/Q3 replacement
 no pre-flight question touches an excluded page. The full run is
 affected, and regenerating the question set against the 128 is what
 fixes it.
+
+---
+
+# September 2026 snapshot
+
+Diffed against the frozen August corpus by content hash, with filenames
+normalized so the `#U2013` mangling does not read as a rename.
+
+| | |
+|---|---:|
+| August | 133 |
+| September | **134** |
+| New | **1** — `Internal-Audit.aspx` |
+| Removed | **0** |
+| Changed content | **62** |
+| Unchanged | 71 |
+
+Reconciles exactly: 133 + 1 − 0 = 134. No renames and no deletions —
+verified by comparison, not assumed.
+
+## `Internal-Audit.aspx` is excluded
+
+The one new page is **not** in the September benchmark. Its third line
+is literally `Placeholder`, and the body beneath it is **Finance
+department content** carried under an Internal Audit title —
+"Financial Feasibility & Investment Support", "CAPEX Monitoring",
+"Request for Payment Processing". Only the two-person
+`INTERNAL AUDIT DEPARTMENT LEADS` block is genuinely Internal Audit.
+
+That makes it worse than thin. Questions generated from it would
+attribute Finance's responsibilities to Internal Audit, so the benchmark
+would be scoring agents on a mis-association the source itself contains.
+It contributes 4 questions, all contact lookups against the two real
+leads — the legitimate part — so excluding it costs almost nothing.
+
+Revisit when the page has real content.
+
+## The resulting scope
+
+```
+134 September pages
+ −5  Unsorted, excluded by intent (unchanged from August)
+ −1  Internal-Audit.aspx, placeholder
+────
+128 benchmark pages
+```
+
+**The page population is identical to August's 128** — same filenames,
+verified set-equal. Only the *content* differs, and it differs a lot:
+62 of 133 pages changed, including 42 of the 48 pages that carry
+questions.
+
+## Question-set impact
+
+Measured by regenerating the set from the September corpus with the same
+deterministic builder and matching on `(page, kind, question)` — not by
+substring-checking expected answers, which gives false positives because
+`amenity` answers are constructed sentences rather than source values.
+
+| | |
+|---|---:|
+| August set | 638 |
+| Survive with an **identical** expected answer | **569 (89.2%)** |
+| Survive with a **changed** answer | **0** |
+| No longer generated | 69 |
+| New in September | 76 |
+| **September set over the 128 pages** | **641** |
+
+**No question kept its wording and acquired a different answer.** There
+is no silent-wrong-answer risk in the 569 that carry over.
+
+The 69 losses concentrate in nine pages — `ARBORAGE` 22, `PROMINENCE`
+17, `MARKETING` 13, `PRIME` 7, `Filinvest-Mimosa` 4, and 6 across the
+whitespace-URL pages. Spot-checked: genuine removals, people and links
+that no longer appear on those pages.
+
+## Consequences for the arms
+
+**A September question set is required.** 89.2% reuse is high, but
+running the August set would ask 69 questions whose answers no longer
+exist.
+
+**Arm A forces the issue.** Arm A reads live SharePoint, which is
+already on September content. Running it against August-derived answers
+would measure it against a corpus it can no longer see, losing those 69
+to drift rather than to representation.
+
+**The confounded stratum shrinks from 11 to 5**, surviving only on
+`Digital Library.aspx`. The comparable headline stratum is 85 in both
+snapshots — a coincidence, not a reason to relax the preregistration in
+`README.md`, which stands unchanged.
