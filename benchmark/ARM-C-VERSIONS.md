@@ -52,6 +52,96 @@ a different stage**, and are not evidence against v1.1.0. See below.
 
 ---
 
+## v1.1.0 is FROZEN — 2026-09-09
+
+No further Arm C representation change is to be made for the residual
+link failures. The evidence below closes that thread: the defect is not
+in the representation, and no change to it can fix what is happening.
+
+---
+
+## Closed: the residual link failures are consumer-side truncation
+
+### The probe rejected its own hypothesis
+
+Page identity was added to the one affected section heading — a single
+line, verified as the only difference from the generated artifact — and
+the three questions were re-asked with the full corpus loaded.
+
+| Probe | Result |
+|---|---|
+| Finance | FAIL |
+| Employees | FAIL |
+| Operations | FAIL |
+| Training Tracker *(control, different page, untouched)* | PARTIAL |
+
+**0/3.** Under the thresholds fixed in advance, that is "hypothesis
+wrong; do not spend the bytes". The +22 KB page-context propagation
+change was **not implemented** and should not be revisited for this.
+
+### What the failures actually are
+
+The agent's answer for Finance, copied as text — not as a link — is:
+
+```
+https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared
+```
+
+against an expected
+
+```
+https://filinvest.sharepoint.com/sites/FAIKnowledgeBase/Shared Documents/Operating Manual System (OMS) - FAI/Finance
+```
+
+The copied value is truncated at the first whitespace. This is not a
+clickable-link rendering artifact: the truncation is present in the
+response text itself.
+
+### Why this is not ours
+
+- **Source:** `Opens in a new window` appears 0 times in the 133 `.aspx`
+  files. `web=1` appears once, on an unrelated `Home.aspx` sharing link.
+- **Arm C v1.1:** contains the complete URL, correctly associated with
+  its label, on one line. `?web=1` and `Opens in a new window` appear
+  zero times.
+- **Markdown validity:** three independent parsers — commonmark, marked,
+  markdown-it — all recover the full destination from the v1.1
+  angle-bracket form. Only the *v1.0 bare form* and *plain-text
+  autolinking* truncate, and both truncate at exactly `/Shared`, which
+  is the observed break point.
+- **Determinism:** Customer Journey and Corporate Governance share the
+  identical URL prefix with Finance/Employees/Operations, sit in the
+  same list, and **passed**. No deterministic string transformation can
+  corrupt three of five and leave two intact.
+
+Recorded as an **external, consumer-side limitation**: Copilot Studio
+retrieves the label and the beginning of the URL, and truncates the
+emitted URL at whitespace. Revisit only if new evidence contradicts it.
+
+### The comparability problem this creates
+
+The two arms do **not** carry the same URL forms. SharePoint stores
+these URLs twice — percent-encoded in `serverProcessedContent.links`,
+raw-space in the web part JSON — and each representation reads a
+different field:
+
+| The Finance URL | raw-space form | `%20` form |
+|---|---:|---:|
+| Arm B (raw `.aspx`) | 2 | **2** |
+| Arm C (extracted) | 1 | **0** |
+
+Arm B therefore carries a whitespace-free variant of the same URL that
+Arm C does not. A consumer that truncates at whitespace can answer these
+from Arm B and cannot from Arm C — **for reasons that have nothing to do
+with representation quality.** On the 11 affected questions, Arm B has a
+structural advantage that is an artifact of source encoding, not of the
+thing the experiment is measuring.
+
+This must be settled before the arms are compared. See the scoring
+recommendation below.
+
+---
+
 ## Open: page identity after chunking
 
 The three residual failures are *not* a serialisation problem. Their
@@ -110,17 +200,13 @@ answer from the wrong page. If that is real it reaches well beyond link
 questions, into the 208 `contact-by-role` questions where names and
 roles repeat across dozens of pages.
 
-### Next step, before any code change
+### Outcome: rejected
 
-A three-question probe: take the generated v1.1.0 artifact, add page
-identity to the one affected section heading, change nothing else, and
-re-ask q0192/q0193/q0194 with the full corpus still loaded — so that
-reduced label ambiguity is not confounded with added page context.
+The probe returned 0/3 and the hypothesis was dropped. Its three
+failures were subsequently traced to consumer-side URL truncation (see
+above), which the page-context change could not have addressed. The
++22 KB change was never implemented.
 
-3/3 → implement page-context propagation generally.
-2/3 → page context helps but something else remains.
-0–1/3 → the hypothesis is wrong; do not spend 22 KB on it.
-
-The candidate change, if earned: scope each section heading with its
-page. 949 section headings, +22,064 bytes (+7.9%), taking Arm C to
-301,720 — still 0.81% of Master.
+The page-spread correlation remains unexplained for the *other* seven
+ambiguous labels, and is worth revisiting only if a failure appears that
+is not accounted for by truncation.
