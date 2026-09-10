@@ -107,8 +107,8 @@ describe.skipIf(!HAS_CORPUS)("benchmark artifacts", () => {
     run("scripts/build-arms.mjs", out);
     const m = JSON.parse(fs.readFileSync(path.join(out, "manifest.json"), "utf8"));
     expect(m.generatorVersion).toMatch(/^\d+\.\d+\.\d+$/);
-    expect(m.snapshot).toBe("AUGUST-2026-CORPUS");
-    expect(m.snapshotClock).toBe("2026-08-31T00:00:00.000Z");
+    expect(m.snapshot).toBe("SEPTEMBER-2026-CORPUS");
+    expect(m.snapshotClock).toBe("2026-09-09T00:00:00.000Z");
     expect(fs.readFileSync(path.join(out, m.arms.C.file), "utf8")).toContain(`- Generator: ${m.generatorVersion}`);
   }, 300000);
 
@@ -137,18 +137,19 @@ describe.skipIf(!HAS_CORPUS)("question set", () => {
   const load = () => JSON.parse(fs.readFileSync(setPath, "utf8"));
 
   // Pinned so a change to the builder cannot silently alter the
-  // benchmark. Regenerated against the 128-page scope (benchmark/SCOPE.md);
-  // curation is still proposed, not applied — see benchmark/CURATION.md.
-  const CORE_SHA = "ed410946f7dc284c9693cf9a2925b508e2f22140ec9b7d3722ddbe8d8d9507b6";
+  // benchmark. Regenerated against the September 2026 snapshot's
+  // 128-page scope (benchmark/SCOPE.md); curation is still proposed,
+  // not applied — see benchmark/CURATION.md.
+  const CORE_SHA = "40befe1d18c3c75bbe6d8e1f502e6dee2437e53ac40cb4871f17920015465d33";
   const core = (qs) => qs.map((q) => [q.id, q.page, q.kind, q.question, q.answer].join(" | ")).join("\n");
 
-  it("still holds exactly the 638 verified questions", () => {
+  it("still holds exactly the 641 verified questions", () => {
     const { questions } = load();
-    expect(questions).toHaveLength(638);
+    expect(questions).toHaveLength(641);
     expect(sha(core(questions))).toBe(CORE_SHA);
   });
 
-  it("rebuilds to the same 638 questions", () => {
+  it("rebuilds to the same 641 questions", () => {
     const out = tmp("qs");
     run("scripts/build-question-set.mjs", out);
     const rebuilt = JSON.parse(fs.readFileSync(path.join(out, "question-set.json"), "utf8")).questions;
@@ -177,8 +178,8 @@ describe.skipIf(!HAS_CORPUS)("question set", () => {
     const corpus = new Set(corpusFiles().map(norm));
 
     expect(meta.corpusPages).toBe(128);
-    expect(meta.snapshotPages).toBe(133);
-    expect(excluded.size).toBe(5);
+    expect(meta.snapshotPages).toBe(134);
+    expect(excluded.size).toBe(6);
 
     const pages = new Set(questions.map((q) => norm(q.page)));
     for (const p of pages) {

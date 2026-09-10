@@ -151,9 +151,12 @@ and that the archive's entries round-trip to the canonical digests.
 > builder passes a fixed snapshot clock (`2026-08-31T00:00:00Z`) so the
 > bytes are stable. Arm C carries no clock.
 
-> **Scope and pre-flight.** The benchmark now runs over a deliberately
-> selected **128-page** subset of the 133-page snapshot, and the
-> nine-question Copilot Studio pre-flight has been run.
+> **Active snapshot: SEPTEMBER 2026.** The benchmark runs over a
+> deliberately selected **128-page** subset of the 134-page September
+> snapshot — **641 questions**, `CORE_SHA 40befe1d…`. August 2026 is
+> superseded but archived and reconstructable; its results are
+> historical and must not be merged with September's. The nine-question
+> Copilot Studio pre-flight was run against August.
 > [`SCOPE.md`](SCOPE.md) records the selection, the five pages excluded
 > by intent, and the regeneration of the question set from 742 to
 > **638** against the 128. [`PREFLIGHT.md`](PREFLIGHT.md) records the
@@ -361,12 +364,12 @@ the exact thing being measured.
 
 ## 7. The question set
 
-**638 questions over the 128 in-scope pages**, all with verbatim source answers. See
+**641 questions over the 128 in-scope pages**, all with verbatim source answers. See
 [`CURATION.md`](CURATION.md) for verified composition, known weaknesses,
 and what to exclude or supplement before a headline number is quoted.
 
 Read results **per category**, not as one aggregate. A difference of a
-few percent across 638 questions is noise; a consistent difference
+few percent across 641 questions is noise; a consistent difference
 within `unit-price`, `unit-area` and `contact-by-role` is the signal,
 because those depend on facts staying next to each other.
 

@@ -33,8 +33,8 @@ const loadCorpus = () => corpusFiles().map((name) => ({ name, path: name, raw: r
 
 describe("benchmark snapshot identity", () => {
   it("is fixed", () => {
-    expect(SNAPSHOT).toBe("AUGUST-2026-CORPUS");
-    expect(SNAPSHOT_CLOCK.toISOString()).toBe("2026-08-31T00:00:00.000Z");
+    expect(SNAPSHOT).toBe("SEPTEMBER-2026-CORPUS");
+    expect(SNAPSHOT_CLOCK.toISOString()).toBe("2026-09-09T00:00:00.000Z");
   });
 
   it("hashes the same way node:crypto does, so CLI and browser agree", async () => {
@@ -73,7 +73,7 @@ describe("benchmark export leaves production packaging alone", () => {
   it("packages under the snapshot name, not the bucket name, on a fixed clock", async () => {
     const { armB, armC } = await buildBenchmarkArtifacts(files);
     expect(armB.md).toContain(`# ${SNAPSHOT} — ASPx Codebase Master File`);
-    expect(armB.md).toContain("Generated on: 08/31/2026");
+    expect(armB.md).toContain("Generated on: 09/09/2026");
     expect(armC.md.startsWith(`# ${SNAPSHOT}\n`)).toBe(true);
     // ...and the bucket file, built the ordinary way, still carries its
     // own name and its own clock.
@@ -204,7 +204,7 @@ describe("download both", () => {
   const files = [{ name: "a.aspx", path: "a.aspx", raw: makeAspx(textControl("<p>Alpha</p>")) }];
 
   it("names the archive for the snapshot", () => {
-    expect(BENCHMARK_ZIP_FILE).toBe("AUGUST-2026-COPILOT-BENCHMARK.zip");
+    expect(BENCHMARK_ZIP_FILE).toBe("SEPTEMBER-2026-COPILOT-BENCHMARK.zip");
   });
 
   it("carries exactly the two arm files, under their own filenames", async () => {
@@ -226,7 +226,7 @@ describe("download both", () => {
 /* ---- against the real corpus ---- */
 
 describe.skipIf(!HAS_CORPUS)("benchmark export over the August corpus", () => {
-  it("covers all 133 pages in both arms", async () => {
+  it("covers all 134 pages in both arms", async () => {
     const { armB, armC, manifest } = await buildBenchmarkArtifacts(loadCorpus());
     expect(manifest.corpusPages).toBe(CANONICAL.pages);
     expect(armB.pages).toBe(CANONICAL.pages);
@@ -238,7 +238,7 @@ describe.skipIf(!HAS_CORPUS)("benchmark export over the August corpus", () => {
     }
   }, 600000);
 
-  it("keeps Arm C coverage at 4791/4791 with nothing untraceable", async () => {
+  it("keeps Arm C coverage at 4864/4864 with nothing untraceable", async () => {
     const { armC } = await buildBenchmarkArtifacts(loadCorpus());
     expect(armC.validation.status).toBe("PASS");
     expect(armC.validation.sourceUnits).toBe(CANONICAL.sourceUnits);

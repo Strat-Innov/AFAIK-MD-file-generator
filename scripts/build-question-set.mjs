@@ -43,11 +43,19 @@ const outDir = process.argv[2] || path.join(root, "benchmark");
  * generated question is edited or filtered afterwards, so the
  * deterministic generation rules are exactly what they were. */
 const EXCLUDED_PAGES = [
+  // Left Unsorted and excluded by intent since the August snapshot.
   "Page.aspx",
   "Lost-Page.aspx",
   "THE-SIGNATURE.aspx",
   "FORTUNE-HILL.aspx",
   "STUDIO-CITY.aspx",
+  // Added in the September snapshot as a placeholder: its third line is
+  // literally "Placeholder" and the body beneath is Finance department
+  // content under an Internal Audit title. Questions built from it would
+  // attribute Finance's responsibilities to Internal Audit — scoring
+  // agents on a mis-association the source itself contains. Revisit when
+  // the page has real content.
+  "Internal-Audit.aspx",
 ];
 
 // Command-line `unzip` escapes the en dash in one corpus filename as

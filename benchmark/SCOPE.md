@@ -1,9 +1,28 @@
 # Benchmark scope
 
-Two snapshots exist. **August 2026** is frozen historical evidence —
-it produced Arm C v1.1 and the 638-question set. **September 2026** is
-the snapshot the remaining arms will run on. Results are never merged
-across them.
+Two snapshots exist. **August 2026** is frozen historical evidence — it
+produced Arm C v1.1 and the 638-question set. **September 2026 is the
+active frozen benchmark snapshot**, and the one Arms A, B and C will run
+on. Results are never merged across them.
+
+Both are archived under `benchmark/corpora/` and both are
+reconstructable — see [`corpora/README.md`](corpora/README.md).
+`test/snapshots.test.js` enforces it: every archived snapshot must
+rebuild to the digests recorded for it.
+
+| | August 2026 | September 2026 |
+|---|---|---|
+| Status | superseded | **active** |
+| Snapshot name | `AUGUST-2026-CORPUS` | `SEPTEMBER-2026-CORPUS` |
+| Snapshot clock | `2026-08-31T00:00:00Z` | `2026-09-09T00:00:00Z` |
+| Pages in corpus | 133 | 134 |
+| Benchmark pages | 128 | 128 |
+| Questions | 638 | **641** |
+| Question `CORE_SHA` | `ed410946f7dc284c…` | `40befe1d18c3c75b…` |
+| Corpus file set | `d76c3e6ccf26e449…` | `69cdbacdd9fb49b4…` |
+| Arm B | `6001b8760126a6e4…` | `409af018d1659277…` |
+| Arm C (generator 1.1.0) | `103a6ec97acc6d78…` | `b0408d31751f4f4e…` |
+| Source units | 4,791 | 4,864 |
 
 ---
 
@@ -233,3 +252,21 @@ to drift rather than to representation.
 `Digital Library.aspx`. The comparable headline stratum is 85 in both
 snapshots — a coincidence, not a reason to relax the preregistration in
 `README.md`, which stands unchanged.
+
+## September is now the active snapshot
+
+`test/corpus/` holds the September pages. The question set was
+regenerated deterministically to **641** questions over the 128 in-scope
+pages, and `CORE_SHA` re-pinned to
+`40befe1d18c3c75bbe6d8e1f502e6dee2437e53ac40cb4871f17920015465d33`.
+
+August is untouched and independently recoverable: its corpus is at
+`benchmark/corpora/august-2026/`, its digests are in `SNAPSHOT_HISTORY`,
+and rebuilding it from the archive reproduces
+`d76c3e6c…` / `6001b876…` / `103a6ec9…` / 4,791 units exactly — verified,
+not assumed.
+
+**Do not compare September scores numerically against the August Arm C
+runs.** The page population is identical, but 62 pages changed content.
+August is a diagnostic that produced Arm C v1.1; September is the
+controlled comparison.

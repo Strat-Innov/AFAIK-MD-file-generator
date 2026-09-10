@@ -36,3 +36,11 @@ benchmark/csv/
 # Hand-modified probe artifacts for a causal test. Same corpus content,
 # same reason as everything above: this repository is public.
 benchmark/probe/
+
+# Archived corpus snapshots. Each holds the real exported .aspx pages
+# plus a manifest of per-file hashes, so any snapshot can be
+# reconstructed and verified independently. Same reason as everything
+# above: employee names, work addresses, internal URLs, public repo.
+# benchmark/SCOPE.md records each snapshot's aggregate hashes.
+# The directory's own README is tracked; the snapshots inside are not.
+benchmark/corpora/*/
