@@ -27,6 +27,8 @@ global.DOMParser = dom.window.DOMParser;
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { parsePage } = await import(path.join(root, "src/lib/aspxDocument.js"));
 const { GENERATOR_VERSION } = await import(path.join(root, "src/lib/version.js"));
+const { checkCorpus, formatReport, blocksBenchmark } = await import(path.join(root, "src/lib/sourceIntegrity.js"));
+const { checkQuestionSet, formatQuestionReport, blocksFreeze } = await import(path.join(root, "src/lib/questionQuality.js"));
 
 const corpusDir = path.join(root, "test/corpus");
 const outDir = process.argv[2] || path.join(root, "benchmark");
@@ -223,21 +225,69 @@ for (const name of scopedNames) {
   console.log(`dropped ${before - questions.length} ambiguous or duplicate question(s) (${dropped} genuinely ambiguous)`);
 }
 
+/* ---- source-integrity governance ----
+ * A page whose body does not belong to its title produces ground truth
+ * that is wrong at source, and no downstream check can see it: the
+ * generator is a faithful transform, so it faithfully reproduces the
+ * error. September V1 lost 34 questions to exactly that. High-confidence
+ * findings stop the build; everything else is reported and proceeds.
+ * Override with --allow-source-warnings when a finding has been reviewed. */
+const allowOverride = process.argv.includes("--allow-source-warnings");
+const integrity = checkCorpus(
+  scopedNames.map((name) => ({
+    name,
+    page: parsePage(fs.readFileSync(path.join(corpusDir, name), "utf8"), { name, path: name }),
+  }))
+);
+if (integrity.length) {
+  console.log("\n" + formatReport(integrity) + "\n");
+}
+const blocking = integrity.filter(blocksBenchmark);
+if (blocking.length && !allowOverride) {
+  console.error(
+    `Refusing to build: ${blocking.length} page(s) flagged at high confidence — ` +
+    blocking.map((b) => b.page).join(", ") +
+    `\nFix the source, or re-run with --allow-source-warnings if this has been reviewed.`
+  );
+  process.exit(3);
+}
+if (blocking.length) {
+  console.warn(`proceeding past ${blocking.length} high-confidence source finding(s) by explicit override\n`);
+}
+
+/* ---- question-quality governance ----
+ * Reported, never applied: a generated question is evidence of what the
+ * page says, so repairing it silently would break the one property that
+ * makes the set usable as ground truth. */
+const quality = checkQuestionSet(questions, { corpusPages: scopedNames });
+if (quality.findings.length) console.log(formatQuestionReport(quality) + "\n");
+if (blocksFreeze(quality)) {
+  console.error("Refusing to build: question-quality findings at high severity. See the report above.");
+  process.exit(4);
+}
+
 fs.mkdirSync(outDir, { recursive: true });
 const meta = {
   generatorVersion: GENERATOR_VERSION,
   builtAt: new Date().toISOString(),
-  scope: "128-page benchmark scope — see benchmark/SCOPE.md",
+  scope: `${scopedNames.length}-page benchmark scope — see benchmark/SCOPE.md`,
   snapshotPages: corpusNames.length,
   corpusPages: scopedNames.length,
   excludedPages: [...excluded].sort(),
   questionCount: questions.length,
+  sourceIntegrity: {
+    checked: scopedNames.length,
+    findings: integrity.map((r) => ({ page: r.page, severity: r.severity, rules: r.findings.map((f) => f.rule) })),
+    blocked: blocking.map((b) => b.page),
+    overridden: blocking.length > 0 && allowOverride,
+  },
+  questionQuality: { counts: quality.counts, findings: quality.findings.length },
 };
 fs.writeFileSync(path.join(outDir, "question-set.json"), JSON.stringify({ meta, questions }, null, 1));
 
 const byKind = {};
 for (const q of questions) (byKind[q.kind] ??= []).push(q);
-let md = `# Retrieval question set\n\nGenerated from the August corpus by \`scripts/build-question-set.mjs\` against generator v${meta.generatorVersion}.\nEvery answer is a verbatim source value.\n\n- Pages in scope: ${meta.corpusPages} of ${meta.snapshotPages} (see benchmark/SCOPE.md)\n- Excluded by intent: ${meta.excludedPages.join(", ")}\n- Questions: ${meta.questionCount}\n\n`;
+let md = `# Retrieval question set\n\nGenerated from the active corpus by \`scripts/build-question-set.mjs\` against generator v${meta.generatorVersion}.\nEvery answer is a verbatim source value.\n\n- Pages in scope: ${meta.corpusPages} of ${meta.snapshotPages} (see benchmark/SCOPE.md)\n- Excluded by intent: ${meta.excludedPages.join(", ")}\n- Questions: ${meta.questionCount}\n\n`;
 for (const [kind, qs] of Object.entries(byKind).sort((a, b) => b[1].length - a[1].length)) {
   md += `## ${kind} (${qs.length})\n\n`;
   for (const q of qs.slice(0, 5)) md += `- **${q.question}**\n  - expected: \`${q.answer}\`\n  - page: \`${q.page}\`\n`;

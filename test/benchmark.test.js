@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { ACTIVE_SNAPSHOT } from "../src/lib/snapshots.js";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -107,8 +108,8 @@ describe.skipIf(!HAS_CORPUS)("benchmark artifacts", () => {
     run("scripts/build-arms.mjs", out);
     const m = JSON.parse(fs.readFileSync(path.join(out, "manifest.json"), "utf8"));
     expect(m.generatorVersion).toMatch(/^\d+\.\d+\.\d+$/);
-    expect(m.snapshot).toBe("SEPTEMBER-2026-CORPUS");
-    expect(m.snapshotClock).toBe("2026-09-09T00:00:00.000Z");
+    expect(m.snapshot).toBe(ACTIVE_SNAPSHOT.name);
+    expect(m.snapshotClock).toBe(ACTIVE_SNAPSHOT.clock);
     expect(fs.readFileSync(path.join(out, m.arms.C.file), "utf8")).toContain(`- Generator: ${m.generatorVersion}`);
   }, 300000);
 
@@ -137,19 +138,20 @@ describe.skipIf(!HAS_CORPUS)("question set", () => {
   const load = () => JSON.parse(fs.readFileSync(setPath, "utf8"));
 
   // Pinned so a change to the builder cannot silently alter the
-  // benchmark. Regenerated against the September 2026 snapshot's
-  // 128-page scope (benchmark/SCOPE.md); curation is still proposed,
-  // not applied — see benchmark/CURATION.md.
-  const CORE_SHA = "40befe1d18c3c75bbe6d8e1f502e6dee2437e53ac40cb4871f17920015465d33";
+  // benchmark — but pinned THROUGH THE REGISTRY, not by a literal here.
+  // A hand-copied checksum is how the CSV exporter came to refuse the
+  // September set while still demanding August's. The registry is the
+  // one place a snapshot is declared.
+  const CORE_SHA = ACTIVE_SNAPSHOT.questionSetSha256;
   const core = (qs) => qs.map((q) => [q.id, q.page, q.kind, q.question, q.answer].join(" | ")).join("\n");
 
-  it("still holds exactly the 641 verified questions", () => {
+  it("still holds exactly the verified questions of the active snapshot", () => {
     const { questions } = load();
-    expect(questions).toHaveLength(641);
+    expect(questions).toHaveLength(ACTIVE_SNAPSHOT.questions);
     expect(sha(core(questions))).toBe(CORE_SHA);
   });
 
-  it("rebuilds to the same 641 questions", () => {
+  it("rebuilds to the same question set", () => {
     const out = tmp("qs");
     run("scripts/build-question-set.mjs", out);
     const rebuilt = JSON.parse(fs.readFileSync(path.join(out, "question-set.json"), "utf8")).questions;
@@ -171,14 +173,14 @@ describe.skipIf(!HAS_CORPUS)("question set", () => {
   // page asks Arms B and C about a page they do not contain, while Arm A
   // still holds all 133 — so it reads as an Arm A win that has nothing
   // to do with representation.
-  it("asks only about pages inside the 128-page scope", () => {
+  it("asks only about pages inside the active scope", () => {
     const { meta, questions } = load();
     const norm = (n) => n.replace(/#U2013/g, "\u2013");
     const excluded = new Set(meta.excludedPages.map(norm));
     const corpus = new Set(corpusFiles().map(norm));
 
-    expect(meta.corpusPages).toBe(128);
-    expect(meta.snapshotPages).toBe(134);
+    expect(meta.corpusPages).toBe(ACTIVE_SNAPSHOT.benchmarkPages);
+    expect(meta.snapshotPages).toBe(ACTIVE_SNAPSHOT.sourceFiles);
     expect(excluded.size).toBe(6);
 
     const pages = new Set(questions.map((q) => norm(q.page)));

@@ -8,7 +8,9 @@ import {
   verifyArtifacts, CANONICAL, BENCHMARK_ZIP_FILE,
   CONSOLIDATED_ZIP_FILE, COPILOT_FILE_LIMIT, SNAPSHOT,
 } from "../lib/benchmarkExport";
-import { detectSnapshot, UNREGISTERED } from "../lib/snapshots";
+import {
+  detectSnapshot, UNREGISTERED, HISTORICAL_SNAPSHOTS, ACTIVE_SNAPSHOT, evaluationStatusOf,
+} from "../lib/snapshots";
 import { stagedKey, fileId } from "../lib/stagedKey";
 import { createZip } from "../lib/zip";
 import { GENERATOR_VERSION } from "../lib/version";
@@ -187,9 +189,30 @@ function SnapshotIdentity({ detection, detecting, staged }) {
       <Row label="Snapshot" tone={s ? "text-slate-700" : "text-amber-700 font-semibold"}>
         {s ? s.name : UNREGISTERED}
       </Row>
+      {s?.label && <Row label="Also known as">{s.label}</Row>}
+      {s && (
+        <Row label="Status" tone={s.status === "frozen" ? "text-slate-700" : "text-slate-500"}>
+          {s.status === "frozen" ? "current" : s.status}
+          {s.status !== "frozen" && s.supersededOn ? ` · superseded ${s.supersededOn}` : ""}
+        </Row>
+      )}
       {s && <Row label="Generator">{s.generator}</Row>}
       {s && <Row label="Snapshot clock">{s.clock}</Row>}
       {s && <Row label="Benchmark pages">{s.benchmarkPages}</Row>}
+      {s && <Row label="Benchmark questions">{s.questions}</Row>}
+      {s && <Row label="Question set CORE_SHA">{s.questionSetSha256}</Row>}
+      {s && (
+        <Row
+          label="Evaluation"
+          tone={evaluationStatusOf(s) === "complete" ? "text-emerald-700" : "text-amber-700 font-semibold"}
+        >
+          {evaluationStatusOf(s) === "complete"
+            ? `complete · ${s.evaluation.evaluations.toLocaleString()} evaluations`
+            : evaluationStatusOf(s) === "not-run"
+              ? "NOT YET EVALUATED"
+              : evaluationStatusOf(s)}
+        </Row>
+      )}
       <Row
         label="Source files"
         tone={!s || id.sourceFiles === s.sourceFiles ? "text-slate-700" : "text-amber-700 font-semibold"}
@@ -414,6 +437,69 @@ function PackageSection({ bucketMap, unsortedFiles }) {
   );
 }
 
+/* ------------------------------------------------------------------ *
+ * Historical benchmarks. A completed run describes the corpus it ran
+ * on and nothing else, so these numbers are never recomputed against a
+ * newer corpus — they are shown exactly as reported, next to the
+ * snapshot that produced them.
+ * ------------------------------------------------------------------ */
+function HistoricalBenchmarks() {
+  if (!HISTORICAL_SNAPSHOTS.length) return null;
+  const pct = (arm) => ((arm.pass / arm.questions) * 100).toFixed(2) + "%";
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center gap-2 border-b border-slate-100 p-4">
+        <Layers className="h-4 w-4 text-slate-500" />
+        <span className="text-sm font-semibold text-slate-800">Historical benchmarks</span>
+        <span className="ml-auto text-xs text-slate-400">evidence · not recomputed</span>
+      </div>
+      <div className="space-y-4 p-4">
+        {HISTORICAL_SNAPSHOTS.map((s) => (
+          <div key={s.name}>
+            <div className="flex flex-wrap items-baseline gap-2">
+              <span className="text-xs font-semibold text-slate-800">{s.label ?? s.name}</span>
+              <span className="font-mono text-[11px] text-slate-500">{s.name}</span>
+              <span className="ml-auto text-[11px] text-slate-500">
+                {s.questions} questions · {s.evaluation.evaluations.toLocaleString()} evaluations
+              </span>
+            </div>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full text-[11px]">
+                <thead className="text-slate-500">
+                  <tr>
+                    <th className="py-1 pr-3 text-left font-medium">Arm</th>
+                    <th className="py-1 pr-3 text-right font-medium">Pass</th>
+                    <th className="py-1 pr-3 text-right font-medium">Fail</th>
+                    <th className="py-1 pr-3 text-right font-medium">Error</th>
+                    <th className="py-1 pr-3 text-right font-medium">Other</th>
+                    <th className="py-1 text-right font-medium">Raw pass</th>
+                  </tr>
+                </thead>
+                <tbody className="font-mono text-slate-700">
+                  {Object.entries(s.evaluation.arms).map(([arm, a]) => (
+                    <tr key={arm} className="border-t border-slate-100">
+                      <td className="py-1 pr-3">{arm}</td>
+                      <td className="py-1 pr-3 text-right">{a.pass}</td>
+                      <td className="py-1 pr-3 text-right">{a.fail}</td>
+                      <td className="py-1 pr-3 text-right">{a.error}</td>
+                      <td className="py-1 pr-3 text-right">{a.other}</td>
+                      <td className="py-1 text-right">{pct(a)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2 text-[11px] text-slate-500">
+              Raw evaluator output. Adjudication is recorded separately and never replaces these numbers.
+              {s.note ? " " + s.note : ""}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
   const [state, setState] = useState("idle"); // idle | working | done | error
   const [built, setBuilt] = useState(null);
@@ -528,6 +614,22 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
           </p>
         </div>
       </div>
+
+      {evaluationStatusOf(ACTIVE_SNAPSHOT) !== "complete" && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          <span>
+            <span className="font-semibold">
+              {ACTIVE_SNAPSHOT.label ?? ACTIVE_SNAPSHOT.name} has not been evaluated.
+            </span>{" "}
+            Its artifacts and its {ACTIVE_SNAPSHOT.questions}-question set can be generated and exported, but no
+            benchmark result describes it yet. The figures under Historical benchmarks belong to an earlier corpus and
+            must not be read as this one's.
+          </span>
+        </div>
+      )}
+
+      <HistoricalBenchmarks />
 
       <PackageSection bucketMap={bucketMap} unsortedFiles={unsortedFiles} />
 

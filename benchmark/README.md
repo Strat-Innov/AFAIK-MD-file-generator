@@ -151,12 +151,24 @@ and that the archive's entries round-trip to the canonical digests.
 > builder passes a fixed snapshot clock (`2026-08-31T00:00:00Z`) so the
 > bytes are stable. Arm C carries no clock.
 
-> **Active snapshot: SEPTEMBER 2026.** The benchmark runs over a
-> deliberately selected **128-page** subset of the 134-page September
-> snapshot — **641 questions**, `CORE_SHA 40befe1d…`. August 2026 is
-> superseded but archived and reconstructable; its results are
-> historical and must not be merged with September's. The nine-question
-> Copilot Studio pre-flight was run against August.
+> **Current snapshot: SEPTEMBER 2026 V2 (cleaned).** 133 source files,
+> **127** in-scope pages, **607 questions**,
+> `CORE_SHA 1f93c4a5…`. **NOT YET EVALUATED** — its artifacts and CSVs can
+> be generated, but no benchmark result describes it.
+>
+> **September 2026 V1 is historical**: 134 files, 128 pages, 641
+> questions, `CORE_SHA 40befe1d…`, executed in full across three arms
+> (1,923 evaluations) and independently audited. That audit found
+> `South-Station-Terminal(test).aspx` was a draft carrying Two Botanika
+> content under a transport-terminal title, contaminating 34 questions.
+> The page has been deleted at source; V2 is the corpus without it.
+> V1's numbers stand as evidence and are **not** a baseline for V2 — a
+> different corpus, a different question population, and renumbered ids.
+> August 2026 is superseded but archived and reconstructable. See
+> [`GOVERNANCE.md`](GOVERNANCE.md) for the snapshot lifecycle, the
+> source-integrity and question-quality gates, and the raw-vs-adjudicated
+> rule.
+>
 > [`SCOPE.md`](SCOPE.md) records the selection, the five pages excluded
 > by intent, and the regeneration of the question set from 742 to
 > **638** against the 128. [`PREFLIGHT.md`](PREFLIGHT.md) records the
@@ -364,12 +376,13 @@ the exact thing being measured.
 
 ## 7. The question set
 
-**641 questions over the 128 in-scope pages**, all with verbatim source answers. See
+**607 questions over the 127 in-scope pages** of September V2, all with verbatim
+source answers (September V1 had 641 over 128). See
 [`CURATION.md`](CURATION.md) for verified composition, known weaknesses,
 and what to exclude or supplement before a headline number is quoted.
 
 Read results **per category**, not as one aggregate. A difference of a
-few percent across 641 questions is noise; a consistent difference
+few percent across several hundred questions is noise; a consistent difference
 within `unit-price`, `unit-area` and `contact-by-role` is the signal,
 because those depend on facts staying next to each other.
 

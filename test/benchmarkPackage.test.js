@@ -5,6 +5,7 @@ import {
   buildBucketPackage, packageEntries, bucketSlug,
   COPILOT_FILE_LIMIT, BENCHMARK_ZIP_FILE, SNAPSHOT, SNAPSHOT_CLOCK,
 } from "../src/lib/benchmarkExport.js";
+import { ACTIVE_SNAPSHOT } from "../src/lib/snapshots.js";
 import { buildMaster } from "../src/lib/masterMd.js";
 import { generateOptimized } from "../src/lib/generate.js";
 import { createZip } from "../src/lib/zip.js";
@@ -92,7 +93,9 @@ describe("the Copilot-safe package", () => {
       expect(b.md).toBe(buildMaster(bucket, files, SNAPSHOT_CLOCK));
       expect(c.md).toBe(generateOptimized(bucket, files).md);
       expect(b.md).toContain(`# ${bucket} — ASPx Codebase Master File`);
-      expect(b.md).toContain("Generated on: 09/09/2026 00:00:00");
+      const d = new Date(ACTIVE_SNAPSHOT.clock);
+      const stamped = `${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(d.getUTCDate()).padStart(2, "0")}/${d.getUTCFullYear()}`;
+      expect(b.md).toContain(`Generated on: ${stamped} 00:00:00`);
     }
   });
 
@@ -180,26 +183,28 @@ function partitionedCorpus() {
   return map;
 }
 
-describe.skipIf(!HAS_CORPUS)("the package over the August corpus", () => {
-  it("covers all 134 pages across exactly five files per arm", async () => {
+describe.skipIf(!HAS_CORPUS)("the package over the active corpus", () => {
+  it("covers every page of the active snapshot across exactly five files per arm", async () => {
+    const PAGES = ACTIVE_SNAPSHOT.sourceFiles;
     const pkg = await buildBucketPackage(partitionedCorpus());
     expect(pkg.armB).toHaveLength(5);
     expect(pkg.armC).toHaveLength(5);
-    expect(pkg.pages).toBe(134);
-    expect(pkg.armB.reduce((n, a) => n + a.pages, 0)).toBe(134);
-    expect(pkg.armC.reduce((n, a) => n + a.pages, 0)).toBe(134);
+    expect(pkg.pages).toBe(PAGES);
+    expect(pkg.armB.reduce((n, a) => n + a.pages, 0)).toBe(PAGES);
+    expect(pkg.armC.reduce((n, a) => n + a.pages, 0)).toBe(PAGES);
     // no page lost, none duplicated
     const listed = pkg.manifest.buckets.flatMap((b) => b.pages);
-    expect(listed).toHaveLength(134);
-    expect(new Set(listed).size).toBe(134);
+    expect(listed).toHaveLength(PAGES);
+    expect(new Set(listed).size).toBe(PAGES);
     expect(listed.sort()).toEqual(corpusFiles().sort());
   }, 900000);
 
-  it("keeps Arm C coverage at 4864/4864 with nothing untraceable", async () => {
+  it("keeps Arm C coverage whole, with nothing untraceable", async () => {
+    const UNITS = ACTIVE_SNAPSHOT.sourceUnits;
     const pkg = await buildBucketPackage(partitionedCorpus());
     expect(pkg.status).toBe("PASS");
-    expect(pkg.totals.sourceUnits).toBe(4864);
-    expect(pkg.totals.representedUnits).toBe(4864);
+    expect(pkg.totals.sourceUnits).toBe(UNITS);
+    expect(pkg.totals.representedUnits).toBe(UNITS);
     expect(pkg.totals.untraceableUnits).toBe(0);
   }, 900000);
 
@@ -230,7 +235,7 @@ describe.skipIf(!HAS_CORPUS)("the package over the August corpus", () => {
       expect(nodeSha(entry.text)).toBe(a.sha256);
     }
     const manifest = JSON.parse(read.find((e) => e.name === "manifest.json").text);
-    expect(manifest.corpusPages).toBe(134);
-    expect(BENCHMARK_ZIP_FILE).toBe("SEPTEMBER-2026-COPILOT-BENCHMARK.zip");
+    expect(manifest.corpusPages).toBe(ACTIVE_SNAPSHOT.sourceFiles);
+    expect(BENCHMARK_ZIP_FILE).toBe(`${ACTIVE_SNAPSHOT.name.replace(/-CORPUS$/, "")}-COPILOT-BENCHMARK.zip`);
   }, 900000);
 });

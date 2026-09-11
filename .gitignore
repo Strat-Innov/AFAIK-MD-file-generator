@@ -15,6 +15,11 @@ test/corpus/*.aspx
 benchmark/question-set.json
 benchmark/question-set.md
 
+# Archived question sets for superseded snapshots. Same content, same
+# reasons, same rule: local only.
+benchmark/history/
+benchmark/question-set.md
+
 # Benchmark knowledge artifacts (Arm B / Arm C) built from the corpus by
 # `npm run benchmark:arms`. They reproduce the corpus content, including
 # employee names, work email addresses and internal tenant URLs, and this

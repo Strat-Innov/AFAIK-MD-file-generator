@@ -22,8 +22,20 @@ const SEP = "benchmark/corpora/september-2026";
 
 describe("the registry", () => {
   it("holds exactly one frozen snapshot", () => {
+    // Which one is active changes with the corpus; that there is exactly
+    // one, and that it is the frozen one, does not.
     expect(SNAPSHOTS.filter((s) => s.status === "frozen")).toHaveLength(1);
-    expect(ACTIVE_SNAPSHOT.name).toBe("SEPTEMBER-2026-CORPUS");
+    expect(ACTIVE_SNAPSHOT.status).toBe("frozen");
+    expect(ACTIVE_SNAPSHOT.name).toMatch(/^[A-Z0-9-]+-CORPUS$/);
+  });
+
+  it("keeps every superseded and historical snapshot registered", () => {
+    // A snapshot is never removed: a benchmark result is only meaningful
+    // against the corpus it ran on, so that corpus must stay resolvable.
+    const names = SNAPSHOTS.map((s) => s.name);
+    expect(names).toContain("AUGUST-2026-CORPUS");
+    expect(names).toContain("SEPTEMBER-2026-CORPUS");
+    expect(new Set(names).size).toBe(names.length);
   });
 
   it("gives every snapshot a distinct content identity", () => {

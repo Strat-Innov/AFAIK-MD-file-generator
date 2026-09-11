@@ -17,7 +17,7 @@ import {
   BENCHMARK_ZIP_FILE,
   sha256,
 } from "../src/lib/benchmarkExport.js";
-import { UNREGISTERED_ID } from "../src/lib/snapshots.js";
+import { UNREGISTERED_ID, ACTIVE_SNAPSHOT } from "../src/lib/snapshots.js";
 import { createZip } from "../src/lib/zip.js";
 import { buildMaster } from "../src/lib/masterMd.js";
 import { generateOptimized } from "../src/lib/generate.js";
@@ -34,8 +34,10 @@ const loadCorpus = () => corpusFiles().map((name) => ({ name, path: name, raw: r
 
 describe("benchmark snapshot identity", () => {
   it("is fixed", () => {
-    expect(SNAPSHOT).toBe("SEPTEMBER-2026-CORPUS");
-    expect(SNAPSHOT_CLOCK.toISOString()).toBe("2026-09-09T00:00:00.000Z");
+    // Fixed to whatever the registry declares active — the point is that
+    // it is declared in exactly one place, not that it is any one month.
+    expect(SNAPSHOT).toBe(ACTIVE_SNAPSHOT.name);
+    expect(SNAPSHOT_CLOCK.toISOString()).toBe(ACTIVE_SNAPSHOT.clock);
   });
 
   it("hashes the same way node:crypto does, so CLI and browser agree", async () => {
@@ -81,7 +83,9 @@ describe("benchmark export leaves production packaging alone", () => {
       clock: SNAPSHOT_CLOCK,
     });
     expect(armB.md).toContain(`# ${SNAPSHOT} — ASPx Codebase Master File`);
-    expect(armB.md).toContain("Generated on: 09/09/2026");
+    const d = new Date(ACTIVE_SNAPSHOT.clock);
+    const stamped = `${String(d.getUTCMonth() + 1).padStart(2, "0")}/${String(d.getUTCDate()).padStart(2, "0")}/${d.getUTCFullYear()}`;
+    expect(armB.md).toContain(`Generated on: ${stamped}`);
     expect(armC.md.startsWith(`# ${SNAPSHOT}\n`)).toBe(true);
     // ...and the bucket file, built the ordinary way, still carries its
     // own name and its own clock.
@@ -223,7 +227,9 @@ describe("download both", () => {
   const files = [{ name: "a.aspx", path: "a.aspx", raw: makeAspx(textControl("<p>Alpha</p>")) }];
 
   it("names the archive for the snapshot", () => {
-    expect(BENCHMARK_ZIP_FILE).toBe("SEPTEMBER-2026-COPILOT-BENCHMARK.zip");
+    expect(BENCHMARK_ZIP_FILE).toBe(`${ACTIVE_SNAPSHOT.name.replace(/-CORPUS$/, "")}-COPILOT-BENCHMARK.zip`);
+    // and it moves with the snapshot rather than naming a fixed month
+    expect(BENCHMARK_ZIP_FILE).toContain(ACTIVE_SNAPSHOT.name.replace(/-CORPUS$/, ""));
   });
 
   it("carries exactly the two arm files, under their own filenames", async () => {

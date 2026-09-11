@@ -28,10 +28,14 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const setPath = path.join(root, "benchmark/question-set.json");
 const outDir = process.argv[2] || path.join(root, "benchmark/csv");
 
-// The set this export is allowed to describe. Same value as CORE_SHA in
-// test/benchmark.test.js; if the two ever disagree, the export refuses
-// rather than shipping questions nobody pinned.
-const CORE_SHA = "ed410946f7dc284c9693cf9a2925b508e2f22140ec9b7d3722ddbe8d8d9507b6";
+// The set this export is allowed to describe comes from the snapshot
+// registry, not from a constant here. Pinning it by hand is how this
+// exporter came to be stuck on August's checksum and August's exclusion
+// count while the active snapshot had moved on twice: it refused the
+// September set outright. The registry is the single source of truth
+// for what is active, so the check reads it.
+const { ACTIVE_SNAPSHOT } = await import(path.join(root, "src/lib/snapshots.js"));
+const CORE_SHA = ACTIVE_SNAPSHOT.questionSetSha256;
 const CHUNK = 100;
 
 if (!fs.existsSync(setPath)) {
@@ -43,7 +47,14 @@ const { meta, questions } = JSON.parse(fs.readFileSync(setPath, "utf8"));
 const core = questions.map((q) => [q.id, q.page, q.kind, q.question, q.answer].join(" | ")).join("\n");
 const sha = crypto.createHash("sha256").update(core, "utf8").digest("hex");
 if (sha !== CORE_SHA) {
-  console.error(`Question set checksum mismatch.\n  expected ${CORE_SHA}\n  found    ${sha}\nRefusing to export a set that is not the pinned one.`);
+  console.error(
+    `Question set checksum mismatch.\n` +
+    `  active snapshot ${ACTIVE_SNAPSHOT.name}\n` +
+    `  expected        ${CORE_SHA}\n` +
+    `  found           ${sha}\n` +
+    `Refusing to export a set the registry does not pin. Rebuild the question set, or\n` +
+    `register the snapshot in src/lib/snapshots.js once its identity is confirmed.`
+  );
   process.exit(2);
 }
 
@@ -51,8 +62,14 @@ if (sha !== CORE_SHA) {
 const normalize = (n) => n.replace(/#U2013/g, "–");
 const excluded = new Set((meta.excludedPages || []).map(normalize));
 const problems = [];
-if (meta.corpusPages !== 128) problems.push(`meta.corpusPages is ${meta.corpusPages}, expected 128`);
-if (excluded.size !== 5) problems.push(`${excluded.size} excluded pages recorded, expected 5`);
+// Derived, never hard-coded: the exporter simply exports whatever set
+// the registry currently pins, whatever its size and exclusions.
+if (meta.corpusPages !== ACTIVE_SNAPSHOT.benchmarkPages) {
+  problems.push(`meta.corpusPages is ${meta.corpusPages}, registry says ${ACTIVE_SNAPSHOT.benchmarkPages}`);
+}
+if (questions.length !== ACTIVE_SNAPSHOT.questions) {
+  problems.push(`${questions.length} questions, registry says ${ACTIVE_SNAPSHOT.questions}`);
+}
 for (const q of questions) {
   if (excluded.has(normalize(q.page))) problems.push(`${q.id} is anchored on the excluded page ${q.page}`);
 }
@@ -91,8 +108,9 @@ chunks.forEach((chunk, i) => {
 
 console.log(`source        ${path.relative(root, setPath)}`);
 console.log(`checksum      ${sha}  (verified)`);
-console.log(`scope         ${meta.corpusPages} of ${meta.snapshotPages} pages   excluded: ${[...excluded].sort().join(", ")}`);
-console.log(`questions     ${questions.length}\n`);
+console.log(`snapshot      ${ACTIVE_SNAPSHOT.name}  (${ACTIVE_SNAPSHOT.label ?? "unlabelled"})`);
+console.log(`scope         ${meta.corpusPages} of ${meta.snapshotPages} pages   excluded: ${[...excluded].sort().join(", ") || "none"}`);
+console.log(`questions     ${questions.length}   batches: ${Math.ceil(questions.length / CHUNK)} (last ${questions.length % CHUNK || CHUNK})\n`);
 for (const w of written) console.log(`  ${w.name.padEnd(38)} ${String(w.rows).padStart(3)} rows   ${String(w.bytes).padStart(7)} bytes`);
 console.log(`\n  ${"TOTAL".padEnd(38)} ${String(written.reduce((n, w) => n + w.rows, 0)).padStart(3)} rows`);
 console.log(`\nwrote ${outDir}`);

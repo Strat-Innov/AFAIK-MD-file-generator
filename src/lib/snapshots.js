@@ -37,7 +37,9 @@ export const UNREGISTERED_CLOCK = new Date(Date.UTC(1970, 0, 1, 0, 0, 0));
 export const SNAPSHOTS = [
   {
     name: "AUGUST-2026-CORPUS",
+    label: "August 2026",
     status: "superseded",
+    evaluation: { status: "partial", note: "Diagnostic runs only; no full three-arm execution." },
     contentSha256: "96ef74084723c3d35cdf50d95dc7b3f1c62524125d3c7e9942aa13fe39042d7a",
     fileSetSha256: "d76c3e6ccf26e449399cc21078f7a72b224a7bd9b022c7ba053e9ede83d8a610",
     sourceFiles: 133,
@@ -56,8 +58,13 @@ export const SNAPSHOTS = [
       "its 133 pages and added one, so results are not comparable across the boundary.",
   },
   {
+    // Historical. Executed in full and independently audited, then
+    // superseded when the defective source page was deleted. Its name,
+    // digests and results are frozen evidence: the artifacts on disk are
+    // stamped with this name, so renaming it would break reproduction.
     name: "SEPTEMBER-2026-CORPUS",
-    status: "frozen",
+    label: "September 2026 V1",
+    status: "historical",
     contentSha256: "b12d87b7e27a087565191e2fd044a910e2f3528339838e161bdc30041c2b80ca",
     fileSetSha256: "69cdbacdd9fb49b4078cc0978e355359e65793683628e7ed1ccb866495090119",
     sourceFiles: 134,
@@ -70,6 +77,49 @@ export const SNAPSHOTS = [
     armCSha256: "b0408d31751f4f4e964d4dd221ec921809f2944be67ce4587f0b3c4928bc1e5c",
     sourceUnits: 4864,
     archive: "benchmark/corpora/september-2026",
+    questionSetArchive: "benchmark/history/september-2026-v1",
+    supersededOn: "2026-09-11",
+    // Raw evaluator output, preserved exactly as reported. Adjudication
+    // lives in benchmark/AUDIT-SEPTEMBER-V1.md and never overwrites this.
+    evaluation: {
+      status: "complete",
+      evaluations: 1923,
+      methods: ["general_quality"],
+      arms: {
+        A: { pass: 317, fail: 323, error: 1, other: 0, questions: 641 },
+        B: { pass: 378, fail: 263, error: 0, other: 0, questions: 641 },
+        C: { pass: 628, fail: 12, error: 0, other: 1, questions: 641 },
+      },
+    },
+    note:
+      "Contaminated source: South-Station-Terminal(test).aspx carried Two Botanika residential " +
+      "content under a transport-terminal title, so 34 questions (q0525-q0558) encode that " +
+      "contamination as ground truth. Retained as the historical record of a completed, audited " +
+      "run; not a valid baseline for future comparison.",
+  },
+  {
+    // Current. The defective page was deleted at source, so it is simply
+    // absent from this corpus — it is NOT on an exclusion list, because
+    // there is nothing left to exclude.
+    name: "SEPTEMBER-2026-V2-CORPUS",
+    label: "September 2026 V2 (cleaned)",
+    status: "frozen",
+    contentSha256: "212e998c36baa92d4413d626403eb16cefc0a045352dbcd7f176ca6065b46e2f",
+    fileSetSha256: "822fba2ff4e74e81930797ade2a28e5ba12efbb03a07a9ab099b0310be3cf033",
+    sourceFiles: 133,
+    benchmarkPages: 127,
+    clock: "2026-09-11T00:00:00.000Z",
+    generator: "1.1.0",
+    questionSetSha256: "1f93c4a5d9d927c1044498df09fec5d7fa141a613da3993c8fd27fb5200f2990",
+    questions: 607,
+    armBSha256: "bb5f8eda7f364c8868ba5fe7827d26cef6b135dd3cea108be080815674f14aea",
+    armCSha256: "65e8001fae11179d2e0808d7b48964f1702f6f31898535fc21b1faf4eb112c75",
+    sourceUnits: 4779,
+    archive: "benchmark/corpora/september-2026-v2",
+    evaluation: { status: "not-run" },
+    note:
+      "September 2026 with the defective test page deleted at source. Question ids are renumbered " +
+      "because the set is regenerated, not edited, so V1 ids do not map onto V2 ids.",
   },
 ];
 
@@ -81,6 +131,18 @@ if (frozen.length !== 1) {
 }
 export const ACTIVE_SNAPSHOT = frozen[0];
 export const SUPERSEDED_SNAPSHOTS = SNAPSHOTS.filter((s) => s.status !== "frozen");
+
+/** Snapshots that carry a completed evaluation. Their numbers are
+ *  evidence and must never be recomputed against a newer corpus. */
+export const HISTORICAL_SNAPSHOTS = SNAPSHOTS.filter(
+  (s) => s.evaluation && s.evaluation.status === "complete"
+);
+
+/** Has the active snapshot been evaluated yet? A freshly rebuilt corpus
+ *  has artifacts and a question set but no results, and the UI must say
+ *  so rather than implying the last run describes it. */
+export const evaluationStatusOf = (snapshot) => snapshot?.evaluation?.status ?? "unknown";
+export const isEvaluated = (snapshot) => evaluationStatusOf(snapshot) === "complete";
 
 /**
  * The objective identity of a loaded corpus.

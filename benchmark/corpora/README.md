@@ -6,9 +6,15 @@ reconstructed and verified independently of the artifacts built from it.
 
 ```
 benchmark/corpora/
-  august-2026/      133 pages   superseded
-  september-2026/   134 pages   active
+  august-2026/         133 pages   superseded
+  september-2026/      134 pages   historical  (September V1, executed and audited)
+  september-2026-v2/   133 pages   current     (September V2, cleaned)
 ```
+
+September V2 is September V1 with `South-Station-Terminal(test).aspx`
+removed. That page was a draft whose body was copied from Two Botanika
+under a transport-terminal title; it has been deleted at source, so it is
+simply absent here rather than filtered out. See `benchmark/GOVERNANCE.md`.
 
 The `.aspx` files are **gitignored** — they carry employee names, work
 email addresses and internal tenant URLs, and this repository is public.
@@ -16,7 +22,7 @@ Supply them locally. `benchmark/SCOPE.md` records each snapshot's
 aggregate digests so a local copy can be checked without the files ever
 being committed.
 
-`test/corpus/` holds the **active** snapshot, which is what the
+`test/corpus/` holds the **current** snapshot, which is what the
 generator, the question-set builder and the arm builder all read. To
 switch snapshots, replace its contents from the directory here.
 
