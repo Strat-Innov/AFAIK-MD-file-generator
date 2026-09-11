@@ -165,9 +165,9 @@ and that the archive's entries round-trip to the canonical digests.
 > V1's numbers stand as evidence and are **not** a baseline for V2 — a
 > different corpus, a different question population, and renumbered ids.
 > August 2026 is superseded but archived and reconstructable. See
-> [`GOVERNANCE.md`](GOVERNANCE.md) for the snapshot lifecycle, the
-> source-integrity and question-quality gates, and the raw-vs-adjudicated
-> rule.
+> [`GOVERNANCE.md`](GOVERNANCE.md) for the snapshot lifecycle, the question
+> set as the snapshot's third artifact, the source-integrity and
+> question-quality gates, and the raw-vs-adjudicated rule.
 >
 > [`SCOPE.md`](SCOPE.md) records the selection, the five pages excluded
 > by intent, and the regeneration of the question set from 742 to

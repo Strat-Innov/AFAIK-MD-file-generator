@@ -18,6 +18,9 @@ benchmark/question-set.md
 # Archived question sets for superseded snapshots. Same content, same
 # reasons, same rule: local only.
 benchmark/history/
+
+# Per-run manifest written beside the question set. Local, like the set.
+benchmark/generation-run.json
 benchmark/question-set.md
 
 # Benchmark knowledge artifacts (Arm B / Arm C) built from the corpus by

@@ -173,7 +173,10 @@ describe("TEST 7 — an empty evaluation result is preserved as OTHER", () => {
 
 describe("TEST 8 — an Error result is preserved as ERROR", () => {
   it("is its own bucket, not a Fail", () => {
-    const r = classifyRow({ result: "Error", actualResponse: "…abi.sanjose@filinvestcity.com…" });
+    // The V1 case this reproduces: an Error verdict on a response that
+    // contained the expected email verbatim. The address itself is not
+    // written here — this repository is public.
+    const r = classifyRow({ result: "Error", actualResponse: "…the expected address, verbatim…" });
     expect(r.kind).toBe(ERROR);
     expect(r.raw).toBe("Error");
     expect(r.disposition).toBe("evaluator-error");

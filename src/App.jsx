@@ -6,6 +6,7 @@ import TagManager from "./components/TagManager";
 import GithubSettings from "./components/GithubSettings";
 import ChangelogDetailView from "./components/ChangelogDetailView";
 import BenchmarkExport from "./components/BenchmarkExport";
+import TestQuestionGenerator from "./components/TestQuestionGenerator";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -466,6 +467,7 @@ export default function App() {
         {selected === "Benchmark" && (
           <BenchmarkExport files={benchmarkFiles} bucketMap={benchmarkBuckets} unsortedFiles={unsortedFiles} />
         )}
+        {selected === "TestQuestions" && <TestQuestionGenerator files={benchmarkFiles} />}
         {activeBucket && (
           <BucketView
             bucket={activeBucket}

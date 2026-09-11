@@ -81,9 +81,98 @@ npm run benchmark:arms
 node scripts/export-question-csv.mjs
 ```
 
-Question ids are positional and are reassigned on every rebuild. **V1 ids
-do not map onto V2 ids.** Cite a question by snapshot *and* id, or by its
-text.
+Ids are minted in extraction order, which depends on which pages are in
+scope — so removing a page shifts every id after it. **V1 ids do not map
+onto V2 ids.** Cite a question by snapshot *and* id, or by its text.
+
+---
+
+## 2b. The question set is a snapshot artifact
+
+A corpus snapshot produces **three** things, not two:
+
+```
+            Source corpus  →  snapshot identity
+                      ↓
+   ┌──────────────────┼──────────────────┐
+Master MD        AI-Optimized MD     Question set
+(fidelity)       (retrieval)         (measurement)
+```
+
+All three come from the same frozen pages, so all three carry the same
+identity. `src/lib/questionSet.js` is the generator, and it is **shared**
+by `scripts/build-question-set.mjs` and the app's Test Question Generator
+panel — the same arrangement `benchmarkExport.js` uses. That is not
+tidiness: a second implementation would be a second answer, and the
+checksum would stop meaning anything. Verified in the browser, the panel
+produces the identical CORE_SHA and generation run id as the CLI.
+
+**It never invents a fact.** Every expected answer is a source value
+copied verbatim; every question carries the page, the evidence text and a
+locator naming the section and block it came from, so "why does this
+question expect this answer" is answerable from the record alone. No
+model is consulted anywhere in generation.
+
+**It consumes; it never produces.** Question generation reads parsed
+pages and writes nothing back. The Master file, the AI file, the
+extraction and the validation are untouched by it.
+
+### Record schema
+
+The canonical fields are unchanged — `id`, `page`, `kind`, `question`,
+`answer`, `evidence`, `locator`. Generation now also derives `category`,
+`answerType`, `difficulty`, `entity` and `sourceSection`. Those are
+descriptive, so **enriching a record cannot move the CORE_SHA**, which a
+test asserts.
+
+Ids are minted during extraction and never reassigned. The ambiguity
+filter then removes records, so the surviving sequence has gaps — q0127,
+q0129, q0132. That is deliberate: an id names one extraction from one
+page, and renumbering after a filter would change every question's
+identity, and the checksum, without any question changing. CSV filename
+ranges refer to row position, not to id.
+
+### Question count
+
+Configurable, never fixed. `--target=N` trims round-robin across pages so
+a cap cannot delete one page's whole coverage; `--per-page=N` keeps the
+first N of each. Neither is applied by default — the canonical set is
+everything the corpus supports, because a set sized by a number rather
+than by the pages is not a description of the corpus. No population size
+(641, 607, 41) appears anywhere in application logic; a test enforces it.
+
+### Negative / entity-grounding questions
+
+`--include-negative` generates absence questions — "Does X list
+residential unit pricing?" for a page with no unit rows — where the
+expected behaviour is refusal. They test the failure mode the V1 audit
+turned on: answering from whatever content is nearby rather than from the
+entity asked about.
+
+**Off by default.** Enabling them changes the question population and
+therefore the CORE_SHA, and the current V2 set is the candidate we intend
+to evaluate. Enable explicitly, review, then register the result as a new
+snapshot identity.
+
+### Generation run
+
+`src/lib/generationRun.js` writes `benchmark/generation-run.json` tying
+the snapshot to all three artifact digests. The run id is derived from
+those digests, not from a clock, so a rebuild that changes nothing does
+not look like new work. No run id or timestamp is ever placed inside
+canonical artifact content.
+
+### Lifecycle
+
+```
+Generate corpus → Master MD + AI MD → validate
+                → question set → validate → export CSVs
+                → Copilot evaluation → import results → adjudicate
+```
+
+The CSV export step packages the already-validated canonical set. It is
+not a separate authoring step, and question CSVs are not maintained by
+hand.
 
 ---
 
