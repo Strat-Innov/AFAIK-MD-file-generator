@@ -82,7 +82,7 @@ function csvBatches(questions) {
   return out;
 }
 
-export default function TestQuestionGenerator({ files }) {
+export default function TestQuestionGenerator({ files, build = null }) {
   const [state, setState] = useState("NOT GENERATED");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
@@ -102,13 +102,19 @@ export default function TestQuestionGenerator({ files }) {
       const detection = await detectSnapshot(staged);
       const snapshot = detection.snapshot;
 
-      // Scope, resolved from the staged corpus — never from a page count
-      // or a filename list carried over from an earlier benchmark.
+      /* Questions come from the SOURCE, not from the Master or AI file.
+       * Master is a raw carrier and the AI file is a lossy representation;
+       * deriving ground truth from either would measure the pipeline
+       * against its own output. What the current build does supply is the
+       * ORDER POLICY it used — parse the pages any other way and the
+       * question set describes a different reading of the same corpus
+       * than the artifacts beside it. */
+      const orderPolicy = build?.orderPolicy ?? undefined;
       const names = scopeOf(staged.map((f) => f.name));
       const byName = new Map(staged.map((f) => [f.name, f]));
       const scopedPages = names.map((name) => ({
         name,
-        page: parsePage(byName.get(name).raw, { name, path: byName.get(name).path ?? name }),
+        page: parsePage(byName.get(name).raw, { name, path: byName.get(name).path ?? name, orderPolicy }),
       }));
 
       // Source integrity runs FIRST. A page whose body does not belong to
@@ -176,6 +182,20 @@ export default function TestQuestionGenerator({ files }) {
       setResult({
         signature, detection, integrity, blocked: [], warnPages,
         questions, quality, sha256: built.sha256, removed: built.removed, manifest,
+        /* Which build this set belongs to. Without it a question set and
+         * the artifacts on screen could come from different builds and
+         * nothing would say so. */
+        lineage: build
+          ? {
+              buildId: build.snapshotId,
+              contentSha256: build.contentSha256,
+              fileSetSha256: build.fileSetSha256,
+              orderPolicy: build.orderPolicy ?? "dom",
+              generator: build.generator,
+              masterSha256: build.masterSha256,
+              aiSha256: build.aiSha256,
+            }
+          : null,
       });
       setState(
         quality.counts.high ? "FAILED"
@@ -231,11 +251,18 @@ export default function TestQuestionGenerator({ files }) {
           </p>
 
           <div className="rounded-lg border border-slate-200 p-3">
+            {/* Read from the CURRENT BUILD first. These rows used to read the
+                registry snapshot, so a corpus the registry had not seen showed
+                dashes for Master and AI even with artifacts freshly built. */}
             <Row label="Knowledge source" tone="text-slate-700">
-              {result
-                ? (snapshot?.name ?? newSourceName(detection?.identity?.fileSetSha256 ?? ""))
-                : "— generate to identify"}
+              {build
+                ? (build.lineage?.snapshot ?? newSourceName(build.fileSetSha256 ?? ""))
+                : result
+                  ? (snapshot?.name ?? newSourceName(detection?.identity?.fileSetSha256 ?? ""))
+                  : "No current knowledge build"}
             </Row>
+            {build && <Row label="Build ID">{build.snapshotId}</Row>}
+            {build && <Row label="Order policy">{build.orderPolicy ?? "dom"}</Row>}
             {snapshot?.label && <Row label="Also known as">{snapshot.label}</Row>}
             {snapshot && (
               <Row label="Snapshot status">
@@ -245,14 +272,32 @@ export default function TestQuestionGenerator({ files }) {
               </Row>
             )}
             <Row label="Corpus pages">
-              {result ? `${result.detection.identity.sourceFiles} loaded · ${questions.length ? new Set(questions.map((q) => q.page)).size : 0} contributing` : "—"}
+              {result
+                ? `${result.detection.identity.sourceFiles} loaded · ${questions.length ? new Set(questions.map((q) => q.page)).size : 0} contributing`
+                : build
+                  ? `${build.pageCount} loaded`
+                  : "—"}
             </Row>
-            <Row label="Master MD">{snapshot?.armBSha256 ?? "—"}</Row>
-            <Row label="AI MD">{snapshot?.armCSha256 ?? "—"}</Row>
+            <Row label="Master MD">{build?.masterSha256 ?? snapshot?.armBSha256 ?? "—"}</Row>
+            <Row label="AI MD">
+              {build
+                ? (build.aiSha256 ?? "— withheld by validation")
+                : snapshot?.armCSha256 ?? "—"}
+            </Row>
             <Row label="Question set">{result?.sha256 ? "generated" : "not generated"}</Row>
             <Row label="Question set SHA">{result?.sha256 ?? "not generated"}</Row>
             <Row label="Question count">{result ? questions.length : "—"}</Row>
             {result?.manifest && <Row label="Generation run">{result.manifest.generationRunId}</Row>}
+            {result && (
+              <Row
+                label="Build lineage"
+                tone={result.lineage ? "text-slate-700" : "text-amber-700"}
+              >
+                {result.lineage
+                  ? `${result.lineage.buildId} · ${result.lineage.orderPolicy}`
+                  : "generated with no current build — artifacts and questions are not bound"}
+              </Row>
+            )}
             {result?.removed && (
               <Row label="Dropped as ambiguous">
                 {result.removed.dropped} ({result.removed.ambiguous} genuinely ambiguous)
