@@ -12,11 +12,13 @@
  *   0 -> page settings slice (no user-visible content)
  *
  * Verified against the three real exported pages in test/fixtures/.
- * Document order matches the controls' zone/section/control indices,
- * so canvas order is reading order and each control is a section.
+ * Each control is a section. The ORDER those sections are emitted in
+ * comes from canvasOrder.js, which coverage validation reads too, so
+ * the renderer and its validator cannot disagree about reading order.
  * ------------------------------------------------------------------ */
 
 import { extractTag, decodeOnce } from "./masterMd.js";
+import { canonicalControls } from "./canvasOrder.js";
 import {
   decodeEntitiesOnce,
   isImageAssetUrl,
@@ -284,12 +286,12 @@ export function canvasHtmlOf(rawAspx) {
   return decodeOnce(extractTag(rawAspx, "CanvasContent1"));
 }
 
-export function parsePage(rawAspx, { name = "", path = "" } = {}) {
+export function parsePage(rawAspx, { name = "", path = "", orderPolicy } = {}) {
   const canvasHtml = canvasHtmlOf(rawAspx);
   const doc = parseCanvas(canvasHtml);
   const sections = [];
 
-  for (const el of doc.querySelectorAll("[data-sp-canvascontrol]")) {
+  for (const el of canonicalControls(doc, orderPolicy)) {
     const controlData = json(el, "data-sp-controldata") || {};
     if (controlData.controlType === CONTROL_TEXT) {
       const rte = el.querySelector("[data-sp-rte]");

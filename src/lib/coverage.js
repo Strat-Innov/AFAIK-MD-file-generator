@@ -42,8 +42,8 @@ function findFreeSpan(hay, needle, taken) {
   return -1;
 }
 
-export function validateCoverage(doc, optimizedMd, { pageName = "" } = {}) {
-  const { units, groups, pairs } = sourceModel(doc);
+export function validateCoverage(doc, optimizedMd, { pageName = "", orderPolicy } = {}) {
+  const { units, groups, pairs } = sourceModel(doc, orderPolicy);
   const unitTokenStrings = [...units.keys()].map((k) => ` ${k} `);
 
   // A title equal to the file name is scaffolding ONLY when nothing in

@@ -33,7 +33,19 @@ const {
   buildQuestionSet, scopeOf, missingExclusions, EXCLUDED_PAGES, titleOf,
 } = await import(path.join(root, "src/lib/questionSet.js"));
 const { buildRunManifest } = await import(path.join(root, "src/lib/generationRun.js"));
+const { ORDER_POLICIES } = await import(path.join(root, "src/lib/canvasOrder.js"));
 const { ACTIVE_SNAPSHOT } = await import(path.join(root, "src/lib/snapshots.js"));
+
+/* A snapshot is defined by the code that built it, ordering policy
+ * included: V2 reproduces only under "dom". Default to the parser's own
+ * default so an unqualified build keeps reproducing the active snapshot,
+ * and require the flag to build a different lineage. */
+const policyArg = process.argv.find((a) => a.startsWith("--order-policy="));
+const orderPolicy = policyArg ? policyArg.split("=")[1] : undefined;
+if (orderPolicy && !ORDER_POLICIES.includes(orderPolicy)) {
+  console.error(`Unknown --order-policy=${orderPolicy}. Known: ${ORDER_POLICIES.join(", ")}`);
+  process.exit(2);
+}
 
 const corpusDir = path.join(root, "test/corpus");
 const outDir = process.argv[2] || path.join(root, "benchmark");
@@ -57,7 +69,7 @@ if (absent.length) {
 
 const scopedPages = scopedNames.map((name) => ({
   name,
-  page: parsePage(fs.readFileSync(path.join(corpusDir, name), "utf8"), { name, path: name }),
+  page: parsePage(fs.readFileSync(path.join(corpusDir, name), "utf8"), { name, path: name, orderPolicy }),
 }));
 const entityByPage = new Map(scopedPages.map(({ name, page }) => [name, titleOf(page)]));
 
@@ -88,7 +100,7 @@ const allowOverride = process.argv.includes("--allow-source-warnings");
 const integrity = checkCorpus(
   scopedNames.map((name) => ({
     name,
-    page: parsePage(fs.readFileSync(path.join(corpusDir, name), "utf8"), { name, path: name }),
+    page: parsePage(fs.readFileSync(path.join(corpusDir, name), "utf8"), { name, path: name, orderPolicy }),
   }))
 );
 if (integrity.length) {

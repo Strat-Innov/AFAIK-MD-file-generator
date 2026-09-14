@@ -26,12 +26,38 @@
 
 import { sha256 } from "./digest.js";
 
+/* ---- naming a corpus the registry has not seen ----
+ *
+ * A snapshot is a record of a BUILD, not a licence to build. An export
+ * SharePoint regenerated this morning is still the knowledge base; it
+ * just has not been built from yet. So an unrecognised corpus gets its
+ * own name rather than being refused one.
+ *
+ * The name is derived from a digest, never from a wall clock: two
+ * machines building the same corpus must produce the same artifact
+ * bytes, and a name containing today's date would break that. For the
+ * same reason the artifact clock is fixed. The real wall-clock time goes
+ * in the build record's `builtAt`, where it describes the build without
+ * contaminating what was built.
+ *
+ * It is derived from the FILE-SET digest rather than the content digest,
+ * and that choice carries weight. The name is stamped into both
+ * artifacts' headers, so naming by content would rename the knowledge
+ * base every time SharePoint rewrote its per-export metadata — and since
+ * the name is IN the artifact, every artifact would then differ too.
+ * Comparing two builds could never tell "the export churned" from "the
+ * content changed", which is the one question this architecture exists
+ * to answer. The file set is what makes a knowledge base recognisably
+ * itself across re-exports; the content digest stays in the record,
+ * where it distinguishes the builds without blurring the comparison.
+ */
+export const NEW_SOURCE_PREFIX = "KNOWLEDGE";
+export const NEW_SOURCE_CLOCK = new Date(Date.UTC(1970, 0, 1, 0, 0, 0));
+export const newSourceName = (fileSetSha256) => `${NEW_SOURCE_PREFIX}-${String(fileSetSha256).slice(0, 12).toUpperCase()}`;
+
+/** @deprecated the label the old source-corpus gate showed. Retained so
+ *  nothing silently renders an empty string; no code path blocks on it. */
 export const UNREGISTERED = "UNREGISTERED SNAPSHOT";
-// Used when artifacts are built from a corpus that matches no registered
-// snapshot. Deliberately not a real snapshot name and not today's date:
-// an unregistered corpus must never be mistaken for a frozen one.
-export const UNREGISTERED_ID = "UNREGISTERED-SNAPSHOT";
-export const UNREGISTERED_CLOCK = new Date(Date.UTC(1970, 0, 1, 0, 0, 0));
 
 /* ---- the registry ---- */
 export const SNAPSHOTS = [
@@ -178,17 +204,31 @@ export async function detectSnapshot(files) {
   return { status: snapshot ? "registered" : "unregistered", snapshot, identity };
 }
 
-// What to display and stamp for a detection result. An unregistered
-// corpus gets an explicitly unregistered identity — never a guessed
-// month, and never the active snapshot's name.
+/**
+ * What to stamp on artifacts built from this corpus.
+ *
+ * A corpus the registry knows keeps that snapshot's name and clock, so
+ * its artifacts still rebuild byte-for-byte — that is what keeps a
+ * frozen lineage reproducible. A corpus it does not know gets a name
+ * derived from its own content digest and the same fixed clock, so its
+ * artifacts are equally deterministic. Neither case guesses a month, and
+ * neither borrows the active snapshot's name.
+ */
 export function snapshotIdentityOf(detection) {
   if (detection.status === "registered") {
     return {
       name: detection.snapshot.name,
       clock: new Date(detection.snapshot.clock),
       generator: detection.snapshot.generator,
+      known: true,
       registered: true,
     };
   }
-  return { name: UNREGISTERED_ID, clock: UNREGISTERED_CLOCK, generator: null, registered: false };
+  return {
+    name: newSourceName(detection.identity?.fileSetSha256 ?? ""),
+    clock: NEW_SOURCE_CLOCK,
+    generator: null,
+    known: false,
+    registered: false,
+  };
 }

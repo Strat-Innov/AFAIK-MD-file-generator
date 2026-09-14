@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   SNAPSHOTS, ACTIVE_SNAPSHOT, HISTORICAL_SNAPSHOTS, evaluationStatusOf, isEvaluated,
-  corpusIdentity, detectSnapshot, snapshotIdentityOf, UNREGISTERED_ID,
+  corpusIdentity, detectSnapshot, snapshotIdentityOf, newSourceName,
 } from "../src/lib/snapshots.js";
 import { buildBenchmarkArtifacts } from "../src/lib/benchmarkExport.js";
 import { checkPage, checkCorpus, blocksBenchmark, titleOf } from "../src/lib/sourceIntegrity.js";
@@ -111,16 +111,19 @@ describe("TEST 4 — the new benchmark has a new CORE_SHA", () => {
   });
 });
 
-describe("TEST 5 — an unknown snapshot is blocked", () => {
-  it("is reported unregistered and stamped as such", async () => {
+describe("TEST 5 — a corpus new to the registry builds, under its own name", () => {
+  it("is marked unknown to the registry and stamped from its own digest", async () => {
     const files = [{ name: "x.aspx", path: "x.aspx", raw: makeAspx(textControl("<p>nothing known</p>")) }];
     const d = await detectSnapshot(files);
     expect(d.status).toBe("unregistered");
-    expect(snapshotIdentityOf(d).registered).toBe(false);
+    expect(snapshotIdentityOf(d).known).toBe(false);
     const built = await buildBenchmarkArtifacts(files);
-    expect(built.manifest.snapshotRegistered).toBe(false);
-    expect(built.manifest.snapshot).toBe(UNREGISTERED_ID);
+    expect(built.manifest.knownToRegistry).toBe(false);
+    expect(built.manifest.snapshot).toBe(newSourceName(d.identity.fileSetSha256));
     expect(built.armB.md).not.toContain(ACTIVE_SNAPSHOT.name);
+    // ...and it BUILT: the registry's ignorance is not a veto
+    expect(built.armB.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(built.build.snapshotId).toMatch(/^build-[0-9a-f]{16}$/);
   });
 });
 

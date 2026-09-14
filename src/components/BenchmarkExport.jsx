@@ -9,7 +9,7 @@ import {
   CONSOLIDATED_ZIP_FILE, COPILOT_FILE_LIMIT, SNAPSHOT,
 } from "../lib/benchmarkExport";
 import {
-  detectSnapshot, UNREGISTERED, HISTORICAL_SNAPSHOTS, ACTIVE_SNAPSHOT, evaluationStatusOf,
+  detectSnapshot, newSourceName, HISTORICAL_SNAPSHOTS, ACTIVE_SNAPSHOT, evaluationStatusOf,
 } from "../lib/snapshots";
 import { stagedKey, fileId } from "../lib/stagedKey";
 import { EXCLUDED_PAGES, normalizeName } from "../lib/questionSet";
@@ -182,14 +182,21 @@ function useDetectedSnapshot(files) {
 // only, so pages left in Unsorted are part of the arms' corpus and not
 // part of the package's.
 function SnapshotIdentity({ detection, detecting, staged }) {
-  if (detecting) return <Row label="Snapshot">identifying…</Row>;
-  if (!detection) return <Row label="Snapshot">— load a corpus to identify it</Row>;
+  if (detecting) return <Row label="Knowledge source">identifying…</Row>;
+  if (!detection) return <Row label="Knowledge source">— load a corpus to identify it</Row>;
   const s = detection.snapshot;
   const id = detection.identity;
   return (
     <>
-      <Row label="Snapshot" tone={s ? "text-slate-700" : "text-amber-700 font-semibold"}>
-        {s ? s.name : UNREGISTERED}
+      {/* The corpus on screen is the CURRENT KNOWLEDGE SOURCE. Matching a
+          registered snapshot tells you this exact state has been built
+          before; not matching tells you it has not. Neither is a verdict
+          on whether it may be built. */}
+      <Row label="Knowledge source" tone="text-slate-700">
+        {s ? s.name : newSourceName(id?.fileSetSha256 ?? "")}
+      </Row>
+      <Row label="Lineage" tone={s ? "text-slate-700" : "text-slate-500"}>
+        {s ? "previously built — matches a recorded snapshot" : "new — no snapshot has been built from these bytes"}
       </Row>
       {s?.label && <Row label="Also known as">{s.label}</Row>}
       {s && (
@@ -344,7 +351,7 @@ function PackageSection({ files, bucketMap, unsortedFiles }) {
         right={
           <button
             onClick={generate}
-            disabled={state === "working" || staged === 0 || orphans.length > 0 || !registered}
+            disabled={state === "working" || staged === 0 || orphans.length > 0}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm px-3.5 py-2 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             {state === "working" ? <Loader2 className="h-4 w-4 animate-spin" /> : pkg ? <RefreshCw className="h-4 w-4" /> : <Layers className="h-4 w-4" />}
@@ -367,11 +374,10 @@ function PackageSection({ files, bucketMap, unsortedFiles }) {
         <Row label="Pages staged">{staged}</Row>
 
         {detection && !registered && (
-          <p className="mt-3 text-xs text-amber-700">
-            <span className="font-semibold">This corpus matches no registered snapshot.</span> A frozen benchmark
-            package can only be built from a registered one, so generation is blocked. Register the snapshot in{" "}
-            <span className="font-mono">src/lib/snapshots.js</span> once its identity is confirmed — nothing here will
-            guess a name, a month or a clock for it.
+          <p className="mt-3 text-xs text-slate-500">
+            <span className="font-medium text-slate-700">New knowledge source.</span> These bytes are not in the
+            registry, which says only that nothing has been built from them yet. Building is how a source becomes a
+            snapshot, so this will build — under a name derived from its own content digest, never a borrowed one.
           </p>
         )}
         {orphans.length > 0 && (
@@ -729,7 +735,7 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
         right={
           <button
             onClick={generate}
-            disabled={state === "working" || staged.length === 0 || !registered}
+            disabled={state === "working" || staged.length === 0}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 text-white text-sm px-3.5 py-2 hover:bg-indigo-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed"
           >
             {state === "working" ? <Loader2 className="h-4 w-4 animate-spin" /> : built ? <RefreshCw className="h-4 w-4" /> : <FlaskConical className="h-4 w-4" />}
@@ -741,10 +747,10 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
         {built && <div className="pt-3"><Pill ok={match.files} yes={`canonical ${SNAPSHOT} file set`} no={`not the canonical ${SNAPSHOT} file set`} /></div>}
 
         {detection && !registered && (
-          <p className="mt-3 text-xs text-amber-700">
-            <span className="font-semibold">This corpus matches no registered snapshot.</span> Its content hash is
-            shown above. Frozen artifacts are only built from registered snapshots, so generation is blocked rather
-            than stamped with a name this corpus has not earned.
+          <p className="mt-3 text-xs text-slate-500">
+            <span className="font-medium text-slate-700">New knowledge source.</span> SharePoint rewrites per-export
+            metadata on every page, so an unchanged knowledge base still exports to a new content hash. That is a fact
+            about the export, not a defect — this builds, and the build is recorded as its own snapshot.
           </p>
         )}
         {staged.length === 0 && (
@@ -784,6 +790,41 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
             you regenerate, so nothing leaves with an identity you have not seen.
           </span>
         </div>
+      )}
+
+      {built?.build && !stale && (
+        <Card title="Knowledge snapshot created">
+          {/* The record of what this build produced. It exists because a
+              build happened — that is the whole inversion: a snapshot is
+              an output, never a precondition. */}
+          <Row label="Snapshot">{built.build.snapshotId}</Row>
+          <Row label="Built at">{built.build.builtAt}</Row>
+          <Row label="Generator">{built.build.generator}</Row>
+          <Row label="Order policy">{built.build.orderPolicy ?? "dom"}</Row>
+          <Row label="Pages">{built.build.pageCount}</Row>
+          <Row label="Content SHA-256">{built.build.contentSha256}</Row>
+          <Row label="File-set SHA-256">{built.build.fileSetSha256}</Row>
+          <Row label="Master MD SHA-256">{built.build.masterSha256}</Row>
+          <Row label="AI MD SHA-256">{built.build.aiSha256 ?? "— blocked by validation"}</Row>
+          <Row label="Source units">
+            {built.build.sourceCoverage.represented} of {built.build.sourceCoverage.sourceUnits} represented
+            {" · "}{built.build.sourceCoverage.missing} missing
+            {" · "}{built.build.sourceCoverage.unmatched} untraceable
+          </Row>
+          <Row label="Lineage">
+            {built.build.lineage
+              ? `${built.build.lineage.snapshot}${built.build.lineage.status ? ` · ${built.build.lineage.status}` : ""}`
+              : "new — first build from these source bytes"}
+          </Row>
+          <div className="pt-3">
+            <button
+              onClick={() => saveText(`${built.build.snapshotId}.json`, JSON.stringify(built.build, null, 2) + "\n")}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 text-slate-700 text-sm px-3 py-1.5 hover:bg-slate-50"
+            >
+              Download build record
+            </button>
+          </div>
+        </Card>
       )}
 
       {built && (
