@@ -16,6 +16,7 @@ import { EXCLUDED_PAGES, normalizeName } from "../lib/questionSet";
 import { createZip } from "../lib/zip";
 import { GENERATOR_VERSION } from "../lib/version";
 import { formatBucketReport } from "../lib/generate";
+import { buildMaster } from "../lib/masterMd";
 
 /* ------------------------------------------------------------------ *
  * Benchmark workspace — admin surface, deliberately outside the normal
@@ -272,6 +273,28 @@ function PackageSection({ files, bucketMap, unsortedFiles }) {
   // An unsorted page is only a problem when nobody meant it to be there.
   const excluded = unsorted.filter(isExcludedByPolicy);
   const orphans = unsorted.filter((f) => !isExcludedByPolicy(f));
+
+  /* ---- evidence export ----
+   * The 127 in-scope pages can already be recovered byte-exactly from
+   * the bucket Master files: the Master serialization embeds each raw
+   * .aspx verbatim inside a fence, and round-trips 133/133 on the frozen
+   * corpus. The six policy exclusions had no download anywhere, so the
+   * app could not emit the whole 133-page source set — and a corpus is
+   * identified by all 133, not by the 127 that get packaged. This closes
+   * that gap and nothing else: it reads the staged corpus, writes a file,
+   * and touches no identity, no gate and no artifact.
+   *
+   * Taken from the WHOLE staged corpus rather than from Unsorted, so it
+   * finds all six wherever they happen to sit. */
+  const excludedPages = wholeCorpus.filter(isExcludedByPolicy);
+  // A fixed clock: the same corpus must always export the same bytes, and
+  // an evidence file must not be mistakable for a production Master file
+  // generated at some particular moment.
+  const EVIDENCE_CLOCK = new Date(0);
+  const downloadExcluded = () => {
+    const md = buildMaster("EXCLUDED PAGES", excludedPages, EVIDENCE_CLOCK);
+    saveText("EXCLUDED-PAGES_Master_File.md", md);
+  };
   // Bucket placement and file content both matter here: re-sorting a
   // page changes which file it lands in, and re-reading it changes what
   // that file says. Either invalidates a built package.
@@ -366,6 +389,22 @@ function PackageSection({ files, bucketMap, unsortedFiles }) {
             They are retained in the source corpus — and counted in its snapshot identity — but omitted from benchmark
             packages: {excluded.map((f) => f.name).join(", ")}.
           </p>
+        )}
+        {excludedPages.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <span className="text-xs text-slate-600">
+              <span className="font-medium text-slate-700">Evidence export.</span> The bucket Master files already
+              carry the {staged} in-scope pages verbatim. These {excludedPages.length} are the rest of the source
+              corpus, and nothing else exports them — download both and the whole {wholeCorpus.length}-page corpus can
+              be reconstructed byte-for-byte.
+            </span>
+            <button
+              onClick={downloadExcluded}
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs px-3 py-1.5 hover:bg-slate-100"
+            >
+              <Download className="h-3.5 w-3.5" /> Download Excluded Master MD
+            </button>
+          </div>
         )}
         {staged === 0 && orphans.length === 0 && (
           <p className="mt-3 text-xs text-amber-700">
