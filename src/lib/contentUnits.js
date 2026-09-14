@@ -25,6 +25,7 @@
  * ------------------------------------------------------------------ */
 
 import { decodeEntitiesOnce, isImageAssetUrl } from "./webparts.js";
+import { canonicalControls } from "./canvasOrder.js";
 
 /* ---------------- normalization ---------------- */
 
@@ -214,7 +215,10 @@ export function sourceModel(doc) {
     }
   };
 
-  for (const control of doc.querySelectorAll("[data-sp-canvascontrol]")) harvest(control);
+  // Canonical order, not DOM order: `groups` is what coverage compares
+  // the rendered document against, so it must be built in the order the
+  // parser emitted sections, never in an order re-derived here.
+  for (const control of canonicalControls(doc)) harvest(control);
   harvest(doc.body || doc); // anything outside a canvas control
 
   return { units, groups, pairs };

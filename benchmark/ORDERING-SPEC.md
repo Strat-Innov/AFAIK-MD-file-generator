@@ -159,7 +159,7 @@ only Arm B is.
 
 ---
 
-## 5. The coverage invariant (accepted design, not implemented)
+## 5. The coverage invariant (implemented; gate decision pending)
 
 `src/lib/coverage.js` conflates two guarantees:
 
@@ -178,6 +178,47 @@ One page currently fails under the candidate with `missing=0, unmatched=0`:
 its failing unit moves from 11th to 5th across controls while remaining
 monotonic within its own control — a pure Invariant-B effect. That single
 page failure suppresses Arm C for the whole corpus (see §4).
+
+### As implemented
+
+`src/lib/canvasOrder.js` now holds the canonical order, and both readers
+import it: `parsePage()` in `aspxDocument.js` and `sourceModel()` in
+`contentUnits.js`. Neither may walk the canvas itself — a test asserts
+that neither file contains a `querySelectorAll("[data-sp-canvascontrol]")`
+of its own, because a second walk is how the two drifted apart before.
+
+The shipped policy is DOM order, so nothing about current output moves:
+CORE_SHA `1f93c4a5…`, Arm B `bb5f8eda…` and Arm C `65e8001f…` all verified
+unchanged, and the full suite is green at 353 passed / 0 failed.
+
+Measured with the candidate policy installed in an isolated copy:
+
+```
+pages failing coverage : 0 / 133     (was 1)
+Arm C                  : PASS, 4779/4779 units, unmatched 0
+Arm C sha256           : b7efd155…   (was e3b0c442… - the empty string)
+question set           : 636 / 8a43db57…   (unchanged by the re-base)
+```
+
+Eleven of the fifteen real test failures the candidate previously caused
+are resolved. The four that remain assert V2's frozen identity and must
+fail for any new lineage; a fifth is this work's own guard asserting that
+the shipped policy is still DOM order, firing correctly because the lab
+runs a policy that is not authorised.
+
+### A limit worth stating: duplication is not a coverage finding
+
+`coverage.js` deliberately does not report a duplicated unit. An unclaimed
+run whose every token is explained by some source unit is treated as a
+legitimate repeat, because the renderer really does repeat values — two
+people share a role, one caption serves several images. Only content no
+source unit explains is reported: an invented phrase, or the seam of a
+fusion such as a run-together `clubhouselap`.
+
+So an acceptance criterion of "Duplicate = 0" is not something this
+validator measures, and could not be added without producing false
+failures on legitimate repeats. The behaviour is now pinned by test so the
+limit is visible rather than assumed.
 
 The existing `test/ordering.test.js` suite (14 tests) **passes unchanged**
 under the candidate policy. Those tests perturb the rendered Markdown while
@@ -211,7 +252,7 @@ recorded here only as a future option.
 |---|---|
 | 1 — rendered-page visual ground truth | **OPEN** — requires screenshots; cannot be closed from metadata |
 | 2 — 57-question semantic diff | **PASSED** |
-| 3 — coverage invariant | **DESIGN ACCEPTED / IMPLEMENTATION PENDING** |
+| 3 — coverage invariant | **IMPLEMENTED — awaiting gate decision** |
 | 4 — question identity | **DECIDED** — sequential ids retained |
 | 5 — V3 authorization | **NOT AUTHORIZED** |
 
