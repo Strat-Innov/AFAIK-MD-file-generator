@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   SNAPSHOTS, ACTIVE_SNAPSHOT, SUPERSEDED_SNAPSHOTS,
-  corpusIdentity, detectSnapshot, snapshotIdentityOf, UNREGISTERED_ID,
+  corpusIdentity, detectSnapshot, snapshotIdentityOf, newSourceName,
 } from "../src/lib/snapshots.js";
 import { buildBenchmarkArtifacts, CANONICAL, SNAPSHOT, fileSetSignature } from "../src/lib/benchmarkExport.js";
 import { stagedKey, fileId } from "../src/lib/stagedKey.js";
@@ -126,15 +126,15 @@ describe("unregistered corpora", () => {
   it("never borrow a registered snapshot's identity", async () => {
     const d = await detectSnapshot(unknown);
     const id = snapshotIdentityOf(d);
-    expect(id.registered).toBe(false);
-    expect(id.name).toBe(UNREGISTERED_ID);
+    expect(id.known).toBe(false);
+    expect(id.name).toBe(newSourceName(d.identity.fileSetSha256));
     for (const s of SNAPSHOTS) expect(id.name).not.toBe(s.name);
   });
 
   it("cannot be silently stamped as a frozen snapshot", async () => {
     const built = await buildBenchmarkArtifacts(unknown);
-    expect(built.snapshot).toBe(UNREGISTERED_ID);
-    expect(built.manifest.snapshotRegistered).toBe(false);
+    expect(built.snapshot).toBe(newSourceName(built.detection.identity.fileSetSha256));
+    expect(built.manifest.knownToRegistry).toBe(false);
     expect(built.armB.md).not.toContain("AUGUST-2026-CORPUS");
     expect(built.armB.md).not.toContain("SEPTEMBER-2026-CORPUS");
   });

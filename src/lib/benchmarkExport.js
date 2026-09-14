@@ -36,7 +36,8 @@ import { buildMaster } from "./masterMd.js";
 import { generateOptimized } from "./generate.js";
 import { GENERATOR_VERSION } from "./version.js";
 import { sha256, byteLength } from "./digest.js";
-import { ACTIVE_SNAPSHOT, SUPERSEDED_SNAPSHOTS, detectSnapshot, snapshotIdentityOf } from "./snapshots.js";
+import { ACTIVE_SNAPSHOT, SUPERSEDED_SNAPSHOTS, detectSnapshot, snapshotIdentityOf, corpusIdentity } from "./snapshots.js";
+import { knowledgeBuild } from "./knowledgeBuild.js";
 
 export { sha256, byteLength };
 
@@ -147,11 +148,14 @@ export const ARM_C_HISTORY = [
  * the CLI's corpus reader both use. Order is irrelevant: buildMaster()
  * and generateOptimized() each sort by lowercased filename.
  */
-export async function buildBenchmarkArtifacts(files, { builtAt = new Date(), snapshot, clock } = {}) {
+export async function buildBenchmarkArtifacts(files, { builtAt = new Date(), snapshot, clock, orderPolicy } = {}) {
   // Identity comes from the corpus itself. An explicit snapshot/clock
   // overrides it — that is how a superseded snapshot gets rebuilt from
   // its archive — but nothing here ever falls back to the active
-  // snapshot's name for a corpus that is not it.
+  // snapshot's name for a corpus that is not it. A corpus the registry
+  // has not seen is named from its own content digest and built anyway;
+  // whether anyone has seen these bytes before is not a soundness
+  // question, and the validations that are still decide the outcome.
   const detection = await detectSnapshot(files);
   const detected = snapshotIdentityOf(detection);
   const activeName = snapshot ?? detected.name;
@@ -161,7 +165,7 @@ export async function buildBenchmarkArtifacts(files, { builtAt = new Date(), sna
   const filesSha256 = await sha256(names.join("\n"));
 
   const masterMd = buildMaster(activeName, files, activeClock);
-  const optimized = generateOptimized(activeName, files);
+  const optimized = generateOptimized(activeName, files, { orderPolicy });
   const pass = optimized.status === "PASS";
 
   const armB = {
@@ -191,7 +195,10 @@ export async function buildBenchmarkArtifacts(files, { builtAt = new Date(), sna
 
   const manifest = {
     snapshot: activeName,
+    // Kept for readers of older manifests. A corpus absent from the
+    // registry is a NEW knowledge source, not a rejected one.
     snapshotRegistered: detection.status === "registered",
+    knownToRegistry: detection.status === "registered",
     generatorVersion: GENERATOR_VERSION,
     snapshotClock: activeClock.toISOString(),
     contentSha256: detection.identity.contentSha256,
@@ -220,7 +227,28 @@ export async function buildBenchmarkArtifacts(files, { builtAt = new Date(), sna
     filesSha256,
   };
 
-  return { snapshot: activeName, detection, generatorVersion: GENERATOR_VERSION, armB, armC, optimized, manifest, filesSha256 };
+  /* The build record — the output this architecture is organised around.
+   * It is produced here, after the artifacts exist, and never before:
+   * a snapshot records a build that happened, so there is nothing to
+   * record until one has. */
+  const build = await knowledgeBuild({
+    identity: await corpusIdentity(files),
+    orderPolicy: orderPolicy ?? null,
+    master: armB,
+    ai: pass ? armC : null,
+    questions: null,                       // the question set is built separately
+    coverage: {
+      pages: files.length,
+      sourceUnits: optimized.totals.sourceUnits,
+      represented: optimized.totals.representedUnits,
+      missing: optimized.totals.sourceUnits - optimized.totals.representedUnits,
+      unmatched: optimized.totals.unmatched,
+    },
+    snapshot: detection.snapshot,
+    builtAt,
+  });
+
+  return { snapshot: activeName, detection, generatorVersion: GENERATOR_VERSION, armB, armC, optimized, manifest, filesSha256, build };
 }
 
 /**

@@ -9,7 +9,7 @@ import {
 import { checkCorpus, blocksBenchmark } from "../lib/sourceIntegrity";
 import { checkQuestionSet } from "../lib/questionQuality";
 import { buildRunManifest } from "../lib/generationRun";
-import { detectSnapshot, UNREGISTERED, evaluationStatusOf } from "../lib/snapshots";
+import { detectSnapshot, newSourceName, evaluationStatusOf } from "../lib/snapshots";
 import { GENERATOR_VERSION } from "../lib/version";
 import { stagedKey } from "../lib/stagedKey";
 
@@ -157,7 +157,7 @@ export default function TestQuestionGenerator({ files }) {
       });
 
       const manifest = await buildRunManifest({
-        snapshot: snapshot?.name ?? UNREGISTERED,
+        snapshot: snapshot?.name ?? newSourceName(detection.identity.fileSetSha256),
         snapshotSha256: detection.identity.contentSha256,
         generatorVersion: GENERATOR_VERSION,
         masterSha: snapshot?.armBSha256 ?? null,
@@ -231,8 +231,10 @@ export default function TestQuestionGenerator({ files }) {
           </p>
 
           <div className="rounded-lg border border-slate-200 p-3">
-            <Row label="Snapshot" tone={snapshot ? "text-slate-700" : "text-amber-700 font-semibold"}>
-              {result ? (snapshot?.name ?? UNREGISTERED) : "— generate to identify"}
+            <Row label="Knowledge source" tone="text-slate-700">
+              {result
+                ? (snapshot?.name ?? newSourceName(detection?.identity?.fileSetSha256 ?? ""))
+                : "— generate to identify"}
             </Row>
             {snapshot?.label && <Row label="Also known as">{snapshot.label}</Row>}
             {snapshot && (

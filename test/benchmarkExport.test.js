@@ -17,7 +17,7 @@ import {
   BENCHMARK_ZIP_FILE,
   sha256,
 } from "../src/lib/benchmarkExport.js";
-import { UNREGISTERED_ID, ACTIVE_SNAPSHOT } from "../src/lib/snapshots.js";
+import { newSourceName, ACTIVE_SNAPSHOT } from "../src/lib/snapshots.js";
 import { createZip } from "../src/lib/zip.js";
 import { buildMaster } from "../src/lib/masterMd.js";
 import { generateOptimized } from "../src/lib/generate.js";
@@ -92,15 +92,16 @@ describe("benchmark export leaves production packaging alone", () => {
     expect(buildMaster("TAG", files, clock)).toContain("# TAG — ASPx Codebase Master File");
   });
 
-  it("does not borrow the active snapshot identity for an unrecognised corpus", async () => {
+  it("names a corpus new to the registry from its own digest, never the active snapshot's", async () => {
     const { armB, armC, manifest, detection } = await buildBenchmarkArtifacts(files);
     expect(detection.status).toBe("unregistered");
     expect(detection.snapshot).toBeNull();
-    expect(manifest.snapshotRegistered).toBe(false);
-    expect(manifest.snapshot).toBe(UNREGISTERED_ID);
+    expect(manifest.knownToRegistry).toBe(false);
+    const own = newSourceName(detection.identity.fileSetSha256);
+    expect(manifest.snapshot).toBe(own);
     expect(armB.md).not.toContain(SNAPSHOT);
     expect(armC.md).not.toContain(SNAPSHOT);
-    expect(armB.md).toContain(`# ${UNREGISTERED_ID} — ASPx Codebase Master File`);
+    expect(armB.md).toContain(`# ${own} — ASPx Codebase Master File`);
   });
 
   it("is deterministic: two builds of the same files agree byte-for-byte", async () => {
