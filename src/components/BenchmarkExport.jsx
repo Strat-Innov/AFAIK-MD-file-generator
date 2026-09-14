@@ -12,6 +12,7 @@ import {
   detectSnapshot, UNREGISTERED, HISTORICAL_SNAPSHOTS, ACTIVE_SNAPSHOT, evaluationStatusOf,
 } from "../lib/snapshots";
 import { stagedKey, fileId } from "../lib/stagedKey";
+import { EXCLUDED_PAGES, normalizeName } from "../lib/questionSet";
 import { createZip } from "../lib/zip";
 import { GENERATOR_VERSION } from "../lib/version";
 import { formatBucketReport } from "../lib/generate";
@@ -235,7 +236,14 @@ function SnapshotIdentity({ detection, detecting, staged }) {
  * arms — 5 files each, same buckets, same pages. Only the
  * representation differs, which is what the experiment is measuring.
  * ------------------------------------------------------------------ */
-function PackageSection({ bucketMap, unsortedFiles }) {
+/* Pages the benchmark leaves out ON PURPOSE. They stay in the source
+ * corpus — they are part of its identity — but never enter a bucket and
+ * never enter a package. The list is the generator's, imported rather
+ * than restated, so the UI cannot disagree with what actually ships. */
+const EXCLUDED_BY_POLICY = new Set(EXCLUDED_PAGES.map(normalizeName));
+const isExcludedByPolicy = (f) => EXCLUDED_BY_POLICY.has(normalizeName(f.name));
+
+function PackageSection({ files, bucketMap, unsortedFiles }) {
   const [state, setState] = useState("idle");
   const [pkg, setPkg] = useState(null);
   const [zipping, setZipping] = useState(false);
@@ -243,9 +251,27 @@ function PackageSection({ bucketMap, unsortedFiles }) {
 
   const buckets = Object.entries(bucketMap || {});
   const staged = buckets.reduce((n, [, f]) => n + f.length, 0);
-  const orphans = unsortedFiles || [];
-  const allStaged = buckets.flatMap(([, f]) => f);
-  const { detection, detecting, registered } = useDetectedSnapshot(allStaged);
+  const unsorted = unsortedFiles || [];
+
+  // IDENTITY AND PACKAGING ARE DIFFERENT POPULATIONS.
+  //
+  // The package is cut on the six production bucket boundaries, so it
+  // covers the in-scope pages only. Its IDENTITY, though, is the
+  // identity of the corpus those pages came from — which is the whole
+  // source set, exclusions included, because that is what the registry
+  // records and what a snapshot actually is.
+  //
+  // Hashing the bucketed subset instead made this panel permanently
+  // unregisterable: six pages are excluded by policy and live outside
+  // the buckets, so the subset could never equal the registered corpus.
+  // A correctly registered snapshot showed REGISTERED in the arms panel
+  // and UNREGISTERED here, at the same moment, from the same files.
+  const wholeCorpus = files && files.length ? files : buckets.flatMap(([, f]) => f).concat(unsorted);
+  const { detection, detecting, registered } = useDetectedSnapshot(wholeCorpus);
+
+  // An unsorted page is only a problem when nobody meant it to be there.
+  const excluded = unsorted.filter(isExcludedByPolicy);
+  const orphans = unsorted.filter((f) => !isExcludedByPolicy(f));
   // Bucket placement and file content both matter here: re-sorting a
   // page changes which file it lands in, and re-reading it changes what
   // that file says. Either invalidates a built package.
@@ -313,7 +339,7 @@ function PackageSection({ bucketMap, unsortedFiles }) {
           {(COPILOT_FILE_LIMIT / 1024 / 1024).toFixed(0)} MB the upload accepts.
         </p>
 
-        <SnapshotIdentity detection={detection} detecting={detecting} staged={allStaged} />
+        <SnapshotIdentity detection={detection} detecting={detecting} staged={wholeCorpus} />
         <Row label="Buckets">{buckets.length ? buckets.map(([n]) => n).sort().join(", ") : "—"}</Row>
         <Row label="Pages staged">{staged}</Row>
 
@@ -327,9 +353,18 @@ function PackageSection({ bucketMap, unsortedFiles }) {
         )}
         {orphans.length > 0 && (
           <p className="mt-3 text-xs text-rose-700">
-            <span className="font-semibold">{orphans.length} file(s) are still Unsorted.</span> They belong to no
-            bucket, so the package would silently leave them out. Assign them first — the package is only meaningful
-            if it covers every page.
+            <span className="font-semibold">{orphans.length} file(s) are unassigned.</span> They belong to no bucket
+            and to no exclusion policy, so the package would silently leave them out. Assign them first — the package
+            is only meaningful if it covers every in-scope page.
+          </p>
+        )}
+        {excluded.length > 0 && (
+          <p className="mt-3 text-xs text-slate-500">
+            <span className="font-medium text-slate-700">
+              {excluded.length} source page(s) are intentionally excluded from the benchmark population by policy.
+            </span>{" "}
+            They are retained in the source corpus — and counted in its snapshot identity — but omitted from benchmark
+            packages: {excluded.map((f) => f.name).join(", ")}.
           </p>
         )}
         {staged === 0 && orphans.length === 0 && (
@@ -399,7 +434,7 @@ function PackageSection({ bucketMap, unsortedFiles }) {
                 onClick={downloadPackage}
                 disabled={blocked || zipping}
                 title={
-                  orphans.length ? "Unsorted files must be assigned first"
+                  orphans.length ? "Unassigned files must be assigned first"
                     : stale ? "The staged files changed — regenerate first"
                     : !pass ? "A bucket failed validation — Arm C is withheld"
                     : oversize ? "A file exceeds the upload limit"
@@ -631,7 +666,7 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
 
       <HistoricalBenchmarks />
 
-      <PackageSection bucketMap={bucketMap} unsortedFiles={unsortedFiles} />
+      <PackageSection files={staged} bucketMap={bucketMap} unsortedFiles={unsortedFiles} />
 
       {/* ---- the single-file pair: what the frozen checksums describe ---- */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
