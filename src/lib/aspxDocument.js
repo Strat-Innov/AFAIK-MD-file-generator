@@ -286,12 +286,12 @@ export function canvasHtmlOf(rawAspx) {
   return decodeOnce(extractTag(rawAspx, "CanvasContent1"));
 }
 
-export function parsePage(rawAspx, { name = "", path = "" } = {}) {
+export function parsePage(rawAspx, { name = "", path = "", orderPolicy } = {}) {
   const canvasHtml = canvasHtmlOf(rawAspx);
   const doc = parseCanvas(canvasHtml);
   const sections = [];
 
-  for (const el of canonicalControls(doc)) {
+  for (const el of canonicalControls(doc, orderPolicy)) {
     const controlData = json(el, "data-sp-controldata") || {};
     if (controlData.controlType === CONTROL_TEXT) {
       const rte = el.querySelector("[data-sp-rte]");

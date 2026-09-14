@@ -281,6 +281,32 @@ No failure indicates a defect in the ordering contract itself.
 
 ---
 
+## 7c. V3 candidate manifest — built, NOT registered
+
+Built from the same source as V2 (`contentSha256` `212e998c…`, 133 pages)
+under `bandedColumnByTop`. Nothing below is in `snapshots.js`; freezing it
+is a separate decision.
+
+```
+Arm B   38,040,142 bytes   bb5f8eda…    identical to V2 - a raw carrier
+Arm C      285,590 bytes   b7efd155…    was 65e8001f… under DOM order
+
+coverage PASS    133/133 pages    units 4779/4779
+missing 0   unmatched 0   ordering 0   association 0
+
+question set   636 questions   CORE_SHA 8a43db57…
+generation run run-f5983a049cb484de
+```
+
+Reproducible: three independent artifact builds gave identical bytes and
+digests, and two question-set builds produced byte-identical `questions`
+arrays differing only in `meta.builtAt`.
+
+An unqualified `build-question-set.mjs` still reproduces V2 exactly
+(607 / `1f93c4a5…`); the new lineage requires `--order-policy=` explicitly.
+
+---
+
 ## 8. Validation required before implementation is accepted
 
 - Fixture tests pinning the worked zones (a 2-column title/hero zone, a

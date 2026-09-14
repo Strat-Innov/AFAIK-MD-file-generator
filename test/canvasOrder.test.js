@@ -186,12 +186,30 @@ for (const [policyName, mock] of [
 }
 
 describe("fallback when layout coordinates are unavailable", () => {
-  it("the shipped policy is DOM order, and says so", async () => {
-    const { CANVAS_ORDER_POLICY, canonicalControls } = await import("../src/lib/canvasOrder.js");
-    expect(CANVAS_ORDER_POLICY).toBe("dom");
+  it("defaults to DOM order — the policy the active snapshot was built under", async () => {
+    const { canonicalControls, DOM } = await import("../src/lib/canvasOrder.js");
     const { parseCanvas, canvasHtmlOf } = await import("../src/lib/aspxDocument.js");
     const doc = parseCanvas(canvasHtmlOf(makeAspx(PRICING + AMENITIES)));
-    expect(canonicalControls(doc)).toEqual([...doc.querySelectorAll("[data-sp-canvascontrol]")]);
+    const dom = [...doc.querySelectorAll("[data-sp-canvascontrol]")];
+    expect(canonicalControls(doc)).toEqual(dom);
+    expect(canonicalControls(doc, DOM)).toEqual(dom);
+  });
+
+  it("rejects an unknown policy rather than silently falling back", async () => {
+    const { canonicalControls } = await import("../src/lib/canvasOrder.js");
+    const { parseCanvas, canvasHtmlOf } = await import("../src/lib/aspxDocument.js");
+    const doc = parseCanvas(canvasHtmlOf(makeAspx(PRICING)));
+    expect(() => canonicalControls(doc, "rowMajor")).toThrow(/Unknown canvas order policy/);
+  });
+
+  it("falls back to serialised order for controls with no flexible coordinates", async () => {
+    // The synthetic builders emit no coordinates, so the layout-aware
+    // policy must return exactly what DOM order returns. A fallback that
+    // reordered anything here would not be a fallback.
+    const { canonicalControls, DOM, BANDED_COLUMN_BY_TOP } = await import("../src/lib/canvasOrder.js");
+    const { parseCanvas, canvasHtmlOf } = await import("../src/lib/aspxDocument.js");
+    const doc = parseCanvas(canvasHtmlOf(makeAspx(PRICING + AMENITIES)));
+    expect(canonicalControls(doc, BANDED_COLUMN_BY_TOP)).toEqual(canonicalControls(doc, DOM));
   });
 
   it("controls carrying NO flexibleLayoutPosition are ordered exactly as before", async () => {

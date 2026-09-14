@@ -27,13 +27,21 @@ export function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-export function textControl(innerHtml, position = {}) {
-  const cd = escapeHtml(JSON.stringify({ controlType: 4, position: { zoneIndex: 1, sectionIndex: 1, controlIndex: 1, ...position } }));
+export function textControl(innerHtml, position = {}, flex = null) {
+  const cd = escapeHtml(JSON.stringify({
+    controlType: 4,
+    position: { zoneIndex: 1, sectionIndex: 1, controlIndex: 1, ...position },
+    ...(flex ? { flexibleLayoutPosition: { lg: { dataVersion: "1.0", ...flex } } } : {}),
+  }));
   return `<div data-sp-canvascontrol="" data-sp-controldata="${cd}"><div data-sp-rte="">${innerHtml}</div></div>`;
 }
 
-export function webPartControl(blob, position = {}) {
-  const cd = escapeHtml(JSON.stringify({ controlType: 3, position: { zoneIndex: 1, sectionIndex: 1, controlIndex: 1, ...position } }));
+export function webPartControl(blob, position = {}, flex = null) {
+  const cd = escapeHtml(JSON.stringify({
+    controlType: 3,
+    position: { zoneIndex: 1, sectionIndex: 1, controlIndex: 1, ...position },
+    ...(flex ? { flexibleLayoutPosition: { lg: { dataVersion: "1.0", ...flex } } } : {}),
+  }));
   const wp = escapeHtml(JSON.stringify(blob));
   return `<div data-sp-canvascontrol="" data-sp-controldata="${cd}"><div data-sp-webpart="" data-sp-webpartdata="${wp}"></div></div>`;
 }

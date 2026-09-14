@@ -16,16 +16,16 @@ import { parsePage, parseCanvas } from "./aspxDocument.js";
 import { renderOptimized } from "./optimizedMd.js";
 import { validateCoverage, formatReport } from "./coverage.js";
 
-export function generatePage(file) {
-  const page = parsePage(file.raw, { name: file.name, path: file.path });
+export function generatePage(file, { orderPolicy } = {}) {
+  const page = parsePage(file.raw, { name: file.name, path: file.path, orderPolicy });
   const md = renderOptimized(page);
-  const validation = validateCoverage(parseCanvas(page.canvasHtml), md, { pageName: file.name });
+  const validation = validateCoverage(parseCanvas(page.canvasHtml), md, { pageName: file.name, orderPolicy });
   return { name: file.name, md, validation, report: formatReport(validation, file.name) };
 }
 
-export function generateOptimized(bucketName, files) {
+export function generateOptimized(bucketName, files, { orderPolicy } = {}) {
   const sorted = [...files].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
-  const pages = sorted.map(generatePage);
+  const pages = sorted.map((f) => generatePage(f, { orderPolicy }));
   const failed = pages.filter((p) => p.validation.status === "FAIL");
 
   const totals = pages.reduce(

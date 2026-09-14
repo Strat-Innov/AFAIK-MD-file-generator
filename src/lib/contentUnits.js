@@ -175,7 +175,7 @@ function webPartPairs(blob) {
 // positioned.
 //
 // `doc` is a parsed canvas document (see aspxDocument.parseCanvas).
-export function sourceModel(doc) {
+export function sourceModel(doc, orderPolicy) {
   const units = new Map(); // token-key -> original text, deduped
   const groups = [];
   const pairs = [];
@@ -218,14 +218,14 @@ export function sourceModel(doc) {
   // Canonical order, not DOM order: `groups` is what coverage compares
   // the rendered document against, so it must be built in the order the
   // parser emitted sections, never in an order re-derived here.
-  for (const control of canonicalControls(doc)) harvest(control);
+  for (const control of canonicalControls(doc, orderPolicy)) harvest(control);
   harvest(doc.body || doc); // anything outside a canvas control
 
   return { units, groups, pairs };
 }
 
-export function sourceUnits(doc) {
-  return sourceModel(doc).units;
+export function sourceUnits(doc, orderPolicy) {
+  return sourceModel(doc, orderPolicy).units;
 }
 
 /* ---------------- rendered side ---------------- */
