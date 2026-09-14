@@ -9,7 +9,7 @@ import {
   CONSOLIDATED_ZIP_FILE, COPILOT_FILE_LIMIT, SNAPSHOT,
 } from "../lib/benchmarkExport";
 import {
-  detectSnapshot, newSourceName, HISTORICAL_SNAPSHOTS, ACTIVE_SNAPSHOT, evaluationStatusOf,
+  detectSnapshot, newSourceName, snapshotIdentityOf, HISTORICAL_SNAPSHOTS, ACTIVE_SNAPSHOT, evaluationStatusOf,
 } from "../lib/snapshots";
 import { stagedKey, fileId } from "../lib/stagedKey";
 import { EXCLUDED_PAGES, normalizeName } from "../lib/questionSet";
@@ -33,13 +33,22 @@ import { buildMaster } from "../lib/masterMd";
  * what the artifacts contain — only how easily they can be obtained.
  * ------------------------------------------------------------------ */
 
-function saveBlob(filename, blob) {
+/* The anchor is attached before it is clicked, and the object URL is
+ * revoked on a later tick rather than in the same statement. A detached
+ * anchor is ignored outside Chromium, and revoking synchronously can
+ * cancel a download that has not started reading the blob yet — either
+ * one produces the same symptom: a click that does nothing at all. */
+export function saveBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 const saveText = (filename, text, type = "text/markdown") => saveBlob(filename, new Blob([text], { type }));
@@ -329,7 +338,10 @@ function PackageSection({ files, bucketMap, unsortedFiles }) {
   const downloadPackage = async () => {
     setZipping(true);
     try {
-      const zip = await createZip(packageEntries(pkg), { modifiedAt: new Date(detection.snapshot.clock) });
+      // Not detection.snapshot.clock: that is null for every corpus the
+      // registry has not seen, which since the gate was removed is the
+      // ordinary case. snapshotIdentityOf answers for both.
+      const zip = await createZip(packageEntries(pkg), { modifiedAt: snapshotIdentityOf(detection).clock });
       saveBlob(BENCHMARK_ZIP_FILE, new Blob([zip], { type: "application/zip" }));
     } catch (e) {
       setError(e.message || String(e));
@@ -580,9 +592,14 @@ function HistoricalBenchmarks() {
   );
 }
 
-export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
+export default function BenchmarkExport({ files, bucketMap, unsortedFiles, currentBuild, onBuild }) {
   const [state, setState] = useState("idle"); // idle | working | done | error
-  const [built, setBuilt] = useState(null);
+  /* The build belongs to the parent, so it survives a tab switch and the
+   * question generator can see the same one. The local fallback keeps the
+   * panel usable if it is ever mounted without a parent holding state. */
+  const [localBuild, setLocalBuild] = useState(null);
+  const built = onBuild ? currentBuild : localBuild;
+  const setBuilt = onBuild ?? setLocalBuild;
   const [verified, setVerified] = useState(null);
   const [verifying, setVerifying] = useState(false);
   const [zipping, setZipping] = useState(false);
@@ -635,9 +652,15 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles }) {
           { name: built.armB.filename, text: built.armB.md },
           { name: built.armC.filename, text: built.armC.md },
         ],
-        { modifiedAt: new Date(detection.snapshot.clock) }
+        // The clock the artifacts were actually stamped with, which is
+        // defined for a new knowledge source as well as a known one.
+        { modifiedAt: new Date(built.manifest.snapshotClock) }
       );
-      saveBlob(CONSOLIDATED_ZIP_FILE, new Blob([zip], { type: "application/zip" }));
+      /* Name the archive after the build inside it. CONSOLIDATED_ZIP_FILE
+       * is a constant derived from the active snapshot, so a build from
+       * any other corpus downloaded under that snapshot's name while
+       * containing entirely different artifacts. */
+      saveBlob(`${built.snapshot}_Consolidated-Arms.zip`, new Blob([zip], { type: "application/zip" }));
     } catch (e) {
       setError(e.message || String(e));
     } finally {

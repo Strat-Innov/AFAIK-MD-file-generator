@@ -10,6 +10,7 @@ import TestQuestionGenerator from "./components/TestQuestionGenerator";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
+import { stagedKey } from "./lib/stagedKey";
 import { getSnapshot, setSnapshot } from "./lib/snapshot";
 import { checkFileVersion, commitFileVersion } from "./lib/fileVersions";
 import { publishChangelog, fetchFileRecords } from "./lib/github";
@@ -399,6 +400,23 @@ export default function App() {
   // Unsorted included. Deduped the same way a bucket is, so a file
   // dropped into two tags cannot appear twice in the artifact.
   const benchmarkFiles = dedupeKeepingLatest(Object.values(buckets).flat()).files;
+
+  /* ---- the current knowledge build ----
+   *
+   * The benchmark panel and the question generator are sibling tabs, so
+   * only one is mounted at a time. While the build lived inside the
+   * benchmark panel it died on every tab switch, and the question
+   * generator — which never saw it at all — had nothing to report but
+   * dashes even though artifacts had just been produced.
+   *
+   * One build, held by the parent that owns the corpus both tabs read.
+   * It is cleared whenever that corpus changes, because a build
+   * describes the files it was made from and stops describing anything
+   * the moment they move. */
+  const [currentBuild, setCurrentBuild] = useState(null);
+  const corpusKey = stagedKey(benchmarkFiles);
+  useEffect(() => { setCurrentBuild(null); }, [corpusKey]);
+
   const benchmarkBuckets = Object.fromEntries(
     Object.entries(buckets).filter(([name, files]) => name !== UNSORTED && files.length > 0)
   );
@@ -465,9 +483,20 @@ export default function App() {
         )}
         {selected === "Changelog" && <ChangelogDetailView tags={tags} />}
         {selected === "Benchmark" && (
-          <BenchmarkExport files={benchmarkFiles} bucketMap={benchmarkBuckets} unsortedFiles={unsortedFiles} />
+          <BenchmarkExport
+            files={benchmarkFiles}
+            bucketMap={benchmarkBuckets}
+            unsortedFiles={unsortedFiles}
+            currentBuild={currentBuild}
+            onBuild={setCurrentBuild}
+          />
         )}
-        {selected === "TestQuestions" && <TestQuestionGenerator files={benchmarkFiles} />}
+        {/* The generator gets the RECORD, not the wrapper: the benchmark
+            panel also needs the artifact bytes, this one needs only what
+            was built. */}
+        {selected === "TestQuestions" && (
+          <TestQuestionGenerator files={benchmarkFiles} build={currentBuild?.build ?? null} />
+        )}
         {activeBucket && (
           <BucketView
             bucket={activeBucket}
