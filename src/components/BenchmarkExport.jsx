@@ -744,7 +744,7 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles, curre
           <span className="ml-auto text-xs text-slate-400">alternative</span>
         </div>
         <div className="p-4 text-xs text-slate-500">
-          The original packaging: all {CANONICAL.pages} pages in a single file per arm. Its checksums are the frozen
+          The original packaging: every page in a single file per arm. Its checksums are the frozen
           ones this work was verified against, and it is still the right shape wherever a single large file can be
           uploaded. It is <span className="font-semibold text-slate-700">not</span> usable on the Add-knowledge screen
           in this tenant — Arm B is {(37176764 / 1024 / 1024).toFixed(1)} MB against a{" "}
@@ -767,7 +767,15 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles, curre
         }
       >
         <SnapshotIdentity detection={detection} detecting={detecting} staged={staged} />
-        {built && <div className="pt-3"><Pill ok={match.files} yes={`canonical ${SNAPSHOT} file set`} no={`not the canonical ${SNAPSHOT} file set`} /></div>}
+        {/* Only where reproducing a known lineage is the point. For a corpus
+            that is not claiming to be one, "not the canonical file set" is
+            not a finding — it is the ordinary case, and every build will be
+            that case once pages have been added at source. */}
+        {built && detection?.snapshot && (
+          <div className="pt-3">
+            <Pill ok={match.files} yes={`reproduces the ${SNAPSHOT} file set`} no={`differs from the ${SNAPSHOT} file set`} />
+          </div>
+        )}
 
         {detection && !registered && (
           <p className="mt-3 text-xs text-slate-500">
@@ -778,19 +786,21 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles, curre
         )}
         {staged.length === 0 && (
           <p className="mt-3 text-xs text-amber-700">
-            Nothing loaded this session. Drop the corpus above first — all {CANONICAL.pages} pages, or the .zip. Every
-            bucket's files are pooled into one snapshot here, so how they sort does not matter.
+            Nothing loaded this session. Drop the corpus above first — the pages, or the .zip. Every bucket's files
+            are pooled into one build here, so how they sort does not matter.
           </p>
         )}
         {staged.length > 0 && staged.length !== CANONICAL.pages && (
-          <p className="mt-3 text-xs text-amber-700">
-            {staged.length} files loaded, not {CANONICAL.pages}. This will still build a valid, deterministic pair of
-            artifacts — but from a different page set than the pre-flight was verified against.
+          <p className="mt-3 text-xs text-slate-500">
+            {staged.length} pages, where {SNAPSHOT} had {CANONICAL.pages}. The knowledge base grows as pages are
+            added at source, so a different count is expected rather than a problem — it is recorded in this build and
+            is what distinguishes it from the last one. What decides whether the artifacts are trustworthy is
+            coverage, and that is checked below.
           </p>
         )}
-        {built && !match.files && staged.length === CANONICAL.pages && (
+        {built && detection?.snapshot && !match.files && staged.length === CANONICAL.pages && (
           <p className="mt-3 text-xs text-amber-700">
-            The page count is right but the file set is not the canonical one — a filename differs. Most often this is
+            The page count matches {SNAPSHOT} but the file set does not — a filename differs. Most often this is
             the en dash in <span className="font-mono">PROJECT-DEVELOPMENT-–-PRIMING-&amp;-INNOVATION.aspx</span>, which
             command-line <span className="font-mono">unzip</span> escapes to <span className="font-mono">#U2013</span>{" "}
             and the browser does not. Page content is unaffected; the checksums below will differ from the canonical
@@ -939,8 +949,12 @@ export default function BenchmarkExport({ files, bucketMap, unsortedFiles, curre
           >
             <ul className="space-y-1.5 text-xs">
               {[
-                [canonicalCorpus, "Canonical snapshot", `${built.manifest.corpusPages} pages, file set ${match.files ? "matches" : "differs from"} the verified corpus`],
-                [match.armB && match.armC, "Deterministic export", match.armB && match.armC ? "both arms reproduce the frozen checksums" : "artifacts differ from the frozen checksums — valid, but not the canonical run"],
+                [true, "Knowledge build recorded", `${built.build.snapshotId} · ${built.manifest.corpusPages} pages · order policy ${built.build.orderPolicy ?? "dom"}`],
+                [true, "Lineage", canonicalCorpus
+                  ? `reproduces ${SNAPSHOT} — both arms match the frozen checksums`
+                  : detection?.snapshot
+                    ? `${detection.snapshot.name}, with a file set that differs from the frozen one`
+                    : "new knowledge source — no earlier build shares these bytes"],
                 [pass, "Arm C coverage", pass ? `PASS — ${built.armC.validation.representedUnits.toLocaleString()} / ${built.armC.validation.sourceUnits.toLocaleString()} represented, ${built.armC.validation.untraceableUnits} untraceable` : "FAIL — Arm C withheld"],
               ].map(([ok, label, detail]) => (
                 <li key={label} className="flex items-start gap-2">

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createZip } from "../src/lib/zip.js";
-import { buildBenchmarkArtifacts, packageEntries, buildBucketPackage } from "../src/lib/benchmarkExport.js";
+import { buildBenchmarkArtifacts, packageEntries, buildBucketPackage, compareToCanonical } from "../src/lib/benchmarkExport.js";
 import { snapshotIdentityOf, detectSnapshot, ACTIVE_SNAPSHOT, newSourceName } from "../src/lib/snapshots.js";
 import { sha256 } from "../src/lib/digest.js";
 import { BANDED_COLUMN_BY_TOP, DOM } from "../src/lib/canvasOrder.js";
@@ -300,5 +300,76 @@ describe("PART E — V2 is untouched by any of this", () => {
     expect(ACTIVE_SNAPSHOT.questions).toBe(607);
     expect(ACTIVE_SNAPSHOT.questionSetSha256).toBe("1f93c4a5d9d927c1044498df09fec5d7fa141a613da3993c8fd27fb5200f2990");
     expect(ACTIVE_SNAPSHOT.evaluation.status).toBe("not-run");
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * The corpus grows. Pages are added at SharePoint over time, so any
+ * build after the first will have a page count that is not V2's. The
+ * panel used to call that out in amber — "139 files loaded, not 133 …
+ * a different page set than the pre-flight was verified against" — and
+ * scored it as a failed row in the readiness checklist. Both framed
+ * ordinary growth as a deviation, and both would have been wrong on
+ * every future build.
+ *
+ * Comparison against the frozen V2 file set stays, because reproducing
+ * a known lineage is a real thing to check. It just stops being a
+ * verdict on corpora that are not claiming to be that lineage.
+ * ------------------------------------------------------------------ */
+
+describe("the page count is descriptive, not an expectation", () => {
+  const ui = fs.readFileSync(path.join(root, "src/components/BenchmarkExport.jsx"), "utf8");
+
+  it("nothing blocks generation on a page count", () => {
+    for (const d of [...ui.matchAll(/disabled=\{([^}]*)\}/g)].map((m) => m[1])) {
+      expect(d, `a control gates on the page count: ${d}`).not.toMatch(/CANONICAL\.pages|sourceFiles/);
+    }
+  });
+
+  it("a different count is not reported in the warning tone", () => {
+    const at = ui.indexOf("staged.length !== CANONICAL.pages");
+    const block = ui.slice(at, at + 600);
+    expect(block).not.toContain("text-amber-700");
+    expect(block).toContain("text-slate-500");
+    expect(block).toMatch(/expected rather than a problem/);
+  });
+
+  it("the empty state does not name a fixed number of pages", () => {
+    const at = ui.indexOf("Nothing loaded this session");
+    const block = ui.slice(at, ui.indexOf("</p>", at));     // that paragraph only
+    expect(block).not.toContain("CANONICAL.pages");
+    expect(block).toContain("the pages, or the .zip");
+  });
+
+  it("the canonical file-set pill appears only where a lineage is claimed", () => {
+    expect(ui).toMatch(/\{built && detection\?\.snapshot && \(/);
+    expect(ui).not.toContain('no={`not the canonical ${SNAPSHOT} file set`}');
+  });
+
+  it("the readiness checklist does not score a new knowledge source as failing", () => {
+    const at = ui.indexOf("Benchmark status");
+    const list = ui.slice(at, ui.indexOf("Arm C coverage", at));
+    expect(list).not.toContain("canonicalCorpus, \"Canonical snapshot\"");
+    expect(list).toContain("new knowledge source — no earlier build shares these bytes");
+  });
+
+  it("a corpus larger than V2 still builds, and records its own count", async () => {
+    const grown = [
+      ...corpus(),
+      { name: "c.aspx", path: "c.aspx", raw: makeAspx(page("Gamma", "Gamma is a new development.")) },
+    ];
+    const built = await buildBenchmarkArtifacts(grown);
+    expect(built.armB.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(built.build.pageCount).toBe(3);
+    expect(built.manifest.corpusPages).toBe(3);
+  });
+
+  it("comparison against the frozen artifacts is still reported, just not enforced", async () => {
+    const built = await buildBenchmarkArtifacts(corpus());
+    const cmp = compareToCanonical(built);
+    expect(cmp.files).toBe(false);
+    expect(cmp.pages).toBe(false);
+    // ...and the build happened anyway
+    expect(built.build.snapshotId).toMatch(/^build-[0-9a-f]{16}$/);
   });
 });
