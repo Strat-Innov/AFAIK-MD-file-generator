@@ -12,9 +12,9 @@ const STEPS = [
   { n: 1, label: "Import", ready: true },
   { n: 2, label: "Extract Q&A", ready: true },
   { n: 3, label: "Review raw Q&A", ready: true },
-  { n: 4, label: "AI intent consolidation", ready: true },
-  { n: 5, label: "Review intents", ready: true },
-  { n: 6, label: "Export", ready: false },
+  { n: 4, label: "Consolidate questions", ready: true },
+  { n: 5, label: "Review clean questions", ready: true },
+  { n: 6, label: "Export Excel", ready: true },
 ];
 
 function Workflow({ imported, extracted, consolidated }) {
@@ -98,7 +98,7 @@ function FileTable({ files }) {
   );
 }
 
-export default function ResponseImport({ workspace, qaSummary, intentCount = 0, busy, error, onImport, onClear, onViewRaw, onViewQA }) {
+export default function ResponseImport({ workspace, qaSummary, consolidatedCount = 0, busy, error, onImport, onClear, onViewRaw, onViewQA, onViewQuestions }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const summary = summarize(workspace);
@@ -115,7 +115,7 @@ export default function ResponseImport({ workspace, qaSummary, intentCount = 0, 
         <p className="text-sm text-slate-600 mt-1">
           Analyze AFAIK Agent sessions and turn real user questions and responses into reusable knowledge.
         </p>
-        <div className="mt-4"><Workflow imported={summary.sessions > 0} extracted={qaSummary.records > 0} consolidated={intentCount > 0} /></div>
+        <div className="mt-4"><Workflow imported={summary.sessions > 0} extracted={qaSummary.records > 0} consolidated={consolidatedCount > 0} /></div>
         <div className="mt-4 flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600">
           <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-px" />
           <span>
@@ -179,9 +179,16 @@ export default function ResponseImport({ workspace, qaSummary, intentCount = 0, 
               <button
                 onClick={onViewQA}
                 disabled={qaSummary.records === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+              >
+                Review extracted Q&amp;A
+              </button>
+              <button
+                onClick={onViewQuestions}
+                disabled={qaSummary.records === 0}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
               >
-                Review extracted Q&amp;A <ArrowRight className="h-3.5 w-3.5" />
+                Consolidate questions <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>

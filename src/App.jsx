@@ -10,8 +10,7 @@ import TestQuestionGenerator from "./components/TestQuestionGenerator";
 import ResponseImport from "./components/responses/ResponseImport";
 import RawSessions from "./components/responses/RawSessions";
 import ExtractedQA from "./components/responses/ExtractedQA";
-import AIConsolidation from "./components/responses/AIConsolidation";
-import IntentCandidates from "./components/responses/IntentCandidates";
+import QuestionConsolidation from "./components/responses/QuestionConsolidation";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -22,8 +21,8 @@ import { publishChangelog, fetchFileRecords } from "./lib/github";
 import { runExclusive } from "./lib/publishQueue";
 import { buildMaster } from "./lib/masterMd";
 import { generateOptimized } from "./lib/generate";
-import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_AI_CONSOLIDATION, RC_INTENT_CANDIDATES, isResponseView } from "./lib/responses/views";
-import { EMPTY_WORKSPACE, readResponseFile, mergeImport } from "./lib/responses/importSessions";
+import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_QUESTIONS, isResponseView } from "./lib/responses/views";
+import { EMPTY_WORKSPACE, readResponseFile, mergeImport, summarize as summarizeWorkspace } from "./lib/responses/importSessions";
 import { extractQA, summarizeQA } from "./lib/responses/qa";
 
 /* ---- ZIP reading via native DecompressionStream (no dependency) ---- */
@@ -428,21 +427,18 @@ export default function App() {
   const qaSummary = useMemo(() => summarizeQA(extracted), [extracted]);
   const recordsById = useMemo(() => new Map(extracted.records.map((r) => [r.id, r])), [extracted]);
 
-  /* Layer 3 candidates: an AI grouping that passed validation, plus the
-   * reviewer's decisions. Memory only, like everything here. Both are
-   * dropped when the sessions change — a grouping describes the exact
-   * question set it was made from and stops describing anything the
-   * moment that set moves (the same rule as the knowledge build below). */
-  const [intentResult, setIntentResult] = useState(null);
-  const [intentReview, setIntentReview] = useState({});
-  useEffect(() => { setIntentResult(null); setIntentReview({}); }, [responseWorkspace]);
-  const onIntentsImported = (result, request) => {
-    setIntentResult({ ...result, packageId: request.packageId, importedAt: new Date().toISOString() });
-    setIntentReview({});
-    setSelected(RC_INTENT_CANDIDATES);
+  /* Layer 3: the consolidated questions — an AI grouping that passed
+   * validation. Memory only, like everything here, and dropped when the
+   * sessions change: a consolidation describes the exact question set it
+   * was made from (the same rule as the knowledge build below). The
+   * Excel export is the persistent record. */
+  const [questionResult, setQuestionResult] = useState(null);
+  useEffect(() => { setQuestionResult(null); }, [responseWorkspace]);
+  const onQuestionsImported = (result, request) => {
+    setQuestionResult({ ...result, packageId: request.packageId, importedAt: new Date().toISOString() });
   };
 
-  // Traceability navigation: intent → QA record → raw session. The
+  // Traceability navigation: clean question → QA record → raw session. The
   // target view remounts on each jump (key) so it opens on that record.
   const [focus, setFocus] = useState({ qaId: null, sessionRecordId: null, n: 0 });
   const openQA = (qaId) => { setFocus((f) => ({ qaId, sessionRecordId: null, n: f.n + 1 })); setSelected(RC_EXTRACTED_QA); };
@@ -500,7 +496,7 @@ export default function App() {
         responseCounts={{
           [RC_RAW_SESSIONS]: responseWorkspace.sessions.length,
           [RC_EXTRACTED_QA]: extracted.records.length,
-          [RC_INTENT_CANDIDATES]: intentResult?.intents.length ?? 0,
+          [RC_QUESTIONS]: questionResult?.questions.length ?? 0,
         }}
       />
 
@@ -564,7 +560,8 @@ export default function App() {
             error={responseError}
             onImport={importResponses}
             onClear={clearResponses}
-            intentCount={intentResult?.intents.length ?? 0}
+            consolidatedCount={questionResult?.questions.length ?? 0}
+            onViewQuestions={() => goTo(RC_QUESTIONS)}
             onViewRaw={() => goTo(RC_RAW_SESSIONS)}
             onViewQA={() => goTo(RC_EXTRACTED_QA)}
           />
@@ -588,23 +585,16 @@ export default function App() {
             onGoImport={() => goTo(RC_IMPORT)}
           />
         )}
-        {selected === RC_AI_CONSOLIDATION && (
-          <AIConsolidation
+        {selected === RC_QUESTIONS && (
+          <QuestionConsolidation
             records={extracted.records}
-            current={intentResult}
-            onImported={onIntentsImported}
-            onViewIntents={() => goTo(RC_INTENT_CANDIDATES)}
-            onGoImport={() => goTo(RC_IMPORT)}
-          />
-        )}
-        {selected === RC_INTENT_CANDIDATES && (
-          <IntentCandidates
-            result={intentResult}
             recordsById={recordsById}
-            review={intentReview}
-            onReview={(intentId, status) => setIntentReview((r) => ({ ...r, [intentId]: status }))}
+            workspaceSummary={summarizeWorkspace(responseWorkspace)}
+            qaSummary={qaSummary}
+            result={questionResult}
+            onImported={onQuestionsImported}
             onOpenQA={openQA}
-            onGoConsolidation={() => goTo(RC_AI_CONSOLIDATION)}
+            onGoImport={() => goTo(RC_IMPORT)}
           />
         )}
 

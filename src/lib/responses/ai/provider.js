@@ -1,11 +1,11 @@
 /* ------------------------------------------------------------------ *
  * AI provider abstraction.
  *
- * The consolidation engine (intentPackage.js, and later passes) builds
- * provider-neutral *requests*: a task, structured input, the required
- * output schema. A provider decides how a request reaches a model. The
- * UI talks to the provider interface only, so a different provider can
- * be added later without touching the engine or the views.
+ * The consolidation engine (questionPackage.js) builds provider-neutral
+ * *requests*: a task, structured input, the required output schema. A
+ * provider decides how a request reaches a model. The UI talks to the
+ * provider interface only, so a different provider can be added later
+ * without touching the engine or the views.
  *
  * Contract — an AIProvider is:
  *   {
@@ -16,17 +16,16 @@
  *                before any call (none exists in v1).
  *     render(request) -> { promptText }   what the model is given
  *   }
- * Parsing and validating the model's reply is Phase 8 and will be added
- * to this contract then.
+ * The reply is validated by questionResult.js whichever provider ran.
  *
  * v1 ships one provider: a manual round-trip. The app produces the
  * prompt; the user decides whether to paste it into Claude. Nothing
  * leaves the browser on the app's initiative, and no API key exists.
  * ------------------------------------------------------------------ */
 
-import { renderIntentPrompt, INTENT_TASK } from "./intentPackage.js";
+import { renderQuestionPrompt, QUESTION_TASK } from "./questionPackage.js";
 
-const RENDERERS = { [INTENT_TASK]: renderIntentPrompt };
+const RENDERERS = { [QUESTION_TASK]: renderQuestionPrompt };
 
 export const manualClaudeProvider = Object.freeze({
   id: "manual-claude",

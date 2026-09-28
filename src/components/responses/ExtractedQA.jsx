@@ -95,11 +95,8 @@ function Detail({ record, session, onOpenSession }) {
             ["Question in session", `${record.questionNumber} (turn ${record.turnNumber})`],
             ["Answer status", <StatusBadge key="s" status={record.answerStatus} />],
             ["Transcript completeness", { COMPLETE: "Complete", TRUNCATED: "Truncated by the export", NONE: "No answer content" }[record.answerCompleteness]],
-            ["Knowledge validation", { NOT_EVALUATED: "Not evaluated — checked against the AFAIK knowledge source, not the transcript", VALIDATED: "Validated", NEEDS_REVIEW: "Needs review" }[record.knowledgeValidation]],
             ["Needs review", yesNo(record.requiresReview)],
-            ["Question kind", record.questionKind === "CONVERSATIONAL" ? "Conversational — kept, not analysed" : "Information request"],
-            ["Answer type", record.answerType ?? "— (no answer content)"],
-            ["Potential knowledge gap", record.potentialKnowledgeGap ? "Yes — to be confirmed at review" : "No"],
+            ["Question kind", record.questionKind === "CONVERSATIONAL" ? "Conversational — kept, not consolidated" : "Information question"],
             ["Parse status", record.parseFlags.length ? record.parseFlags.join(", ") : PARSE_STATUS.OK],
             ["Session outcome", [record.sessionOutcome, record.outcomeReason].filter(Boolean).join(" · ") || "—"],
             ["Channel", record.channel || "—"],
@@ -133,7 +130,7 @@ function Detail({ record, session, onOpenSession }) {
 }
 
 /* `focusQaId` opens the view on one record — searched for and expanded —
- * when the user follows a QA ID from an intent candidate. */
+ * when the user follows a QA ID from a consolidated question. */
 export default function ExtractedQA({ records, sessions, summary, onGoImport, focusQaId = null, onOpenSession }) {
   const [filters, setFilters] = useState(() => (focusQaId ? { ...DEFAULT_QA_FILTERS, text: focusQaId } : DEFAULT_QA_FILTERS));
   const [sort, setSort] = useState({ key: "id", direction: "asc" });
@@ -230,10 +227,6 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport, fo
             {sourceFiles.map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
           <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
-            <input type="checkbox" checked={filters.potentialGapOnly} onChange={(e) => set({ potentialGapOnly: e.target.checked })} />
-            Potential knowledge gaps ({summary.potentialKnowledgeGaps})
-          </label>
-          <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
             <input type="checkbox" checked={filters.hideConversational} onChange={(e) => set({ hideConversational: e.target.checked })} />
             Hide conversational ({summary.conversational})
           </label>
@@ -297,12 +290,7 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport, fo
                     </td>
                     <td className="px-2 py-2">
                       <StatusBadge status={r.answerStatus} />
-                      {r.answerType && (
-                        <div className="mt-1 text-[11px] text-slate-500 whitespace-nowrap">
-                          {r.answerType.replace("_", " ").toLowerCase()}
-                        </div>
-                      )}
-                      {r.potentialKnowledgeGap && <div className="mt-1"><FlagBadge tone="amber">Potential gap</FlagBadge></div>}
+                      {r.questionKind === "CONVERSATIONAL" && <div className="mt-1 text-[11px] text-slate-500 whitespace-nowrap">conversational</div>}
                     </td>
                     <td className="px-2 py-2 tabular-nums text-slate-600">{r.turnNumber}</td>
                     <td className="px-2 py-2 text-xs text-slate-500 break-all min-w-[9rem]">{r.sourceFiles[0]}{r.sourceFiles.length > 1 && <span className="text-slate-400"> +{r.sourceFiles.length - 1}</span>}</td>

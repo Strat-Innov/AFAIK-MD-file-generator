@@ -11,7 +11,6 @@ export const DEFAULT_QA_FILTERS = Object.freeze({
   parseIssuesOnly: false,
   reviewOnly: false,
   sourceFile: "",
-  potentialGapOnly: false,
   hideConversational: false,
 });
 
@@ -23,7 +22,6 @@ export function filterQA(records, filters = DEFAULT_QA_FILTERS) {
     if (f.parseIssuesOnly && r.parseStatus === PARSE_STATUS.OK) return false;
     if (f.reviewOnly && !r.requiresReview) return false;
     if (f.sourceFile && !r.sourceFiles.includes(f.sourceFile)) return false;
-    if (f.potentialGapOnly && !r.potentialKnowledgeGap) return false;
     if (f.hideConversational && !r.includeInConsolidation) return false;
     if (needle) {
       const haystack = [r.id, r.sessionId, r.question, ...r.answerParts.map((p) => p.text)].join("\n").toLowerCase();

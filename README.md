@@ -140,7 +140,7 @@ the one below it:
 |---|---|---|
 | **RAW** | Raw Sessions | Every imported row, exactly as exported, with its source file and row number. Read-only. |
 | RAW | Extracted Q&A | One record per user message, read deterministically from the transcript. The question and every agent answer part are kept word for word. |
-| DERIVED | Clean Knowledge, Knowledge Gaps *(planned)* | AI candidates, validated against the raw layer and reviewed by a person before export. |
+| DERIVED | Question Consolidation | Real questions grouped into clean, reusable questions by Claude, validated against the raw layer, reviewed, and exported to Excel. |
 
 **Import rules**
 
@@ -188,66 +188,57 @@ the one below it:
 - `InitialUserMessage` is kept as reference only. The transcript is
   authoritative.
 
-**Question first.** The user's question is the primary signal: it shows
-what people expect AFAIK to know. The answer is context. Each record
-also carries simple, rule-based metadata:
+**Purpose.** The Response Consolidator shows what AFAIK users are
+actually asking. It keeps those real questions, turns repeated and
+reworded ones into clean reusable questions, and exports that question
+master for improving AFAIK. Answer evaluation is supporting information.
 
-- **Answer type:** `KNOWLEDGE`, `NOT_FOUND`, `CONVERSATIONAL` or
-  `SYSTEM_NOTICE`. It's set only where there's answer text, which means
-  `ANSWERED` or `TRUNCATED`.
-- **Question kind:** `INFORMATION_REQUEST` or `CONVERSATIONAL`.
-  Conversational questions ("hi", "hmp") stay in the dataset but are left
-  out of consolidation.
-- **Potential knowledge gap:** an information request answered
-  `NOT_FOUND`. It's a flag for review, not a confirmed gap.
+**Information vs conversational.** Greetings and filler ("hi", "hmp") are
+kept in Raw Sessions and Extracted Q&A, but they aren't knowledge
+questions and aren't consolidated. On the September 2026 exports that's
+49 Q&A records: 42 information questions and 7 conversational.
 
-**AI Intent Consolidation.** This step finds what users are asking
-about. It doesn't write answers.
+**Question Consolidation** (manual Claude round-trip, nothing sent
+automatically):
 
-1. The app builds a deterministic package of every information request.
-   By default each item is the QA ID, question, answer parts, answer
-   status and answer type. Session IDs and source files are opt-in; the
-   app keeps that mapping itself.
-2. It renders a prompt asking Claude to group the questions by
-   information need, with every QA ID in exactly one intent. Claude
-   isn't asked for answers or facts. Each intent carries two separate
-   signals:
-   - **Potential knowledge gap:** set only when a reply explicitly says
-     the information wasn't found in the configured knowledge source.
-     It's never inferred from a missing answer.
-   - **Unanswered demand:** set when any question in the intent got no
-     usable answer content (agent unavailable, no reply, redacted). It
-     means users asked; it doesn't mean the knowledge is missing.
+1. **Copy Claude prompt.** The prompt holds every information question:
+   QA ID, exact question, agent answer parts and answer status. It
+   contains no session IDs or file names. It asks Claude only to:
+   - group questions that ask for the same information (never just the
+     same topic);
+   - write one clean question per group, keeping its meaning, without
+     answering it or adding facts;
+   - account for every QA ID exactly once;
+   - judge the observed answer: `ANSWERED`, `PARTIALLY_ANSWERED`,
+     `NOT_ANSWERED` or `CANNOT_DETERMINE`. `TRUNCATED` doesn't mean
+     not answered.
+2. **Paste Claude's JSON reply.** It's checked
+   (`src/lib/responses/ai/questionResult.js`): the package ID must
+   match, every field must be present, and each eligible QA ID must
+   appear exactly once, with none missing, duplicated, invented or
+   conversational. Any failure rejects the whole reply. A pasted prompt
+   or input package is recognised and explained.
+3. **Review.** Each clean question expands to show its original
+   questions exactly as asked, the agent's answers, answer status,
+   timestamps and source files. Each QA ID links to its Extracted Q&A
+   record, which links to its raw session and source row.
+4. **Export Consolidated Excel** → `AFAIK_Question_Consolidated.xlsx`:
 
-   Both can be true. Truncation sets neither.
-3. Nothing is sent automatically. The user copies the prompt into
-   Claude and pastes the JSON reply back.
-4. The app checks the reply against the package
-   (`src/lib/responses/ai/intentResult.js`):
-   - the `packageId` matches;
-   - every required field is present with the right type;
-   - every expected QA ID is covered exactly once, with none missing,
-     duplicated, invented or conversational.
-   - `unansweredDemand` matches the answer statuses of the intent's
-     questions. The model sees the same statuses, so a mismatch rejects
-     the reply.
-   - A potential gap without not-found evidence, or not-found evidence
-     without a potential gap, is shown as a warning. The app's not-found
-     rules are simple patterns and can miss wording the model reads
-     correctly.
+   | Sheet | Contents |
+   |---|---|
+   | `RAW_Q&A` | Every Q&A record, values exactly as imported, plus the consolidated question each one went into |
+   | `CONSOLIDATED_QUESTIONS` | Question ID, clean question, occurrence count, original QA IDs, original questions, answer result, notes |
+   | `SUMMARY` | Files, sessions, Q&A, information/conversational, consolidated and repeated questions, answer-result counts |
 
-   One failure rejects the whole reply.
-5. Accepted intents appear in **Intent Candidates** for review
-   (Pending, Accepted, Rejected, Needs review). Each QA ID links to its
-   Extracted Q&A record, which links to its raw session and source file
-   row.
+   The workbook is written in the browser with the app's own zip writer,
+   with no dependency. Text is stored as text, so a question starting
+   with `=` can't run as a formula.
 
-Intent candidates and review decisions are held in memory. They're
-cleared when the imported sessions change, because a grouping only
-describes the question set it was made from. The engine produces
-provider-neutral requests, and `src/lib/responses/ai/provider.js`
-renders them. v1 has one provider, a manual one, so a direct provider
-can be added later without touching the UI.
+The consolidation is held in memory and cleared when the imported
+sessions change. The Excel export is the lasting record. The provider
+layer (`src/lib/responses/ai/provider.js`) keeps the prompt engine
+independent of how it reaches a model, and v1's only provider is the
+manual one.
 
 **Privacy.** Everything runs in the browser. Session data is never
 uploaded, never written to `localStorage`, and is gone when the tab

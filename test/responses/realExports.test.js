@@ -7,7 +7,7 @@ import {
 } from "../../src/lib/responses/importSessions.js";
 import { extractQA, summarizeQA } from "../../src/lib/responses/qa.js";
 import { SPEAKER } from "../../src/lib/responses/transcript.js";
-import { buildIntentRequest } from "../../src/lib/responses/ai/intentPackage.js";
+import { buildQuestionRequest } from "../../src/lib/responses/ai/questionPackage.js";
 
 /* Real AFAIK session exports, gitignored — see README.md in this
  * folder. The invariants hold for any set of exports. The fixed counts
@@ -103,11 +103,8 @@ describe.skipIf(!isSeptemberSet)("real exports — September 2026 regression cou
     expect(summarizeQA(qa)).toEqual({
       records: 49,
       byStatus: { ANSWERED: 13, AGENT_UNAVAILABLE: 5, NO_RESPONSE: 1, REDACTED: 8, TRUNCATED: 22 },
-      // Answer Type (added with Phase 7) — reviewed record by record on 2026-09-28.
-      byAnswerType: { KNOWLEDGE: 20, NOT_FOUND: 8, CONVERSATIONAL: 6, SYSTEM_NOTICE: 1, NONE: 14 },
       informationRequests: 42,
       conversational: 7,
-      potentialKnowledgeGaps: 8,
       sessionsWithQuestions: 29,
       multiQuestionSessions: 10,
       multiPartAnswers: 11,
@@ -117,11 +114,13 @@ describe.skipIf(!isSeptemberSet)("real exports — September 2026 regression cou
     });
   });
 
-  it("sends the 42 information requests to intent consolidation and nothing else", async () => {
+  it("sends the 42 information questions to consolidation and nothing else", async () => {
     const { records } = await extracted();
-    const req = buildIntentRequest(records);
-    expect(req.counts).toEqual({ records: 49, items: 42, excluded: 7, potentialKnowledgeGaps: 8 });
-    // Data minimisation: no session IDs or source files unless asked for.
+    const req = buildQuestionRequest(records);
+    expect(req.counts).toEqual({ records: 49, items: 42, excluded: 7 });
+    // All 22 truncated questions are included.
+    expect(req.items.filter((i) => i.answerStatus === "TRUNCATED")).toHaveLength(22);
+    // Data minimisation: no session IDs or source files.
     expect(req.items.every((i) => !("sessionId" in i) && !("sourceFile" in i))).toBe(true);
     // Every sent question is its exact extracted text.
     const byId = new Map(records.map((r) => [r.id, r]));

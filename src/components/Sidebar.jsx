@@ -1,13 +1,13 @@
 import React from "react";
-import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, Upload, Table2, MessagesSquare, Sparkles, Layers } from "lucide-react";
+import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, Upload, Table2, MessagesSquare, Sparkles } from "lucide-react";
 import { UNSORTED } from "../lib/router";
 import {
-  RESPONSE_VIEWS, RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_AI_CONSOLIDATION, RC_INTENT_CANDIDATES, LAYER_RAW, LAYER_DERIVED,
+  RESPONSE_VIEWS, RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_QUESTIONS, LAYER_RAW, LAYER_DERIVED,
 } from "../lib/responses/views";
 
 const RESPONSE_ICONS = {
   [RC_IMPORT]: Upload, [RC_RAW_SESSIONS]: Table2, [RC_EXTRACTED_QA]: MessagesSquare,
-  [RC_AI_CONSOLIDATION]: Sparkles, [RC_INTENT_CANDIDATES]: Layers,
+  [RC_QUESTIONS]: Sparkles,
 };
 
 export default function Sidebar({ tags, selected, onSelect, counts, responseCounts = {} }) {
@@ -61,7 +61,7 @@ export default function Sidebar({ tags, selected, onSelect, counts, responseCoun
       {byLayer(null).map(responseItem)}
       {byLayer(LAYER_RAW).length > 0 && groupLabel("Raw · source of truth")}
       {byLayer(LAYER_RAW).map(responseItem)}
-      {byLayer(LAYER_DERIVED).length > 0 && groupLabel("Derived · AI candidates")}
+      {byLayer(LAYER_DERIVED).length > 0 && groupLabel("Derived · AI consolidated")}
       {byLayer(LAYER_DERIVED).map(responseItem)}
 
       <div className="mt-auto pt-2 border-t border-slate-800 flex flex-col gap-1">
