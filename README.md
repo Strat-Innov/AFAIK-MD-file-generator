@@ -139,7 +139,7 @@ the one below it:
 | Layer | View | What it is |
 |---|---|---|
 | **RAW** | Raw Sessions | Every imported row, exactly as exported, with its source file and row number. Read-only. |
-| RAW | Extracted Q&A *(planned)* | Each User → Agent exchange read from the transcript, wording unchanged. |
+| RAW | Extracted Q&A | One record per user message, read deterministically from the transcript. The question and every agent answer part are kept word for word. |
 | DERIVED | Clean Knowledge, Knowledge Gaps *(planned)* | AI candidates, validated against the raw layer and reviewed by a person before export. |
 
 **Import rules**
@@ -152,6 +152,30 @@ the one below it:
   different content is kept twice and flagged, never silently resolved.
 - A file dropped twice is recognised by its content and skipped.
 - Legacy binary `.xls` isn't supported; save as `.xlsx` or `.csv`.
+
+**Extraction rules** (`src/lib/responses/transcript.js`, `qa.js`)
+
+- Transcripts are `<Speaker> says: <text>;` entries. Only `User says`
+  and `Agent says` are speakers; `Bot said:` inside an agent message is
+  message text. The parsed entry count must equal the `Turns` column,
+  otherwise the session is flagged `PARSE_MISMATCH`. Unknown speakers and
+  text outside any entry are kept and flagged, never dropped.
+- Each user message is one Q&A record. Its answer is the agent messages
+  that follow, up to the next user message, kept as ordered parts.
+  Agent messages before the first question are session preamble.
+- Every answer gets a status taken from the transcript text, never from
+  `SessionOutcome`:
+
+  | Status | When | Usable as answer evidence | Needs review |
+  |---|---|---|---|
+  | `ANSWERED` | A normal agent reply | Yes | No |
+  | `TRUNCATED` | The exporter cut a message off (≥480 characters ending in `...`) | No | Yes |
+  | `REDACTED` | A message is exactly `[REDACTED]` | No | Yes |
+  | `NO_RESPONSE` | No agent message before the next user message or the end | No | Yes |
+  | `AGENT_UNAVAILABLE` | Every reply is the usage-limit notice | No | No |
+
+- `InitialUserMessage` is kept as reference only. The transcript is
+  authoritative.
 
 **Privacy.** Everything runs in the browser. Session data is never
 uploaded, never written to `localStorage`, and is gone when the tab

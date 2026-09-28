@@ -1,9 +1,9 @@
 import React from "react";
-import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, Upload, Table2 } from "lucide-react";
+import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, Upload, Table2, MessagesSquare } from "lucide-react";
 import { UNSORTED } from "../lib/router";
-import { RESPONSE_VIEWS, RC_IMPORT, RC_RAW_SESSIONS, LAYER_RAW, LAYER_DERIVED } from "../lib/responses/views";
+import { RESPONSE_VIEWS, RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, LAYER_RAW, LAYER_DERIVED } from "../lib/responses/views";
 
-const RESPONSE_ICONS = { [RC_IMPORT]: Upload, [RC_RAW_SESSIONS]: Table2 };
+const RESPONSE_ICONS = { [RC_IMPORT]: Upload, [RC_RAW_SESSIONS]: Table2, [RC_EXTRACTED_QA]: MessagesSquare };
 
 export default function Sidebar({ tags, selected, onSelect, counts, responseCounts = {} }) {
   const item = (key, label, Icon, badge) => (

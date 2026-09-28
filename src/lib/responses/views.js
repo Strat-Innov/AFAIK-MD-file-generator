@@ -18,11 +18,15 @@ export const LAYER_DERIVED = "DERIVED";
 
 export const RC_IMPORT = "responses:import";
 export const RC_RAW_SESSIONS = "responses:raw-sessions";
+export const RC_EXTRACTED_QA = "responses:extracted-qa";
 
 // Ordered as the workflow runs. Later phases append here.
 export const RESPONSE_VIEWS = [
   { key: RC_IMPORT, label: "Import Responses", layer: null },
   { key: RC_RAW_SESSIONS, label: "Raw Sessions", layer: LAYER_RAW },
+  // A deterministic reading of the raw sessions — wording unchanged, no
+  // AI — so it sits with the raw layer, not with the derived one.
+  { key: RC_EXTRACTED_QA, label: "Extracted Q&A", layer: LAYER_RAW },
 ];
 
 export const isResponseView = (key) => typeof key === "string" && key.startsWith("responses:");

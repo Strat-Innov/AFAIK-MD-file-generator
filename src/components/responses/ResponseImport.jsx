@@ -10,18 +10,20 @@ import { Stat, FlagBadge } from "./common";
  * rather than left out, so the path from import to export stays clear. */
 const STEPS = [
   { n: 1, label: "Import", ready: true },
-  { n: 2, label: "Extract Q&A", ready: false },
-  { n: 3, label: "Review raw Q&A", ready: false },
+  { n: 2, label: "Extract Q&A", ready: true },
+  { n: 3, label: "Review raw Q&A", ready: true },
   { n: 4, label: "AI consolidate", ready: false },
   { n: 5, label: "Review knowledge", ready: false },
   { n: 6, label: "Export", ready: false },
 ];
 
-function Workflow({ imported }) {
+function Workflow({ imported, extracted }) {
   return (
     <ol className="flex flex-wrap items-center gap-1.5 text-xs">
       {STEPS.map((s, i) => {
-        const done = s.n === 1 && imported;
+        // Extraction runs on import. Review is never "done" on the app's
+        // say-so, so step 3 stays open.
+        const done = (s.n === 1 && imported) || (s.n === 2 && extracted);
         return (
           <React.Fragment key={s.n}>
             <li
@@ -95,7 +97,7 @@ function FileTable({ files }) {
   );
 }
 
-export default function ResponseImport({ workspace, busy, error, onImport, onClear, onViewRaw }) {
+export default function ResponseImport({ workspace, qaSummary, busy, error, onImport, onClear, onViewRaw, onViewQA }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const summary = summarize(workspace);
@@ -112,7 +114,7 @@ export default function ResponseImport({ workspace, busy, error, onImport, onCle
         <p className="text-sm text-slate-600 mt-1">
           Analyze AFAIK Agent sessions and turn real user questions and responses into reusable knowledge.
         </p>
-        <div className="mt-4"><Workflow imported={summary.sessions > 0} /></div>
+        <div className="mt-4"><Workflow imported={summary.sessions > 0} extracted={qaSummary.records > 0} /></div>
         <div className="mt-4 flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600">
           <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-px" />
           <span>
@@ -169,15 +171,24 @@ export default function ResponseImport({ workspace, busy, error, onImport, onCle
               <button
                 onClick={onViewRaw}
                 disabled={summary.sessions === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+              >
+                View raw sessions
+              </button>
+              <button
+                onClick={onViewQA}
+                disabled={qaSummary.records === 0}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
               >
-                View raw sessions <ArrowRight className="h-3.5 w-3.5" />
+                Review extracted Q&amp;A <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 p-4">
             <Stat label="Files imported" value={summary.files} />
             <Stat label="Sessions" value={summary.sessions} />
+            <Stat label="Q&A pairs (user questions)" value={qaSummary.records} />
+            <Stat label="Q&A needing review" value={qaSummary.requiresReview} tone={qaSummary.requiresReview ? "amber" : "slate"} />
             <Stat label="Rows read" value={summary.rows} />
             <Stat label="Sessions in >1 file" value={summary.multiSourceSessions} />
             <Stat label="Conflicting session IDs" value={summary.conflicts} tone={summary.conflicts ? "amber" : "slate"} />

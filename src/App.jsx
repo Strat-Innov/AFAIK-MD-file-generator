@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Upload, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import BucketView from "./components/BucketView";
@@ -9,6 +9,7 @@ import BenchmarkExport from "./components/BenchmarkExport";
 import TestQuestionGenerator from "./components/TestQuestionGenerator";
 import ResponseImport from "./components/responses/ResponseImport";
 import RawSessions from "./components/responses/RawSessions";
+import ExtractedQA from "./components/responses/ExtractedQA";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -19,8 +20,9 @@ import { publishChangelog, fetchFileRecords } from "./lib/github";
 import { runExclusive } from "./lib/publishQueue";
 import { buildMaster } from "./lib/masterMd";
 import { generateOptimized } from "./lib/generate";
-import { RC_IMPORT, RC_RAW_SESSIONS, isResponseView } from "./lib/responses/views";
+import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, isResponseView } from "./lib/responses/views";
 import { EMPTY_WORKSPACE, readResponseFile, mergeImport } from "./lib/responses/importSessions";
+import { extractQA, summarizeQA } from "./lib/responses/qa";
 
 /* ---- ZIP reading via native DecompressionStream (no dependency) ---- */
 async function inflateRaw(u8) {
@@ -418,6 +420,11 @@ export default function App() {
     }
   };
 
+  // Layer 2 is derived, never stored: recomputed from the raw sessions
+  // whenever they change, so it can't drift from them.
+  const extracted = useMemo(() => extractQA(responseWorkspace.sessions), [responseWorkspace]);
+  const qaSummary = useMemo(() => summarizeQA(extracted), [extracted]);
+
   const clearResponses = () => {
     responseRef.current = EMPTY_WORKSPACE;
     setResponseWorkspace(EMPTY_WORKSPACE);
@@ -466,7 +473,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex">
       <Sidebar
         tags={tags} selected={selected} onSelect={setSelected} counts={counts}
-        responseCounts={{ [RC_RAW_SESSIONS]: responseWorkspace.sessions.length }}
+        responseCounts={{ [RC_RAW_SESSIONS]: responseWorkspace.sessions.length, [RC_EXTRACTED_QA]: extracted.records.length }}
       />
 
       <main className={"flex-1 px-6 py-6 min-w-0 " + (onResponseView ? "max-w-7xl" : "max-w-5xl")}>
@@ -524,15 +531,25 @@ export default function App() {
         {selected === RC_IMPORT && (
           <ResponseImport
             workspace={responseWorkspace}
+            qaSummary={qaSummary}
             busy={responseBusy}
             error={responseError}
             onImport={importResponses}
             onClear={clearResponses}
             onViewRaw={() => setSelected(RC_RAW_SESSIONS)}
+            onViewQA={() => setSelected(RC_EXTRACTED_QA)}
           />
         )}
         {selected === RC_RAW_SESSIONS && (
           <RawSessions workspace={responseWorkspace} onGoImport={() => setSelected(RC_IMPORT)} />
+        )}
+        {selected === RC_EXTRACTED_QA && (
+          <ExtractedQA
+            records={extracted.records}
+            sessions={responseWorkspace.sessions}
+            summary={qaSummary}
+            onGoImport={() => setSelected(RC_IMPORT)}
+          />
         )}
 
         {selected === "ManageTags" && (
