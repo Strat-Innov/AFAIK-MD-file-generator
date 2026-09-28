@@ -36,7 +36,8 @@ describe("extracted Q&A query", () => {
   it("filters by answer status, review need and source file", async () => {
     const r = await load();
     expect(ids(filterQA(r, { answerStatus: ANSWER_STATUS.TRUNCATED }))).toEqual(["QA-0005"]);
-    expect(ids(filterQA(r, { reviewOnly: true }))).toEqual(["QA-0005", "QA-0006"]);
+    // Truncation alone is no review reason; the unanswered question is.
+    expect(ids(filterQA(r, { reviewOnly: true }))).toEqual(["QA-0006"]);
     expect(ids(filterQA(r, { sourceFile: "b.csv" }))).toEqual(["QA-0005", "QA-0006"]);
     expect(ids(filterQA(r, { parseIssuesOnly: true }))).toEqual([]);
   });

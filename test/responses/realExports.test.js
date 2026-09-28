@@ -111,7 +111,7 @@ describe.skipIf(!isSeptemberSet)("real exports — September 2026 regression cou
       sessionsWithQuestions: 29,
       multiQuestionSessions: 10,
       multiPartAnswers: 11,
-      requiresReview: 31,
+      requiresReview: 9, // REDACTED 8 + NO_RESPONSE 1; truncation alone is not a review reason
       parseMismatches: 0,
       sessionsWithParseIssues: 0,
     });

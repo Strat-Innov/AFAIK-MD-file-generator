@@ -20,7 +20,7 @@ export const STATUS_STYLE = {
 };
 
 const PART_NOTE = {
-  [PART_KIND.TRUNCATED]: `Cut off by the export at about ${TRUNCATION_MIN_LENGTH}–500 characters. Shows the question was asked; not usable as a complete answer.`,
+  [PART_KIND.TRUNCATED]: `The transcript export cut this message off at about ${TRUNCATION_MIN_LENGTH}–500 characters. That is a limit of the export, not a verdict on the answer: the question stays fully valid, and the answer's correctness is judged against the AFAIK knowledge source, never by reconstructing the missing text.`,
   [PART_KIND.REDACTED]: "Withheld by the export. No answer content is available.",
   [PART_KIND.UNAVAILABLE]: "Platform usage-limit notice, not an answer.",
 };
@@ -94,8 +94,8 @@ function Detail({ record, session, onOpenSession }) {
             ["Session ID", record.sessionId || "—"],
             ["Question in session", `${record.questionNumber} (turn ${record.turnNumber})`],
             ["Answer status", <StatusBadge key="s" status={record.answerStatus} />],
-            ["Complete answer", yesNo(record.isCompleteAnswer)],
-            ["Usable as answer evidence", yesNo(record.isUsableAsAnswerEvidence)],
+            ["Transcript completeness", { COMPLETE: "Complete", TRUNCATED: "Truncated by the export", NONE: "No answer content" }[record.answerCompleteness]],
+            ["Knowledge validation", { NOT_EVALUATED: "Not evaluated — checked against the AFAIK knowledge source, not the transcript", VALIDATED: "Validated", NEEDS_REVIEW: "Needs review" }[record.knowledgeValidation]],
             ["Needs review", yesNo(record.requiresReview)],
             ["Question kind", record.questionKind === "CONVERSATIONAL" ? "Conversational — kept, not analysed" : "Information request"],
             ["Answer type", record.answerType ?? "— (no answer content)"],

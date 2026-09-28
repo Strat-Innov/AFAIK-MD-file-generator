@@ -166,13 +166,24 @@ the one below it:
 - Every answer gets a status taken from the transcript text, never from
   `SessionOutcome`:
 
-  | Status | When | Usable as answer evidence | Needs review |
+  | Status | When | Transcript completeness | Needs review |
   |---|---|---|---|
-  | `ANSWERED` | A normal agent reply | Yes | No |
-  | `TRUNCATED` | The exporter cut a message off (≥480 characters ending in `...`) | No | Yes |
-  | `REDACTED` | A message is exactly `[REDACTED]` | No | Yes |
-  | `NO_RESPONSE` | No agent message before the next user message or the end | No | Yes |
-  | `AGENT_UNAVAILABLE` | Every reply is the usage-limit notice | No | No |
+  | `ANSWERED` | A normal agent reply | `COMPLETE` | No |
+  | `TRUNCATED` | The exporter cut a message off (≥480 characters ending in `...`) | `TRUNCATED` | No |
+  | `REDACTED` | A message is exactly `[REDACTED]` | `NONE` | Yes |
+  | `NO_RESPONSE` | No agent message before the next user message or the end | `NONE` | Yes |
+  | `AGENT_UNAVAILABLE` | Every reply is the usage-limit notice | `NONE` | No |
+
+  Answer status describes the interaction and the export, **never
+  whether the answer was correct**.
+
+  - `TRUNCATED` only means the export has a character limit. The question
+    is fully valid and always goes to intent consolidation, and the
+    visible text is kept as context. The missing part is never
+    reconstructed.
+  - Correctness is a separate field, `knowledgeValidation`. It is judged
+    against the validated AFAIK knowledge source, not the transcript.
+    Every record starts `NOT_EVALUATED`.
 
 - `InitialUserMessage` is kept as reference only. The transcript is
   authoritative.

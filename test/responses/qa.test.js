@@ -42,13 +42,13 @@ describe("part and answer classification", () => {
     expect(answerStatusOf(p("NORMAL", "UNAVAILABLE"))).toBe(ANSWER_STATUS.ANSWERED);
   });
 
-  it("carries the agreed evidence metadata for every status", () => {
+  it("describes transcript completeness per status — never answer correctness", () => {
     expect(STATUS_METADATA).toEqual({
-      ANSWERED: { isCompleteAnswer: true, isUsableAsAnswerEvidence: true, requiresReview: false },
-      TRUNCATED: { isCompleteAnswer: false, isUsableAsAnswerEvidence: false, requiresReview: true },
-      REDACTED: { isCompleteAnswer: false, isUsableAsAnswerEvidence: false, requiresReview: true },
-      AGENT_UNAVAILABLE: { isCompleteAnswer: false, isUsableAsAnswerEvidence: false, requiresReview: false },
-      NO_RESPONSE: { isCompleteAnswer: false, isUsableAsAnswerEvidence: false, requiresReview: true },
+      ANSWERED: { answerCompleteness: "COMPLETE", requiresReview: false },
+      TRUNCATED: { answerCompleteness: "TRUNCATED", requiresReview: false },
+      REDACTED: { answerCompleteness: "NONE", requiresReview: true },
+      AGENT_UNAVAILABLE: { answerCompleteness: "NONE", requiresReview: false },
+      NO_RESPONSE: { answerCompleteness: "NONE", requiresReview: true },
     });
   });
 });
@@ -98,7 +98,7 @@ describe("Q&A extraction", () => {
       ["first", ANSWER_STATUS.NO_RESPONSE],
       ["second", ANSWER_STATUS.ANSWERED],
     ]);
-    expect(records[0]).toMatchObject({ answerParts: [], isUsableAsAnswerEvidence: false, requiresReview: true });
+    expect(records[0]).toMatchObject({ answerParts: [], answerCompleteness: "NONE", requiresReview: true });
   });
 
   it("7b. a user message at the end of the transcript → NO_RESPONSE", async () => {
@@ -108,14 +108,19 @@ describe("Q&A extraction", () => {
 
   it("8. [REDACTED] → REDACTED, kept as the exact part", async () => {
     const { records } = await one(tx(["User", "who leads operations"], ["Agent", "[REDACTED]"]), 2);
-    expect(records[0]).toMatchObject({ answerStatus: ANSWER_STATUS.REDACTED, isUsableAsAnswerEvidence: false, requiresReview: true });
+    expect(records[0]).toMatchObject({ answerStatus: ANSWER_STATUS.REDACTED, answerCompleteness: "NONE", requiresReview: true });
     expect(records[0].answerParts[0].text).toBe("[REDACTED]");
   });
 
-  it("9. a truncated answer is kept whole and flagged TRUNCATED, not usable as answer evidence", async () => {
+  it("9. a truncated answer is kept whole and flagged TRUNCATED — an export limit, not a verdict on the answer", async () => {
     const { records } = await one(tx(["User", "links for the operations oms"], ["Agent", TRUNCATED_ANSWER]), 2);
     expect(records[0]).toMatchObject({
-      answerStatus: ANSWER_STATUS.TRUNCATED, isCompleteAnswer: false, isUsableAsAnswerEvidence: false, requiresReview: true,
+      answerStatus: ANSWER_STATUS.TRUNCATED,
+      answerCompleteness: "TRUNCATED",
+      knowledgeValidation: "NOT_EVALUATED", // correctness is judged against the knowledge source, not here
+      requiresReview: false,                // truncation alone is no reason for review
+      includeInConsolidation: true,         // the question is fully valid
+      potentialKnowledgeGap: false,         // and truncation is not a gap signal
     });
     expect(records[0].answerParts[0].text).toBe(TRUNCATED_ANSWER);
   });
@@ -189,7 +194,7 @@ describe("Q&A extraction", () => {
       sessionsWithQuestions: 2,
       multiQuestionSessions: 1,
       multiPartAnswers: 0,
-      requiresReview: 2,
+      requiresReview: 1,
       parseMismatches: 1,
       sessionsWithParseIssues: 1,
     });
@@ -249,7 +254,17 @@ describe("question-first metadata — answer type and question kind", () => {
 
   it("never changes the question, answer text or status", async () => {
     const r = await typeOf(" hi ", "Bot said:Hi!");
-    expect(r).toMatchObject({ question: " hi ", answerStatus: ANSWER_STATUS.ANSWERED, isUsableAsAnswerEvidence: true });
+    expect(r).toMatchObject({ question: " hi ", answerStatus: ANSWER_STATUS.ANSWERED, answerCompleteness: "COMPLETE" });
     expect(r.answerParts[0].text).toBe("Bot said:Hi!");
+  });
+});
+
+describe("knowledge validation is never decided from the transcript", () => {
+  it("starts NOT_EVALUATED on every record, whatever the status", async () => {
+    const { records } = extractQA(await sessionsFrom([
+      ["s-1", tx(["User", "q1"], ["Agent", "a"], ["User", "q2"], ["Agent", TRUNCATED_ANSWER], ["User", "q3"], ["Agent", "[REDACTED]"], ["User", "q4"]), 7],
+    ]));
+    expect(records.map((r) => r.knowledgeValidation)).toEqual(["NOT_EVALUATED", "NOT_EVALUATED", "NOT_EVALUATED", "NOT_EVALUATED"]);
+    expect(records.every((r) => !("isUsableAsAnswerEvidence" in r) && !("isCompleteAnswer" in r))).toBe(true);
   });
 });

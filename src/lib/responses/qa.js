@@ -31,15 +31,41 @@ export const ANSWER_STATUS = Object.freeze({
   TRUNCATED: "TRUNCATED",
 });
 
-/* What each status means for the knowledge pipeline. A truncated or
- * redacted answer still shows the question was asked and can inform
- * intent grouping, but it is not evidence of what the full answer is. */
+/* Two separate questions, kept apart on purpose:
+ *
+ *  1. Is the TRANSCRIPT complete? (answerCompleteness)
+ *     A property of the export. TRUNCATED means the exporter cut the
+ *     message at ~500 characters — it says nothing about whether the
+ *     answer AFAIK gave was right. The question is fully valid either way.
+ *
+ *  2. Is the ANSWER correct? (knowledgeValidation)
+ *     Not decidable from a transcript. It is established against the
+ *     validated AFAIK knowledge source, never by reconstructing a cut-off
+ *     message. Every record starts NOT_EVALUATED; nothing in this module
+ *     sets it higher.
+ *
+ * Answer status is an interaction status, never a proxy for correctness.
+ * requiresReview flags records a person should look at because of what
+ * the interaction shows (content withheld, no reply) — truncation alone
+ * is not one of them. */
+export const ANSWER_COMPLETENESS = Object.freeze({
+  COMPLETE: "COMPLETE",   // the full message is in the export
+  TRUNCATED: "TRUNCATED", // the export cut it off
+  NONE: "NONE",           // no answer content (redacted, unavailable, no reply)
+});
+
+export const KNOWLEDGE_VALIDATION = Object.freeze({
+  NOT_EVALUATED: "NOT_EVALUATED",
+  VALIDATED: "VALIDATED",
+  NEEDS_REVIEW: "NEEDS_REVIEW",
+});
+
 export const STATUS_METADATA = Object.freeze({
-  [ANSWER_STATUS.ANSWERED]: { isCompleteAnswer: true, isUsableAsAnswerEvidence: true, requiresReview: false },
-  [ANSWER_STATUS.TRUNCATED]: { isCompleteAnswer: false, isUsableAsAnswerEvidence: false, requiresReview: true },
-  [ANSWER_STATUS.REDACTED]: { isCompleteAnswer: false, isUsableAsAnswerEvidence: false, requiresReview: true },
-  [ANSWER_STATUS.AGENT_UNAVAILABLE]: { isCompleteAnswer: false, isUsableAsAnswerEvidence: false, requiresReview: false },
-  [ANSWER_STATUS.NO_RESPONSE]: { isCompleteAnswer: false, isUsableAsAnswerEvidence: false, requiresReview: true },
+  [ANSWER_STATUS.ANSWERED]: { answerCompleteness: ANSWER_COMPLETENESS.COMPLETE, requiresReview: false },
+  [ANSWER_STATUS.TRUNCATED]: { answerCompleteness: ANSWER_COMPLETENESS.TRUNCATED, requiresReview: false },
+  [ANSWER_STATUS.REDACTED]: { answerCompleteness: ANSWER_COMPLETENESS.NONE, requiresReview: true },
+  [ANSWER_STATUS.AGENT_UNAVAILABLE]: { answerCompleteness: ANSWER_COMPLETENESS.NONE, requiresReview: false },
+  [ANSWER_STATUS.NO_RESPONSE]: { answerCompleteness: ANSWER_COMPLETENESS.NONE, requiresReview: true },
 });
 
 /* Part-level conditions, each fixed to what the real exports show.
@@ -224,6 +250,7 @@ export function extractQA(sessions) {
         answerParts: parts,
         answerStatus,
         ...STATUS_METADATA[answerStatus],
+        knowledgeValidation: KNOWLEDGE_VALIDATION.NOT_EVALUATED,
         ...analysisMetadata(e.text, parts, answerStatus),
         otherContent: skipped,
         parseStatus,

@@ -24,7 +24,8 @@ describe("intent consolidation request", () => {
     });
     // Usage-limit notices carry no content and are left out of the answer; the status says it.
     expect(second).toEqual({ qaId: "QA-0002", question: "who's the project director for mimosa", answerParts: [], answerStatus: "AGENT_UNAVAILABLE", answerType: null });
-    expect(third.answerParts).toEqual([TRUNCATED_ANSWER]);
+    // A truncated reply's question is sent like any other, with its visible text as context.
+    expect(third).toMatchObject({ qaId: "QA-0004", answerStatus: "TRUNCATED", answerParts: [TRUNCATED_ANSWER] });
   });
 
   it("adds session ID and source file only when asked, without changing the package ID", async () => {
