@@ -25,10 +25,11 @@ export function ValidationSummary({ result }) {
       {!c.evaluated && (
         <div className="mt-2 text-xs text-rose-800">QA ID coverage was not checked: the reply could not be read. {c.expected} QA IDs expected.</div>
       )}
-      {c.evaluated && <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-3">
+      {c.evaluated && <div className="grid grid-cols-3 sm:grid-cols-7 gap-2 mt-3">
         {cell("expected", c.expected, false)}
         {cell("assigned", c.assigned, c.assigned !== c.expected)}
         {cell("missing", c.missing.length, c.missing.length > 0)}
+        {cell("truncated left out", c.truncatedMissing.length, c.truncatedMissing.length > 0)}
         {cell("duplicated", c.duplicated.length, c.duplicated.length > 0)}
         {cell("unknown", c.unknown.length, c.unknown.length > 0)}
         {cell("conversational", c.conversational.length, c.conversational.length > 0)}
@@ -58,11 +59,13 @@ const CONFIDENCE_TONE = { high: "emerald", medium: "slate", low: "amber" };
 export default function IntentCandidates({ result, recordsById, review, onReview, onOpenQA, onGoConsolidation }) {
   const [expanded, setExpanded] = useState(() => new Set());
   const [gapOnly, setGapOnly] = useState(false);
+  const [demandOnly, setDemandOnly] = useState(false);
   const [reviewFilter, setReviewFilter] = useState("");
 
   const statusOf = (it) => review[it.intentId] ?? REVIEW_STATUS.PENDING;
   const intents = result?.intents ?? [];
-  const rows = intents.filter((it) => (!gapOnly || it.potentialKnowledgeGap) && (!reviewFilter || statusOf(it) === reviewFilter));
+  const rows = intents.filter((it) =>
+    (!gapOnly || it.potentialKnowledgeGap) && (!demandOnly || it.unansweredDemand) && (!reviewFilter || statusOf(it) === reviewFilter));
 
   if (!result) {
     return (
@@ -84,6 +87,7 @@ export default function IntentCandidates({ result, recordsById, review, onReview
   });
   const reviewCounts = Object.fromEntries(Object.values(REVIEW_STATUS).map((s) => [s, intents.filter((it) => statusOf(it) === s).length]));
   const gaps = intents.filter((it) => it.potentialKnowledgeGap).length;
+  const demand = intents.filter((it) => it.unansweredDemand).length;
 
   return (
     <div className="space-y-4">
@@ -98,10 +102,11 @@ export default function IntentCandidates({ result, recordsById, review, onReview
           wording; the questions underneath are the originals, unchanged. A potential knowledge gap is a flag for review,
           not a finding. No answers are generated at this stage.
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <Stat label="Intent candidates" value={intents.length} />
           <Stat label="Questions assigned" value={`${result.coverage.assigned} / ${result.coverage.expected}`} />
-          <Stat label="Potential knowledge gaps" value={gaps} tone={gaps ? "amber" : "slate"} />
+          <Stat label="Potential knowledge gaps (not-found evidence)" value={gaps} tone={gaps ? "amber" : "slate"} />
+          <Stat label="Unanswered demand (no usable answer captured)" value={demand} />
           <Stat label="Reviewed (accepted / rejected)" value={`${reviewCounts.ACCEPTED} / ${reviewCounts.REJECTED}`} />
         </div>
         <ValidationSummary result={result} />
@@ -112,6 +117,10 @@ export default function IntentCandidates({ result, recordsById, review, onReview
           <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
             <input type="checkbox" checked={gapOnly} onChange={(e) => setGapOnly(e.target.checked)} />
             Potential knowledge gaps only ({gaps})
+          </label>
+          <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+            <input type="checkbox" checked={demandOnly} onChange={(e) => setDemandOnly(e.target.checked)} />
+            Unanswered demand only ({demand})
           </label>
           <select value={reviewFilter} onChange={(e) => setReviewFilter(e.target.value)} aria-label="Review status filter"
             className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700">
@@ -128,7 +137,7 @@ export default function IntentCandidates({ result, recordsById, review, onReview
                 <th className="px-2 py-2 font-medium">Intent</th>
                 <th className="px-2 py-2 font-medium">Information need</th>
                 <th className="px-2 py-2 font-medium text-right">Questions</th>
-                <th className="px-2 py-2 font-medium">Potential gap</th>
+                <th className="px-2 py-2 font-medium">Signals</th>
                 <th className="px-2 py-2 font-medium">Confidence</th>
                 <th className="px-4 py-2 font-medium">Review status</th>
               </tr>
@@ -152,9 +161,16 @@ export default function IntentCandidates({ result, recordsById, review, onReview
                       </td>
                       <td className="px-2 py-2 text-right tabular-nums text-slate-700">{it.qaIds.length}</td>
                       <td className="px-2 py-2 min-w-[12rem]">
-                        {it.potentialKnowledgeGap
-                          ? <><FlagBadge tone="amber">Potential gap</FlagBadge><div className="mt-1 text-xs text-slate-600">{it.gapRationale}</div></>
-                          : <span className="text-xs text-slate-400">No</span>}
+                        {it.potentialKnowledgeGap && (
+                          <div><FlagBadge tone="amber">Potential gap</FlagBadge><div className="mt-1 text-xs text-slate-600">{it.gapRationale}</div></div>
+                        )}
+                        {it.unansweredDemand && (
+                          <div className={it.potentialKnowledgeGap ? "mt-1.5" : ""}>
+                            <FlagBadge tone="slate">Unanswered demand</FlagBadge>
+                            <div className="mt-1 text-[11px] text-slate-500">Some questions got no usable answer in the captured interaction — not evidence that the knowledge is missing.</div>
+                          </div>
+                        )}
+                        {!it.potentialKnowledgeGap && !it.unansweredDemand && <span className="text-xs text-slate-400">—</span>}
                       </td>
                       <td className="px-2 py-2"><FlagBadge tone={CONFIDENCE_TONE[it.confidence]}>{it.confidence}</FlagBadge></td>
                       <td className="px-4 py-2">

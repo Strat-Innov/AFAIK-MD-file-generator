@@ -11,15 +11,16 @@ const intent = (over = {}) => ({
   intentTitle: "Mimosa Project Director",
   informationNeed: "Users want to know who the project director of Mimosa is.",
   qaIds: ["QA-0001", "QA-0002"],
-  potentialKnowledgeGap: true,
-  gapRationale: "Both questions got no usable answer.",
+  potentialKnowledgeGap: true,   // QA-0001's reply says not found
+  unansweredDemand: true,        // QA-0002 hit the usage limit
+  gapRationale: "One reply says no information about the PD of Mimosa was found.",
   confidence: "high",
   notes: "",
   ...over,
 });
 const oms = (over = {}) => intent({
   intentId: "INT-002", intentTitle: "Operations OMS links", informationNeed: "Users want the links to the Operations OMS.",
-  qaIds: ["QA-0004"], potentialKnowledgeGap: false, gapRationale: "", confidence: "medium", ...over,
+  qaIds: ["QA-0004"], potentialKnowledgeGap: false, unansweredDemand: false, gapRationale: "", confidence: "medium", ...over,
 });
 const reply = (intents, over = {}) => JSON.stringify({ packageId: request.packageId, intents, ...over });
 
@@ -28,7 +29,8 @@ describe("validating Claude's intent reply", () => {
     const r = validateIntentReply(reply([intent(), oms()]), request);
     expect(r.ok).toBe(true);
     expect(r.errors).toEqual([]);
-    expect(r.coverage).toEqual({ evaluated: true, expected: 3, assigned: 3, missing: [], duplicated: [], unknown: [], conversational: [] });
+    expect(r.coverage).toEqual({ evaluated: true, expected: 3, assigned: 3, missing: [], truncatedMissing: [], duplicated: [], unknown: [], conversational: [] });
+    expect(r.warnings).toEqual([]);
     expect(r.intents.map((i) => [i.intentId, i.qaIds, i.reviewStatus])).toEqual([
       ["INT-001", ["QA-0001", "QA-0002"], REVIEW_STATUS.PENDING],
       ["INT-002", ["QA-0004"], REVIEW_STATUS.PENDING],
@@ -39,7 +41,7 @@ describe("validating Claude's intent reply", () => {
     const [it0] = validateIntentReply(reply([intent(), oms()]), request).intents;
     expect(it0.intentTitle).toBe("Mimosa Project Director");
     expect(Object.keys(it0).sort()).toEqual(
-      ["confidence", "gapRationale", "informationNeed", "intentId", "intentTitle", "notes", "potentialKnowledgeGap", "qaIds", "reviewStatus"],
+      ["confidence", "gapRationale", "informationNeed", "intentId", "intentTitle", "notes", "potentialKnowledgeGap", "qaIds", "reviewStatus", "unansweredDemand"],
     );
   });
 
@@ -138,5 +140,60 @@ describe("pasting the prompt back by mistake", () => {
       expect(r.ok).toBe(false);
       expect(r.errors[0]).toMatch(/This is the prompt, not Claude's reply/);
     }
+  });
+});
+
+describe("potential knowledge gap vs unanswered demand", () => {
+  it("mixed evidence — a not-found reply and an unavailable one — sets both flags", () => {
+    const r = validateIntentReply(reply([intent(), oms()]), request);
+    expect(r.intents[0]).toMatchObject({ potentialKnowledgeGap: true, unansweredDemand: true });
+  });
+
+  it("requires unansweredDemand on every intent", () => {
+    const { unansweredDemand, ...without } = intent();
+    const r = validateIntentReply(reply([without, oms()]), request);
+    expect(r.ok).toBe(false);
+    expect(r.errors.join("\n")).toMatch(/unansweredDemand must be true or false/);
+  });
+
+  it("rejects an unansweredDemand flag that contradicts the answer statuses", () => {
+    const missed = validateIntentReply(reply([intent({ unansweredDemand: false }), oms()]), request);
+    expect(missed.ok).toBe(false);
+    expect(missed.errors[0]).toMatch(/INT-001: unansweredDemand must be true — .*QA-0002 AGENT_UNAVAILABLE/);
+    // Truncation is an export limit, not an unanswered question.
+    const invented = validateIntentReply(reply([intent(), oms({ unansweredDemand: true })]), request);
+    expect(invented.ok).toBe(false);
+    expect(invented.errors[0]).toMatch(/INT-002: unansweredDemand must be false/);
+  });
+
+  it("unanswered-only intents are demand, not gaps", () => {
+    const split = [
+      intent({ intentId: "INT-001", qaIds: ["QA-0001"], unansweredDemand: false }),
+      intent({ intentId: "INT-003", qaIds: ["QA-0002"], potentialKnowledgeGap: false, unansweredDemand: true, gapRationale: null }),
+      oms(),
+    ];
+    const r = validateIntentReply(reply(split), request);
+    expect(r.ok).toBe(true);
+    expect(r.warnings).toEqual([]);
+    expect(r.intents[1]).toMatchObject({ potentialKnowledgeGap: false, unansweredDemand: true, gapRationale: "" });
+  });
+
+  it("warns when a gap is flagged without not-found evidence — e.g. for truncation or unavailability", () => {
+    const r = validateIntentReply(reply([intent(), oms({ potentialKnowledgeGap: true, gapRationale: "The reply was cut off." })]), request);
+    expect(r.ok).toBe(true);
+    expect(r.warnings.join(" ")).toMatch(/INT-002: flagged as a potential knowledge gap, but none of its questions/);
+  });
+
+  it("warns when not-found evidence is present but no gap is flagged", () => {
+    const r = validateIntentReply(reply([intent({ potentialKnowledgeGap: false, gapRationale: "" }), oms()]), request);
+    expect(r.ok).toBe(true);
+    expect(r.warnings.join(" ")).toMatch(/INT-001: not flagged as a potential knowledge gap, although QA-0001/);
+  });
+
+  it("names a truncated question that was left out", () => {
+    const r = validateIntentReply(reply([intent()]), request);
+    expect(r.ok).toBe(false);
+    expect(r.coverage.truncatedMissing).toEqual(["QA-0004"]);
+    expect(r.errors.join("\n")).toMatch(/truncated questions, which must always be included: QA-0004/);
   });
 });

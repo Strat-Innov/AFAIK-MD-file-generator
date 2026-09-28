@@ -35,8 +35,9 @@ export const INTENT_RESPONSE_SCHEMA = Object.freeze({
     intentTitle: "short name of the information need, e.g. 'Mimosa Project Director'",
     informationNeed: "one sentence: what these users want to know",
     qaIds: ["every qaId asking for this information need"],
-    potentialKnowledgeGap: "true | false",
-    gapRationale: "why this need may be missing or insufficient in AFAIK (required when potentialKnowledgeGap is true)",
+    potentialKnowledgeGap: "true | false — true ONLY with explicit not-found evidence (rule 5)",
+    unansweredDemand: "true | false — true when any question in the intent got no usable answer content (rule 6)",
+    gapRationale: "the not-found evidence, when potentialKnowledgeGap is true; otherwise empty string or null",
     confidence: CONFIDENCE_LEVELS.join(" | "),
     notes: "optional: ambiguity, or a related intent you kept separate and why",
   }],
@@ -114,11 +115,12 @@ RULES
 2. Group questions that ask for the same information, however they are worded ("who is the PD of mimosa", "who's the project director for mimosa", "who handles the mimosa project" → one intent). A question asked twice in a session is still grouped, never dropped.
 3. Do NOT group on shared keywords alone. Same subject, different need = separate intents (e.g. "price of Two Botanika" vs "payment schedule of Two Botanika").
 4. Describe the need only. Do NOT answer the questions, do NOT state facts, do NOT write knowledge-base content. Nothing in your reply may assert information that is not in the questions.
-5. potentialKnowledgeGap is a flag for human review, not a verdict. Set it to true when the need looks missing or insufficiently covered in AFAIK — for example answerType NOT_FOUND, or no usable answer (answerStatus AGENT_UNAVAILABLE, NO_RESPONSE, REDACTED). Explain why in gapRationale.
-6. answerStatus TRUNCATED means only that the transcript export cut the reply off at about 500 characters. It says nothing about whether AFAIK's answer was right, and it is NOT by itself a sign of a knowledge gap. Use the visible part as context; never guess or reconstruct the missing part.
-7. confidence is how sure you are that the grouped questions share one information need: ${CONFIDENCE_LEVELS.join(", ")}.
-8. Copy packageId from the input unchanged.
-9. Reply with ONE JSON object and nothing else — no prose, no Markdown fences — matching this schema:
+5. potentialKnowledgeGap = true ONLY when at least one reply in the intent explicitly says the information could not be found in the configured knowledge source (e.g. "unable to find information", "not available in the configured knowledge source"; answerType NOT_FOUND usually marks these). Never infer a gap from the absence of an answer. gapRationale quotes or paraphrases that not-found evidence; when potentialKnowledgeGap is false, gapRationale is "" or null. It is a flag for human review, not a verdict.
+6. unansweredDemand = true when at least one question in the intent got no usable answer content: answerStatus AGENT_UNAVAILABLE, NO_RESPONSE or REDACTED. It means "users asked, and the captured interaction gave no usable answer" — a demand signal, never a claim that the knowledge is missing. Both flags can be true in the same intent (not-found evidence and unanswered questions together).
+7. answerStatus TRUNCATED means only that the transcript export cut the reply off at about 500 characters. It sets neither flag: it is not a sign of a wrong answer, missing knowledge or unanswered demand. Use the visible part as context; never guess or reconstruct the missing part.
+8. confidence is how sure you are that the grouped questions share one information need: ${CONFIDENCE_LEVELS.join(", ")}.
+9. Copy packageId from the input unchanged.
+10. Reply with ONE JSON object and nothing else — no prose, no Markdown fences — matching this schema:
 
 ${JSON.stringify(INTENT_RESPONSE_SCHEMA, null, 2)}
 

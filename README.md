@@ -209,9 +209,17 @@ about. It doesn't write answers.
    status and answer type. Session IDs and source files are opt-in; the
    app keeps that mapping itself.
 2. It renders a prompt asking Claude to group the questions by
-   information need, with every QA ID in exactly one intent, and to flag
-   *potential* knowledge gaps with a rationale. Claude isn't asked for
-   answers or facts.
+   information need, with every QA ID in exactly one intent. Claude
+   isn't asked for answers or facts. Each intent carries two separate
+   signals:
+   - **Potential knowledge gap:** set only when a reply explicitly says
+     the information wasn't found in the configured knowledge source.
+     It's never inferred from a missing answer.
+   - **Unanswered demand:** set when any question in the intent got no
+     usable answer content (agent unavailable, no reply, redacted). It
+     means users asked; it doesn't mean the knowledge is missing.
+
+   Both can be true. Truncation sets neither.
 3. Nothing is sent automatically. The user copies the prompt into
    Claude and pastes the JSON reply back.
 4. The app checks the reply against the package
@@ -220,6 +228,13 @@ about. It doesn't write answers.
    - every required field is present with the right type;
    - every expected QA ID is covered exactly once, with none missing,
      duplicated, invented or conversational.
+   - `unansweredDemand` matches the answer statuses of the intent's
+     questions. The model sees the same statuses, so a mismatch rejects
+     the reply.
+   - A potential gap without not-found evidence, or not-found evidence
+     without a potential gap, is shown as a warning. The app's not-found
+     rules are simple patterns and can miss wording the model reads
+     correctly.
 
    One failure rejects the whole reply.
 5. Accepted intents appear in **Intent Candidates** for review

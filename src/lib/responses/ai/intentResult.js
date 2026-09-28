@@ -14,7 +14,9 @@
  *  - every intent has the required fields with the required types;
  *  - QA ID coverage against the package: each of the expected IDs
  *    exactly once across all intents — none missing, duplicated,
- *    unknown, or taken from the conversational records left out.
+ *    unknown, or taken from the conversational records left out;
+ *  - the two evidence flags against what the questions' own records
+ *    show (see checkEvidence below).
  *
  * The model's text (titles, needs, rationales) is kept as it wrote it.
  * The app adds review state and the links back to the source; it never
@@ -31,7 +33,43 @@ export const REVIEW_STATUS = Object.freeze({
   NEEDS_REVIEW: "NEEDS_REVIEW",
 });
 
-const INTENT_FIELDS = ["intentId", "intentTitle", "informationNeed", "qaIds", "potentialKnowledgeGap", "gapRationale", "confidence", "notes"];
+const INTENT_FIELDS = ["intentId", "intentTitle", "informationNeed", "qaIds", "potentialKnowledgeGap", "unansweredDemand", "gapRationale", "confidence", "notes"];
+
+// Statuses whose interaction gave no usable answer content. Truncated is
+// deliberately absent: an export limit is not an unanswered question.
+const UNANSWERED_STATUSES = new Set(["AGENT_UNAVAILABLE", "NO_RESPONSE", "REDACTED"]);
+
+/* The two flags mean different things and are held to different standards:
+ *
+ *  unansweredDemand is decidable from data the app already has — the
+ *  answer status of each question in the intent. The model saw the same
+ *  statuses, so a flag that disagrees with them is simply wrong: error.
+ *
+ *  potentialKnowledgeGap rests on reading the reply text for not-found
+ *  wording. The app's own NOT_FOUND rules are simple patterns and can
+ *  miss a phrasing the model reads correctly, so a disagreement is shown
+ *  as a warning for the reviewer, not a rejection. */
+function checkEvidence(intents, itemsById) {
+  const errors = [];
+  const warnings = [];
+  for (const it of intents) {
+    const members = it.qaIds.map((q) => itemsById.get(q)).filter(Boolean);
+    const unanswered = members.some((m) => UNANSWERED_STATUSES.has(m.answerStatus));
+    const notFound = members.some((m) => m.answerType === "NOT_FOUND");
+    if (it.unansweredDemand !== unanswered) {
+      errors.push(unanswered
+        ? `${it.intentId}: unansweredDemand must be true — it contains a question answered ${members.filter((m) => UNANSWERED_STATUSES.has(m.answerStatus)).map((m) => `${m.qaId} ${m.answerStatus}`).join(", ")}.`
+        : `${it.intentId}: unansweredDemand must be false — none of its questions is AGENT_UNAVAILABLE, NO_RESPONSE or REDACTED.`);
+    }
+    if (it.potentialKnowledgeGap && !notFound) {
+      warnings.push(`${it.intentId}: flagged as a potential knowledge gap, but none of its questions has a reply the app classifies as NOT_FOUND. Check that the rationale cites explicit not-found wording.`);
+    }
+    if (!it.potentialKnowledgeGap && notFound) {
+      warnings.push(`${it.intentId}: not flagged as a potential knowledge gap, although ${members.filter((m) => m.answerType === "NOT_FOUND").map((m) => m.qaId).join(", ")} has a reply the app classifies as NOT_FOUND.`);
+    }
+  }
+  return { errors, warnings };
+}
 
 const nonEmptyString = (v) => typeof v === "string" && v.trim() !== "";
 
@@ -62,7 +100,7 @@ export function validateIntentReply(text, request) {
   const expectedIds = request.items.map((i) => i.qaId);
   // `evaluated` stays false when the reply could not be read far enough
   // to count QA IDs, so "0 missing" is never shown for an unread reply.
-  const coverage = { evaluated: false, expected: expectedIds.length, assigned: 0, missing: [], duplicated: [], unknown: [], conversational: [] };
+  const coverage = { evaluated: false, expected: expectedIds.length, assigned: 0, missing: [], truncatedMissing: [], duplicated: [], unknown: [], conversational: [] };
   const fail = (errors, warnings = []) => ({ ok: false, errors, warnings, coverage, intents: [] });
 
   // The easiest mistake in a copy-and-paste round-trip: pasting the
@@ -102,7 +140,8 @@ export function validateIntentReply(text, request) {
     else if (it.qaIds.some((q) => typeof q !== "string")) errors.push(`${at}: every qaId must be a string.`);
     if (typeof it.potentialKnowledgeGap !== "boolean") errors.push(`${at}: potentialKnowledgeGap must be true or false.`);
     else if (it.potentialKnowledgeGap && !nonEmptyString(it.gapRationale)) errors.push(`${at}: a potential knowledge gap needs a gapRationale.`);
-    if (it.gapRationale !== undefined && typeof it.gapRationale !== "string") errors.push(`${at}: gapRationale must be text.`);
+    if (typeof it.unansweredDemand !== "boolean") errors.push(`${at}: unansweredDemand must be true or false.`);
+    if (it.gapRationale !== undefined && it.gapRationale !== null && typeof it.gapRationale !== "string") errors.push(`${at}: gapRationale must be text or null.`);
     if (!CONFIDENCE_LEVELS.includes(String(it.confidence ?? "").toLowerCase())) errors.push(`${at}: confidence must be one of ${CONFIDENCE_LEVELS.join(", ")}.`);
     if (it.notes !== undefined && it.notes !== null && typeof it.notes !== "string") errors.push(`${at}: notes must be text.`);
     const extra = Object.keys(it).filter((k) => !INTENT_FIELDS.includes(k));
@@ -123,17 +162,26 @@ export function validateIntentReply(text, request) {
     if (n > 1) coverage.duplicated.push(q);
   }
   coverage.evaluated = true;
+  const truncated = new Set(request.items.filter((i) => i.answerStatus === "TRUNCATED").map((i) => i.qaId));
   coverage.missing = expectedIds.filter((q) => !counts.has(q));
   coverage.assigned = expectedIds.filter((q) => counts.has(q)).length;
+  // Reported on its own because truncated questions are the easiest to
+  // drop by mistake ("partial answer") and must never be.
+  coverage.truncatedMissing = coverage.missing.filter((q) => truncated.has(q));
   const order = (a, b) => a.localeCompare(b);
   coverage.duplicated.sort(order); coverage.unknown.sort(order); coverage.conversational.sort(order);
 
   if (coverage.missing.length) errors.push(`${coverage.missing.length} QA ID(s) missing: ${coverage.missing.join(", ")}.`);
+  if (coverage.truncatedMissing.length) errors.push(`${coverage.truncatedMissing.length} of the missing QA IDs are truncated questions, which must always be included: ${coverage.truncatedMissing.join(", ")}.`);
   if (coverage.duplicated.length) errors.push(`${coverage.duplicated.length} QA ID(s) assigned more than once: ${coverage.duplicated.join(", ")}.`);
   if (coverage.unknown.length) errors.push(`${coverage.unknown.length} unknown QA ID(s), not in the package: ${coverage.unknown.join(", ")}.`);
   if (coverage.conversational.length) errors.push(`${coverage.conversational.length} conversational QA ID(s) that were not sent: ${coverage.conversational.join(", ")}.`);
 
   if (errors.length) return fail(errors, warnings);
+
+  const evidence = checkEvidence(value.intents, new Map(request.items.map((i) => [i.qaId, i])));
+  warnings.push(...evidence.warnings);
+  if (evidence.errors.length) return fail(evidence.errors, warnings);
 
   const intents = value.intents.map((it) => Object.freeze({
     intentId: it.intentId.trim(),
@@ -141,7 +189,8 @@ export function validateIntentReply(text, request) {
     informationNeed: it.informationNeed.trim(),
     qaIds: Object.freeze([...it.qaIds]),
     potentialKnowledgeGap: it.potentialKnowledgeGap,
-    gapRationale: (it.gapRationale ?? "").trim(),
+    unansweredDemand: it.unansweredDemand,
+    gapRationale: it.potentialKnowledgeGap ? it.gapRationale.trim() : (it.gapRationale ?? "").trim(),
     confidence: it.confidence.toLowerCase(),
     notes: (it.notes ?? "").trim(),
     reviewStatus: REVIEW_STATUS.PENDING,

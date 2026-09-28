@@ -49,7 +49,9 @@ describe("intent consolidation request", () => {
     expect(prompt).toContain("The QUESTION is the signal. The answer is context.");
     expect(prompt).toContain("EXACTLY ONE intent");
     expect(prompt).toContain("Do NOT answer the questions");
-    for (const f of ["intentId", "intentTitle", "informationNeed", "qaIds", "potentialKnowledgeGap", "gapRationale", "confidence", "notes"]) {
+    expect(prompt).toContain("Never infer a gap from the absence of an answer");
+    expect(prompt).toContain("It sets neither flag");
+    for (const f of ["intentId", "intentTitle", "informationNeed", "qaIds", "potentialKnowledgeGap", "unansweredDemand", "gapRationale", "confidence", "notes"]) {
       expect(prompt).toContain(`"${f}"`);
     }
     for (const c of CONFIDENCE_LEVELS) expect(prompt).toContain(c);
