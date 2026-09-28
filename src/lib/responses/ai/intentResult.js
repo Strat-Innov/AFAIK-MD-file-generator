@@ -22,7 +22,7 @@
  * from Layer 2 by QA ID, so they cannot drift from the source.
  * ------------------------------------------------------------------ */
 
-import { CONFIDENCE_LEVELS } from "./intentPackage.js";
+import { CONFIDENCE_LEVELS, PROMPT_MARKER } from "./intentPackage.js";
 
 export const REVIEW_STATUS = Object.freeze({
   PENDING: "PENDING",
@@ -64,6 +64,13 @@ export function validateIntentReply(text, request) {
   // to count QA IDs, so "0 missing" is never shown for an unread reply.
   const coverage = { evaluated: false, expected: expectedIds.length, assigned: 0, missing: [], duplicated: [], unknown: [], conversational: [] };
   const fail = (errors, warnings = []) => ({ ok: false, errors, warnings, coverage, intents: [] });
+
+  // The easiest mistake in a copy-and-paste round-trip: pasting the
+  // prompt (or its input block) back instead of Claude's answer.
+  const pasted = String(text ?? "");
+  if (pasted.includes(PROMPT_MARKER) || (pasted.includes('"questions"') && !pasted.includes('"intents"'))) {
+    return fail(["This is the prompt, not Claude's reply. Paste the prompt into Claude, then paste the JSON that Claude answers with here — it starts with {\"packageId\": … \"intents\": …."]);
+  }
 
   const { value, error, warnings } = parseJson(text);
   if (error) return fail([error], warnings);

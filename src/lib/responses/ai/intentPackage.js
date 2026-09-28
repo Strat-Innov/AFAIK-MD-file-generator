@@ -98,9 +98,12 @@ export function buildIntentRequest(records, { includeSourceRefs = false } = {}) 
   };
 }
 
+// The prompt's opening words, so a prompt pasted back by mistake can be recognised.
+export const PROMPT_MARKER = "You are helping maintain AFAIK";
+
 export function renderIntentPrompt(request) {
   const payload = { packageId: request.packageId, packageVersion: request.version, questions: request.items };
-  return `You are helping maintain AFAIK, an internal knowledge agent. Below are real questions employees asked AFAIK, extracted word for word from its session logs, each with the agent's reply as context.
+  return `${PROMPT_MARKER}, an internal knowledge agent. Below are real questions employees asked AFAIK, extracted word for word from its session logs, each with the agent's reply as context.
 
 YOUR TASK: group the questions by INFORMATION NEED — what the user wants to know — so the AFAIK team can see what people ask for and what AFAIK may need to contain.
 

@@ -127,3 +127,16 @@ describe("coverage reporting", () => {
     expect(validateIntentReply("not json", request).coverage).toMatchObject({ evaluated: false, expected: 3 });
   });
 });
+
+describe("pasting the prompt back by mistake", () => {
+  it("says so plainly, for the whole prompt or just its input block", async () => {
+    const { renderIntentPrompt } = await import("../../src/lib/responses/ai/intentPackage.js");
+    const request = buildIntentRequest(await intentRecords());
+    const prompt = renderIntentPrompt(request);
+    for (const pasted of [prompt, prompt.slice(prompt.lastIndexOf("{\n  \"packageId\""))]) {
+      const r = validateIntentReply(pasted, request);
+      expect(r.ok).toBe(false);
+      expect(r.errors[0]).toMatch(/This is the prompt, not Claude's reply/);
+    }
+  });
+});
