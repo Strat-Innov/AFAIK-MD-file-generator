@@ -3,9 +3,8 @@
  * Invented content only. Real exports hold real employee conversations
  * and this repository is public, so they stay local (gitignored) — see
  * test/responses/README.md. The shapes below mirror the real export:
- * the same 13 columns, a semicolon-separated ChatTranscript with
- * "User says:" / "Agent says:" / "Bot said:" speakers, multi-line
- * answers with Markdown tables, URLs and doubled quotes. */
+ * the same 13 columns and the ChatTranscript structure described
+ * below. */
 
 import { createZip } from "../../src/lib/zip.js";
 
@@ -18,30 +17,48 @@ const q = (v) => (/[",\r\n;]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
 export const toCsv = (rows, headers = HEADERS, eol = "\r\n") =>
   [headers, ...rows].map((r) => r.map((c) => q(String(c))).join(",")).join(eol) + eol;
 
-export const MULTI_QUESTION_TRANSCRIPT =
-  "Agent says: Hello, I'm AFAIK. How can I help?;" +
-  "User says: give me oms for operations;" +
-  "Agent says: Here are the direct links to the OMS Documents for Operations:\n\n" +
-  "| Document | Link |\n|---|---|\n| Operations OMS | https://example.test/sites/ops/OMS.pdf |\n\n" +
-  "Let me know if you need anything else.;" +
-  "User says: give me the links;" +
-  "Agent says: Here you go: https://example.test/sites/ops/OMS.pdf;" +
-  "User says: give me the links for operations OMS;" +
-  "Agent says: The Operations OMS is at https://example.test/sites/ops/OMS.pdf — it was titled \"OMS v2\".";
+/* Transcript shape, from the real exports (scripts/analyze-session-exports.mjs):
+ * every entry is "<Speaker> says: <text>;" — one space after the colon,
+ * a ";" terminating every entry including the last, no separator
+ * between entries, no line breaks (Markdown is flattened onto one
+ * line). Only "User says" and "Agent says" occur; "Bot said:" appears
+ * only inside an Agent entry's text. The Turns column counts entries. */
+export const tx = (...entries) => entries.map(([who, text]) => `${who} says: ${text};`).join("");
 
-export const NOT_FOUND_TRANSCRIPT =
-  "User says: 1-BR Unit price at Sample Station Terminal;" +
-  "Agent says: I'm sorry, that information is not available in the configured knowledge source.";
+export const GREETING = "Hi! I'm **AFAIK AGENT** your virtual assistant. How can I help?";
+export const UNAVAILABLE_NOTICE = "This agent is currently unavailable. It has reached its usage limit. Please try again later.";
+// The exporter cuts messages at ~500 characters and appends "...".
+export const TRUNCATED_ANSWER =
+  ("Based on the configured knowledge source here are the **Operations OMS** documents: " +
+    "- **OMS Volume 1** https://example.test/sites/ops/Shared%20Documents/OMS-1.pdf ").repeat(4).slice(0, 497) + "...";
 
-export const UNAVAILABLE_TRANSCRIPT =
-  "Bot said: This agent is currently unavailable. It has reached its usage limit.";
+export const MULTI_QUESTION_TRANSCRIPT = tx(
+  ["Agent", GREETING],
+  ["User", "give me oms for operations"],
+  ["Agent", "Here are the direct links to the OMS Documents for Operations: - **Operations OMS**: https://example.test/sites/ops/OMS.pdf"],
+  ["User", "give me the links"],
+  ["Agent", "Here you go: https://example.test/sites/ops/OMS.pdf"],
+  ["User", "give me the links for operations OMS"],
+  ["Agent", 'The Operations OMS is at https://example.test/sites/ops/OMS.pdf — it was titled "OMS v2".'],
+);
+
+export const NOT_FOUND_TRANSCRIPT = tx(
+  ["User", "1-BR Unit price at Sample Station Terminal"],
+  ["Agent", "I'm sorry but **this information is not available in the configured knowledge source**."],
+);
+
+export const UNAVAILABLE_TRANSCRIPT = tx(["Agent", GREETING], ["Agent", UNAVAILABLE_NOTICE]);
+
+// Not the real transcript shape — kept to prove the CSV reader copes
+// with quoted multi-line cells, which other exports may still contain.
+export const MULTILINE_CELL = "line one; with a semicolon\n\n| a | b |\n|---|---|\n| \"quoted\" | 2 |";
 
 export const ROWS = [
-  ["sess-001", "2026-09-23 03:14:05", "Resolved", "Resolved", "True", "4",
+  ["sess-001", "2026-09-23 03:14:05", "Resolved", "Resolved", "True", "7",
     MULTI_QUESTION_TRANSCRIPT, "give me oms for operations", "Conversational boosting", "t-1", "msteams", "5", ""],
-  ["sess-002", "9/23/2026 4:05:00 PM", "Abandoned", "UserExit", "False", "1",
+  ["sess-002", "9/23/2026 4:05:00 PM", "Abandoned", "UserExit", "False", "2",
     NOT_FOUND_TRANSCRIPT, "1-BR Unit price at Sample Station Terminal", "Conversational boosting", "t-1", "msteams", "", "no price"],
-  ["sess-003", "2026-09-22T08:00:00Z", "Escalated", "AgentUnavailable", "False", "0",
+  ["sess-003", "2026-09-22T08:00:00Z", "Escalated", "AgentUnavailable", "False", "2",
     UNAVAILABLE_TRANSCRIPT, "", "", "", "webchat", "", ""],
 ];
 

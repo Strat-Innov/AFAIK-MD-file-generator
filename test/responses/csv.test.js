@@ -1,14 +1,22 @@
 import { describe, it, expect } from "vitest";
 import { parseCsv, detectDelimiter } from "../../src/lib/responses/csv.js";
-import { HEADERS, ROWS, toCsv, MULTI_QUESTION_TRANSCRIPT } from "./fixtures.js";
+import { HEADERS, ROWS, toCsv, MULTI_QUESTION_TRANSCRIPT, MULTILINE_CELL } from "./fixtures.js";
 
 describe("CSV reader", () => {
-  it("round-trips a multi-line, quoted transcript cell exactly", () => {
+  it("round-trips every row, transcript cells included, exactly", () => {
     const { rows, errors } = parseCsv(toCsv(ROWS));
     expect(errors).toEqual([]);
     expect(rows[0]).toEqual(HEADERS);
     expect(rows.slice(1)).toEqual(ROWS);
     expect(rows[1][6]).toBe(MULTI_QUESTION_TRANSCRIPT);
+  });
+
+  it("round-trips a quoted multi-line cell with semicolons, pipes and quotes", () => {
+    const row = [...ROWS[0]];
+    row[6] = MULTILINE_CELL;
+    const { rows, errors } = parseCsv(toCsv([row]));
+    expect(errors).toEqual([]);
+    expect(rows[1][6]).toBe(MULTILINE_CELL);
   });
 
   it("handles LF, CRLF and a missing trailing newline alike", () => {

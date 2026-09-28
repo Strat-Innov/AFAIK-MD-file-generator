@@ -57,7 +57,7 @@ describe("importing session exports", () => {
     const [s] = workspace.sessions;
     expect(s).toMatchObject({
       id: "S-0001", sessionId: "sess-001", timestamp: "2026-09-23T03:14:05.000Z", outcome: "Resolved",
-      resolved: true, turns: 4, channel: "msteams", csat: "5", initialUserMessage: "give me oms for operations",
+      resolved: true, turns: 7, channel: "msteams", csat: "5", initialUserMessage: "give me oms for operations",
     });
     expect(s.transcript).toBe(MULTI_QUESTION_TRANSCRIPT);
     expect(s.occurrences).toEqual([{
