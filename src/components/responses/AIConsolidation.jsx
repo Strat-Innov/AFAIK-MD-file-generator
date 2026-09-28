@@ -97,8 +97,12 @@ export default function AIConsolidation({ records, onGoImport, current, onImport
             <span className="text-xs text-slate-400">(reference only — QA IDs keep the link to the source either way)</span>
           </label>
           <div className="flex items-center gap-2">
-            <button onClick={downloadPackage} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
-              <Download className="h-3.5 w-3.5" /> Package (.json)
+            <button
+              onClick={downloadPackage}
+              title="The app's input data, for your records. It is not the reply and is not what you send to Claude — send the prompt."
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              <Download className="h-3.5 w-3.5" /> Input package (records only)
             </button>
             <button onClick={downloadPrompt} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">
               <Download className="h-3.5 w-3.5" /> Download prompt

@@ -143,6 +143,14 @@ describe("pasting the prompt back by mistake", () => {
   });
 });
 
+describe("pasting the package file back by mistake", () => {
+  it("says it is the package, not Claude's reply", () => {
+    const r = validateIntentReply(JSON.stringify(request, null, 2), request);
+    expect(r.ok).toBe(false);
+    expect(r.errors[0]).toMatch(/This is the package file .* not Claude's reply/);
+  });
+});
+
 describe("potential knowledge gap vs unanswered demand", () => {
   it("mixed evidence — a not-found reply and an unavailable one — sets both flags", () => {
     const r = validateIntentReply(reply([intent(), oms()]), request);

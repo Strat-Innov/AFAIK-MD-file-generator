@@ -114,6 +114,12 @@ export function validateIntentReply(text, request) {
   if (error) return fail([error], warnings);
   if (value === null || typeof value !== "object" || Array.isArray(value)) return fail(["The reply must be one JSON object with an \"intents\" array."], warnings);
 
+  // The package file (the app's own input, from "Download package")
+  // pasted back instead of Claude's answer.
+  if (Array.isArray(value.items) && value.intents === undefined) {
+    return fail(["This is the package file (the app's input), not Claude's reply. Copy the prompt with “Generate & copy Claude prompt”, send it to Claude, and paste the JSON Claude answers with here — it has an \"intents\" list."], warnings);
+  }
+
   const errors = [];
   if (value.packageId !== request.packageId) {
     errors.push(value.packageId === undefined
