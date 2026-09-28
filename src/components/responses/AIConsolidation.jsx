@@ -1,20 +1,25 @@
 import React, { useMemo, useState } from "react";
-import { Copy, Download, ShieldAlert, Check, Upload } from "lucide-react";
+import { Copy, Download, ShieldAlert, Check, Upload, FileJson, ArrowRight } from "lucide-react";
 import { LAYER_DERIVED } from "../../lib/responses/views";
 import { buildIntentRequest } from "../../lib/responses/ai/intentPackage";
+import { validateIntentReply } from "../../lib/responses/ai/intentResult";
 import { DEFAULT_PROVIDER } from "../../lib/responses/ai/provider";
 import { saveBlob } from "../BenchmarkExport";
 import { LayerBadge, Stat, FlagBadge } from "./common";
 import { StatusBadge } from "./ExtractedQA";
+import { ValidationSummary } from "./IntentCandidates";
 
 const sizeLabel = (chars) => (chars >= 1e6 ? (chars / 1e6).toFixed(1) + "M" : Math.round(chars / 1e3) + "k") + " characters";
 
-/* Consolidation Pass 1, preparation only: shows exactly what would be
- * given to Claude and lets the user take it out by their own action.
- * Importing Claude's reply is the next phase. */
-export default function AIConsolidation({ records, onGoImport }) {
-  const [includeSourceRefs, setIncludeSourceRefs] = useState(true);
+/* AI Intent Consolidation: shows exactly what would be given to Claude,
+ * lets the user take it out by their own action, and validates the reply
+ * they bring back. Nothing is sent or imported on the app's initiative. */
+export default function AIConsolidation({ records, onGoImport, current, onImported, onViewIntents }) {
+  // Off by default: the model needs QA IDs, not session IDs or file names.
+  const [includeSourceRefs, setIncludeSourceRefs] = useState(false);
   const [copied, setCopied] = useState("");
+  const [reply, setReply] = useState("");
+  const [attempt, setAttempt] = useState(null); // last validation result, accepted or not
   const provider = DEFAULT_PROVIDER;
 
   const request = useMemo(() => buildIntentRequest(records, { includeSourceRefs }), [records, includeSourceRefs]);
@@ -42,6 +47,16 @@ export default function AIConsolidation({ records, onGoImport }) {
     }
   };
   const downloadPrompt = () => saveBlob("AFAIK_intent-clustering_prompt.txt", new Blob([promptText], { type: "text/plain" }));
+  const validateAndImport = (text) => {
+    const result = validateIntentReply(text, request);
+    setAttempt(result);
+    if (result.ok) onImported(result, request);
+  };
+  const readReplyFile = async (file) => {
+    const text = await file.text();
+    setReply(text);
+    validateAndImport(text);
+  };
   const downloadPackage = () =>
     saveBlob("AFAIK_intent-clustering_package.json", new Blob([JSON.stringify(request, null, 2)], { type: "application/json" }));
 
@@ -49,12 +64,13 @@ export default function AIConsolidation({ records, onGoImport }) {
     <div className="space-y-4">
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-sm font-semibold text-slate-800">AI Consolidation — Pass 1: group questions by information need</h1>
-          <LayerBadge layer={LAYER_DERIVED} note="preparation · nothing is sent automatically" />
+          <h1 className="text-sm font-semibold text-slate-800">AI Intent Consolidation — group questions by information need</h1>
+          <LayerBadge layer={LAYER_DERIVED} note="nothing is sent automatically" />
         </div>
         <p className="text-sm text-slate-600 mt-2">
           The user's question is the signal; the agent's answer is context. Claude is asked which questions share one
-          information need and which needs look like potential knowledge gaps — not whether AFAIK answered well.
+          information need and which needs look like potential knowledge gaps — not whether AFAIK answered well, and not
+          to write any answers.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
           <Stat label="Questions in the package" value={request.counts.items} />
@@ -93,9 +109,7 @@ export default function AIConsolidation({ records, onGoImport }) {
           </div>
         </div>
         {copied && <div className="px-4 pt-3 text-xs text-slate-600">{copied}</div>}
-        <div className="p-4 text-xs text-slate-500">
-          Next step (Phase 8, not built yet): paste Claude's JSON reply back here to be validated against these QA IDs.
-        </div>
+        <div className="px-4 pt-3 text-xs text-slate-500">Package <span className="font-mono">{request.packageId}</span> — Claude's reply must name it.</div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -123,13 +137,48 @@ export default function AIConsolidation({ records, onGoImport }) {
         </div>
         {request.excluded.length > 0 && (
           <div className="p-4 text-xs text-slate-500">
-            Left out as conversational (kept in Extracted Q&amp;A): {request.excluded.map((x) => `${x.qa_id} “${x.question.trim()}”`).join(" · ")}
+            Left out as conversational (kept in Extracted Q&amp;A): {request.excluded.map((x) => `${x.qaId} “${x.question.trim()}”`).join(" · ")}
           </div>
         )}
         <details className="border-t border-slate-100">
           <summary className="cursor-pointer px-4 py-2 text-xs font-medium text-slate-600">Show the full prompt text</summary>
           <pre className="whitespace-pre-wrap break-words px-4 pb-4 text-xs font-mono text-slate-700 max-h-[32rem] overflow-y-auto">{promptText}</pre>
         </details>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm font-semibold text-slate-800">Import Claude's reply</div>
+          {current && (
+            <button onClick={onViewIntents} className="inline-flex items-center gap-1.5 text-sm text-slate-700 hover:text-slate-900 underline">
+              {current.intents.length} intent candidates imported for {current.packageId} <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-slate-500">
+          Paste the JSON Claude returned. It is checked before anything is kept: the package must match, every field must be
+          present, and each of the {request.items.length} QA IDs must appear exactly once. A reply that fails any check is
+          rejected whole.
+        </p>
+        <textarea
+          value={reply} onChange={(e) => setReply(e.target.value)} rows={6} spellCheck={false}
+          placeholder='{"packageId": "…", "intents": [ … ]}'
+          aria-label="Claude's JSON reply"
+          className="w-full rounded-lg border border-slate-300 p-2 font-mono text-xs"
+        />
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => validateAndImport(reply)} disabled={!reply.trim()}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
+          >
+            <Check className="h-3.5 w-3.5" /> Validate &amp; import
+          </button>
+          <label className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
+            <FileJson className="h-3.5 w-3.5" /> Load reply file
+            <input type="file" accept=".json,.txt" className="hidden" onChange={(e) => { if (e.target.files[0]) readReplyFile(e.target.files[0]); e.target.value = ""; }} />
+          </label>
+        </div>
+        {attempt && <ValidationSummary result={attempt} />}
       </div>
     </div>
   );

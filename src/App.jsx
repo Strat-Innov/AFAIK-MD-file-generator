@@ -11,6 +11,7 @@ import ResponseImport from "./components/responses/ResponseImport";
 import RawSessions from "./components/responses/RawSessions";
 import ExtractedQA from "./components/responses/ExtractedQA";
 import AIConsolidation from "./components/responses/AIConsolidation";
+import IntentCandidates from "./components/responses/IntentCandidates";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -21,7 +22,7 @@ import { publishChangelog, fetchFileRecords } from "./lib/github";
 import { runExclusive } from "./lib/publishQueue";
 import { buildMaster } from "./lib/masterMd";
 import { generateOptimized } from "./lib/generate";
-import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_AI_CONSOLIDATION, isResponseView } from "./lib/responses/views";
+import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_AI_CONSOLIDATION, RC_INTENT_CANDIDATES, isResponseView } from "./lib/responses/views";
 import { EMPTY_WORKSPACE, readResponseFile, mergeImport } from "./lib/responses/importSessions";
 import { extractQA, summarizeQA } from "./lib/responses/qa";
 
@@ -425,6 +426,28 @@ export default function App() {
   // whenever they change, so it can't drift from them.
   const extracted = useMemo(() => extractQA(responseWorkspace.sessions), [responseWorkspace]);
   const qaSummary = useMemo(() => summarizeQA(extracted), [extracted]);
+  const recordsById = useMemo(() => new Map(extracted.records.map((r) => [r.id, r])), [extracted]);
+
+  /* Layer 3 candidates: an AI grouping that passed validation, plus the
+   * reviewer's decisions. Memory only, like everything here. Both are
+   * dropped when the sessions change — a grouping describes the exact
+   * question set it was made from and stops describing anything the
+   * moment that set moves (the same rule as the knowledge build below). */
+  const [intentResult, setIntentResult] = useState(null);
+  const [intentReview, setIntentReview] = useState({});
+  useEffect(() => { setIntentResult(null); setIntentReview({}); }, [responseWorkspace]);
+  const onIntentsImported = (result, request) => {
+    setIntentResult({ ...result, packageId: request.packageId, importedAt: new Date().toISOString() });
+    setIntentReview({});
+    setSelected(RC_INTENT_CANDIDATES);
+  };
+
+  // Traceability navigation: intent → QA record → raw session. The
+  // target view remounts on each jump (key) so it opens on that record.
+  const [focus, setFocus] = useState({ qaId: null, sessionRecordId: null, n: 0 });
+  const openQA = (qaId) => { setFocus((f) => ({ qaId, sessionRecordId: null, n: f.n + 1 })); setSelected(RC_EXTRACTED_QA); };
+  const openSession = (sessionRecordId) => { setFocus((f) => ({ qaId: null, sessionRecordId, n: f.n + 1 })); setSelected(RC_RAW_SESSIONS); };
+  const goTo = (view) => { setFocus((f) => ({ qaId: null, sessionRecordId: null, n: f.n + 1 })); setSelected(view); };
 
   const clearResponses = () => {
     responseRef.current = EMPTY_WORKSPACE;
@@ -473,8 +496,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex">
       <Sidebar
-        tags={tags} selected={selected} onSelect={setSelected} counts={counts}
-        responseCounts={{ [RC_RAW_SESSIONS]: responseWorkspace.sessions.length, [RC_EXTRACTED_QA]: extracted.records.length }}
+        tags={tags} selected={selected} onSelect={goTo} counts={counts}
+        responseCounts={{
+          [RC_RAW_SESSIONS]: responseWorkspace.sessions.length,
+          [RC_EXTRACTED_QA]: extracted.records.length,
+          [RC_INTENT_CANDIDATES]: intentResult?.intents.length ?? 0,
+        }}
       />
 
       <main className={"flex-1 px-6 py-6 min-w-0 " + (onResponseView ? "max-w-7xl" : "max-w-5xl")}>
@@ -537,23 +564,48 @@ export default function App() {
             error={responseError}
             onImport={importResponses}
             onClear={clearResponses}
-            onViewRaw={() => setSelected(RC_RAW_SESSIONS)}
-            onViewQA={() => setSelected(RC_EXTRACTED_QA)}
+            intentCount={intentResult?.intents.length ?? 0}
+            onViewRaw={() => goTo(RC_RAW_SESSIONS)}
+            onViewQA={() => goTo(RC_EXTRACTED_QA)}
           />
         )}
         {selected === RC_RAW_SESSIONS && (
-          <RawSessions workspace={responseWorkspace} onGoImport={() => setSelected(RC_IMPORT)} />
+          <RawSessions
+            key={`raw-${focus.n}`}
+            workspace={responseWorkspace}
+            focusSessionRecordId={focus.sessionRecordId}
+            onGoImport={() => goTo(RC_IMPORT)}
+          />
         )}
         {selected === RC_EXTRACTED_QA && (
           <ExtractedQA
+            key={`qa-${focus.n}`}
             records={extracted.records}
             sessions={responseWorkspace.sessions}
             summary={qaSummary}
-            onGoImport={() => setSelected(RC_IMPORT)}
+            focusQaId={focus.qaId}
+            onOpenSession={openSession}
+            onGoImport={() => goTo(RC_IMPORT)}
           />
         )}
         {selected === RC_AI_CONSOLIDATION && (
-          <AIConsolidation records={extracted.records} onGoImport={() => setSelected(RC_IMPORT)} />
+          <AIConsolidation
+            records={extracted.records}
+            current={intentResult}
+            onImported={onIntentsImported}
+            onViewIntents={() => goTo(RC_INTENT_CANDIDATES)}
+            onGoImport={() => goTo(RC_IMPORT)}
+          />
+        )}
+        {selected === RC_INTENT_CANDIDATES && (
+          <IntentCandidates
+            result={intentResult}
+            recordsById={recordsById}
+            review={intentReview}
+            onReview={(intentId, status) => setIntentReview((r) => ({ ...r, [intentId]: status }))}
+            onOpenQA={openQA}
+            onGoConsolidation={() => goTo(RC_AI_CONSOLIDATION)}
+          />
         )}
 
         {selected === "ManageTags" && (

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, Search, Eye, EyeOff, Upload, Scissors } from "lucide-react";
+import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, ArrowRight, Search, Eye, EyeOff, Upload, Scissors } from "lucide-react";
 import { LAYER_RAW } from "../../lib/responses/views";
 import { ANSWER_STATUS, PART_KIND, TRUNCATION_MIN_LENGTH } from "../../lib/responses/qa";
 import { PARSE_STATUS } from "../../lib/responses/transcript";
@@ -35,7 +35,7 @@ export function StatusBadge({ status }) {
   return <FlagBadge tone={tone}>{label}</FlagBadge>;
 }
 
-function Detail({ record, session }) {
+function Detail({ record, session, onOpenSession }) {
   const yesNo = (v) => (v ? "Yes" : "No");
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] p-4 bg-slate-50 border-t border-slate-100">
@@ -119,15 +119,25 @@ function Detail({ record, session }) {
             </div>
           ))}
         </div>
+        {onOpenSession && (
+          <button
+            onClick={() => onOpenSession(record.sessionRecordId)}
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-50"
+          >
+            Open raw session <ArrowRight className="h-3 w-3" />
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-export default function ExtractedQA({ records, sessions, summary, onGoImport }) {
-  const [filters, setFilters] = useState(DEFAULT_QA_FILTERS);
+/* `focusQaId` opens the view on one record — searched for and expanded —
+ * when the user follows a QA ID from an intent candidate. */
+export default function ExtractedQA({ records, sessions, summary, onGoImport, focusQaId = null, onOpenSession }) {
+  const [filters, setFilters] = useState(() => (focusQaId ? { ...DEFAULT_QA_FILTERS, text: focusQaId } : DEFAULT_QA_FILTERS));
   const [sort, setSort] = useState({ key: "id", direction: "asc" });
-  const [expanded, setExpanded] = useState(() => new Set());
+  const [expanded, setExpanded] = useState(() => new Set(focusQaId ? [focusQaId] : []));
   const [showIds, setShowIds] = useState(false);
   const [limit, setLimit] = useState(PAGE);
 
@@ -302,7 +312,7 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport }) 
                         : <FlagBadge tone="amber">{r.parseStatus}</FlagBadge>}
                     </td>
                   </tr>
-                  {open && <tr><td colSpan={cols} className="p-0"><Detail record={r} session={sessionById.get(r.sessionRecordId)} /></td></tr>}
+                  {open && <tr><td colSpan={cols} className="p-0"><Detail record={r} session={sessionById.get(r.sessionRecordId)} onOpenSession={onOpenSession} /></td></tr>}
                 </React.Fragment>
               );
             })}

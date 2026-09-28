@@ -12,18 +12,19 @@ const STEPS = [
   { n: 1, label: "Import", ready: true },
   { n: 2, label: "Extract Q&A", ready: true },
   { n: 3, label: "Review raw Q&A", ready: true },
-  { n: 4, label: "AI consolidate", ready: true },
-  { n: 5, label: "Review knowledge", ready: false },
+  { n: 4, label: "AI intent consolidation", ready: true },
+  { n: 5, label: "Review intents", ready: true },
   { n: 6, label: "Export", ready: false },
 ];
 
-function Workflow({ imported, extracted }) {
+function Workflow({ imported, extracted, consolidated }) {
   return (
     <ol className="flex flex-wrap items-center gap-1.5 text-xs">
       {STEPS.map((s, i) => {
-        // Extraction runs on import. Review is never "done" on the app's
-        // say-so, so step 3 stays open.
-        const done = (s.n === 1 && imported) || (s.n === 2 && extracted);
+        // Extraction runs on import; consolidation is done once a reply
+        // passed validation. Review is never "done" on the app's say-so,
+        // so steps 3 and 5 stay open.
+        const done = (s.n === 1 && imported) || (s.n === 2 && extracted) || (s.n === 4 && consolidated);
         return (
           <React.Fragment key={s.n}>
             <li
@@ -97,7 +98,7 @@ function FileTable({ files }) {
   );
 }
 
-export default function ResponseImport({ workspace, qaSummary, busy, error, onImport, onClear, onViewRaw, onViewQA }) {
+export default function ResponseImport({ workspace, qaSummary, intentCount = 0, busy, error, onImport, onClear, onViewRaw, onViewQA }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const summary = summarize(workspace);
@@ -114,7 +115,7 @@ export default function ResponseImport({ workspace, qaSummary, busy, error, onIm
         <p className="text-sm text-slate-600 mt-1">
           Analyze AFAIK Agent sessions and turn real user questions and responses into reusable knowledge.
         </p>
-        <div className="mt-4"><Workflow imported={summary.sessions > 0} extracted={qaSummary.records > 0} /></div>
+        <div className="mt-4"><Workflow imported={summary.sessions > 0} extracted={qaSummary.records > 0} consolidated={intentCount > 0} /></div>
         <div className="mt-4 flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600">
           <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-px" />
           <span>

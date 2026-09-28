@@ -190,15 +190,38 @@ also carries simple, rule-based metadata:
 - **Potential knowledge gap:** an information request answered
   `NOT_FOUND`. It's a flag for review, not a confirmed gap.
 
-**AI Consolidation, Pass 1 (preparation).** Builds a deterministic
-package of every information request, with its exact question, answer
-parts, status and type, plus a prompt asking Claude to group the
-questions by information need. The prompt says every QA ID must appear
-exactly once. Nothing is sent automatically: the user copies or
-downloads the prompt. Importing and validating Claude's reply is the
-next phase. The engine produces provider-neutral requests, and
-`src/lib/responses/ai/provider.js` renders them. v1 has one provider, a
-manual one, so another can be added without touching the UI.
+**AI Intent Consolidation.** This step finds what users are asking
+about. It doesn't write answers.
+
+1. The app builds a deterministic package of every information request.
+   By default each item is the QA ID, question, answer parts, answer
+   status and answer type. Session IDs and source files are opt-in; the
+   app keeps that mapping itself.
+2. It renders a prompt asking Claude to group the questions by
+   information need, with every QA ID in exactly one intent, and to flag
+   *potential* knowledge gaps with a rationale. Claude isn't asked for
+   answers or facts.
+3. Nothing is sent automatically. The user copies the prompt into
+   Claude and pastes the JSON reply back.
+4. The app checks the reply against the package
+   (`src/lib/responses/ai/intentResult.js`):
+   - the `packageId` matches;
+   - every required field is present with the right type;
+   - every expected QA ID is covered exactly once, with none missing,
+     duplicated, invented or conversational.
+
+   One failure rejects the whole reply.
+5. Accepted intents appear in **Intent Candidates** for review
+   (Pending, Accepted, Rejected, Needs review). Each QA ID links to its
+   Extracted Q&A record, which links to its raw session and source file
+   row.
+
+Intent candidates and review decisions are held in memory. They're
+cleared when the imported sessions change, because a grouping only
+describes the question set it was made from. The engine produces
+provider-neutral requests, and `src/lib/responses/ai/provider.js`
+renders them. v1 has one provider, a manual one, so a direct provider
+can be added later without touching the UI.
 
 **Privacy.** Everything runs in the browser. Session data is never
 uploaded, never written to `localStorage`, and is gone when the tab

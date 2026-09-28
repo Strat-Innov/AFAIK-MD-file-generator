@@ -7,6 +7,8 @@
  * below. */
 
 import { createZip } from "../../src/lib/zip.js";
+import { readResponseFile, mergeImport, EMPTY_WORKSPACE } from "../../src/lib/responses/importSessions.js";
+import { extractQA } from "../../src/lib/responses/qa.js";
 
 export const HEADERS = [
   "SessionId", "StartDateTime(UTC)", "SessionOutcome", "OutcomeReason", "IsResolvedImplied", "Turns",
@@ -97,4 +99,17 @@ export async function buildWorkbook(rows, { prefix = "" } = {}) {
   ];
   const bytes = await createZip(entries);
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+}
+
+/* Four records: two Mimosa-PD questions, a greeting, an OMS question.
+ * Shared with intentResult.test.js. */
+export async function intentRecords() {
+  const row = (id, transcript, turns) => { const r = [...ROWS[0]]; r[0] = id; r[5] = String(turns); r[6] = transcript; return r; };
+  const csv = toCsv([
+    row("s-1", tx(["Agent", GREETING], ["User", "who is the PD of mimosa"], ["Agent", "I was unable to find any information about the PD of Mimosa."],
+      ["User", "who's the project director for mimosa"], ["Agent", UNAVAILABLE_NOTICE]), 5),
+    row("s-2", tx(["User", "hi"], ["Agent", "Bot said:Hi! I'm your assistant."], ["User", "links for the operations oms"], ["Agent", TRUNCATED_ANSWER]), 4),
+  ]);
+  const parsed = [await readResponseFile(fileFrom("Sessions test UTC.csv", csv))];
+  return extractQA(mergeImport(EMPTY_WORKSPACE, parsed, "x").workspace.sessions).records;
 }

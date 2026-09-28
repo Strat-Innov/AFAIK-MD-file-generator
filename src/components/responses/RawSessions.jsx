@@ -79,11 +79,15 @@ function Detail({ session, showIds }) {
   );
 }
 
-export default function RawSessions({ workspace, onGoImport }) {
+/* `focusSessionRecordId` opens the view on one session — searched for by
+ * its SessionId and expanded — when the user follows a Q&A record back
+ * to its source. */
+export default function RawSessions({ workspace, onGoImport, focusSessionRecordId = null }) {
   const sessions = workspace.sessions;
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const focus = focusSessionRecordId ? sessions.find((s) => s.id === focusSessionRecordId) : null;
+  const [filters, setFilters] = useState(() => (focus?.sessionId ? { ...DEFAULT_FILTERS, text: focus.sessionId } : DEFAULT_FILTERS));
   const [sort, setSort] = useState({ key: "timestamp", direction: "desc" });
-  const [expanded, setExpanded] = useState(() => new Set());
+  const [expanded, setExpanded] = useState(() => new Set(focus ? [focus.id] : []));
   const [showIds, setShowIds] = useState(false);
   const [limit, setLimit] = useState(PAGE);
 

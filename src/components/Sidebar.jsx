@@ -1,9 +1,14 @@
 import React from "react";
-import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, Upload, Table2, MessagesSquare, Sparkles } from "lucide-react";
+import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, Upload, Table2, MessagesSquare, Sparkles, Layers } from "lucide-react";
 import { UNSORTED } from "../lib/router";
-import { RESPONSE_VIEWS, RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_AI_CONSOLIDATION, LAYER_RAW, LAYER_DERIVED } from "../lib/responses/views";
+import {
+  RESPONSE_VIEWS, RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_AI_CONSOLIDATION, RC_INTENT_CANDIDATES, LAYER_RAW, LAYER_DERIVED,
+} from "../lib/responses/views";
 
-const RESPONSE_ICONS = { [RC_IMPORT]: Upload, [RC_RAW_SESSIONS]: Table2, [RC_EXTRACTED_QA]: MessagesSquare, [RC_AI_CONSOLIDATION]: Sparkles };
+const RESPONSE_ICONS = {
+  [RC_IMPORT]: Upload, [RC_RAW_SESSIONS]: Table2, [RC_EXTRACTED_QA]: MessagesSquare,
+  [RC_AI_CONSOLIDATION]: Sparkles, [RC_INTENT_CANDIDATES]: Layers,
+};
 
 export default function Sidebar({ tags, selected, onSelect, counts, responseCounts = {} }) {
   const item = (key, label, Icon, badge) => (

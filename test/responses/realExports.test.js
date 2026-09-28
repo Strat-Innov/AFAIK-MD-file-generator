@@ -7,6 +7,7 @@ import {
 } from "../../src/lib/responses/importSessions.js";
 import { extractQA, summarizeQA } from "../../src/lib/responses/qa.js";
 import { SPEAKER } from "../../src/lib/responses/transcript.js";
+import { buildIntentRequest } from "../../src/lib/responses/ai/intentPackage.js";
 
 /* Real AFAIK session exports, gitignored — see README.md in this
  * folder. The invariants hold for any set of exports. The fixed counts
@@ -114,5 +115,16 @@ describe.skipIf(!isSeptemberSet)("real exports — September 2026 regression cou
       parseMismatches: 0,
       sessionsWithParseIssues: 0,
     });
+  });
+
+  it("sends the 42 information requests to intent consolidation and nothing else", async () => {
+    const { records } = await extracted();
+    const req = buildIntentRequest(records);
+    expect(req.counts).toEqual({ records: 49, items: 42, excluded: 7, potentialKnowledgeGaps: 8 });
+    // Data minimisation: no session IDs or source files unless asked for.
+    expect(req.items.every((i) => !("sessionId" in i) && !("sourceFile" in i))).toBe(true);
+    // Every sent question is its exact extracted text.
+    const byId = new Map(records.map((r) => [r.id, r]));
+    expect(req.items.every((i) => i.question === byId.get(i.qaId).question)).toBe(true);
   });
 });
