@@ -19,10 +19,12 @@
  * deliberately NOT that parser: marker discovery here is permissive and
  * reports what it finds, so the parser's rules come from the data.
  *
- * Privacy. The exports are real conversations. Output is counts and
- * short masked excerpts: session IDs are shortened, e-mail addresses
- * and long digit runs are redacted, excerpts are truncated. Nothing is
- * written to disk or sent anywhere. Read the output before sharing it.
+ * Privacy. The exports are real conversations. By default the output
+ * is counts only, plus shortened session IDs: no message text at all,
+ * because user questions name people and pattern-based redaction cannot
+ * reliably find names. `--show-text` adds short excerpts (e-mails, long
+ * numbers and URLs redacted, NOT names) for local inspection only.
+ * Nothing is written to disk or sent anywhere.
  * ------------------------------------------------------------------ */
 
 import fs from "node:fs";
@@ -47,6 +49,8 @@ const flag = (name) => {
 };
 const expectFiles = flag("--expect-files");
 const expectSessions = flag("--expect-sessions");
+const showText = args.includes("--show-text");
+if (showText) args.splice(args.indexOf("--show-text"), 1);
 const dir = path.resolve(args[0] ?? "test/responses");
 
 /* ---------------- masking ---------------- */
@@ -211,6 +215,16 @@ function tokenize(transcript) {
   }));
 }
 
+// Agent-side conditions seen in real exports. The exporter caps each
+// message at ~500 characters and appends "..."; answers are replaced
+// wholesale by "[REDACTED]"; and a greeting can carry an inner
+// "Bot said:" prefix inside the Agent entry (not a speaker of its own).
+const TRUNCATION_MIN = 480;
+const clean = (t) => t.text.replace(/;\s*$/, "").trim();
+const isTruncated = (t) => clean(t).endsWith("...") && clean(t).length >= TRUNCATION_MIN;
+const isRedacted = (t) => clean(t).includes("[REDACTED]");
+const NESTED_PREFIX = /^([A-Za-z][A-Za-z ]{0,20}?\s+(?:says|said))\s*:/i;
+
 const roleOf = (label) => (/^user\b/i.test(label) ? "U" : /^(agent|bot)\b/i.test(label) ? "A" : "?");
 
 const NOT_FOUND = [
@@ -241,6 +255,10 @@ const analysed = sessions.map((s) => {
     notFound: NOT_FOUND.filter((re) => re.test(agentText)).map((re) => re.source),
     unavailable: UNAVAILABLE.some((re) => re.test(agentText)),
     initialMatchesFirstUser: !s.initialUserMessage ? null : firstUser === s.initialUserMessage.trim(),
+    truncated: turns.filter((t) => roleOf(t.label) === "A" && isTruncated(t)).length,
+    redacted: turns.filter(isRedacted).length,
+    nested: turns.map((t) => NESTED_PREFIX.exec(clean(t))?.[1]).filter(Boolean),
+    turnsMatchEntries: s.turns === null ? null : s.turns === turns.length,
   };
 });
 
@@ -251,6 +269,13 @@ print();
 table(["Marker", "Occurrences", "Sessions", "Read as"], [...speakerCounts].sort((a, b) => b[1] - a[1])
   .map(([label, n]) => [`\`${label}:\``, n, speakerSessions.get(label).size, { U: "User", A: "Agent", "?": "UNKNOWN" }[roleOf(label)]]));
 table(["Marker position", "Occurrences"], [...boundaryCounts].sort((a, b) => b[1] - a[1]));
+const nestedCounts = new Map();
+for (const a of analysed) for (const n of a.nested) nestedCounts.set(n, (nestedCounts.get(n) ?? 0) + 1);
+if (nestedCounts.size) {
+  print(`Speaker-like prefixes found INSIDE an entry's text (not speakers — part of the message):`);
+  print();
+  table(["Inner prefix", "Entries"], [...nestedCounts].map(([l, n]) => [`\`${l}:\``, n]));
+}
 const frequentOther = [...otherLabels].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).slice(0, 15);
 print(`Other "Label:" patterns at a boundary that are not speaker markers: ${[...otherLabels.values()].reduce((a, b) => a + b, 0)} occurrences, ${otherLabels.size} distinct.` +
   (frequentOther.length ? ` Recurring (≥3): ${frequentOther.map(([l, n]) => `\`${l}:\` ×${n}`).join(", ")}.` : ""));
@@ -305,9 +330,12 @@ print();
 table(["Edge case", "Sessions"], [
   ["Text before the first speaker marker", analysed.filter((a) => a.turns.length && a.leading).length],
   ["A speaker turn with empty text", analysed.filter((a) => a.emptyTurns > 0).length],
+  ["Turns column = number of transcript entries", analysed.filter((a) => a.turnsMatchEntries === true).length],
+  ["Turns column ≠ number of transcript entries", analysed.filter((a) => a.turnsMatchEntries === false).length],
+  ["Agent message truncated by the export (≥480 chars ending \"...\")", `${analysed.filter((a) => a.truncated).length} (${analysed.reduce((n, a) => n + a.truncated, 0)} messages)`],
+  ["Message replaced by [REDACTED]", `${analysed.filter((a) => a.redacted).length} (${analysed.reduce((n, a) => n + a.redacted, 0)} messages)`],
   ["Two user messages in a row (no agent reply between)", analysed.filter((a) => a.consecutiveUsers).length],
   ["Session ends on a user message (no reply)", analysed.filter((a) => a.roles.at(-1) === "U").length],
-  ["Turns column ≠ user-message count", analysed.filter((a) => a.s.turns !== null && a.s.turns !== a.users).length],
   ["InitialUserMessage = first user message (exact, trimmed)", analysed.filter((a) => a.initialMatchesFirstUser === true).length],
   ["InitialUserMessage ≠ first user message", analysed.filter((a) => a.initialMatchesFirstUser === false).length],
   ["InitialUserMessage empty", analysed.filter((a) => a.initialMatchesFirstUser === null).length],
@@ -320,15 +348,14 @@ print(`### Multi-question sessions`);
 print();
 const multi = analysed.filter((a) => a.users > 1).sort((a, b) => b.users - a.users);
 if (multi.length === 0) print("None found.");
-else table(["Session (masked)", "User msgs", "Agent msgs", "User messages (truncated, redacted)"], multi.map((a) => [
-  maskId(a.s.sessionId), a.users, a.agents,
-  a.turns.filter((t) => roleOf(t.label) === "U").map((t) => `“${excerpt(t.text.replace(/;\s*$/, ""), 45)}”`).join(" → "),
+else table(["Session (masked)", "User msgs", "Agent msgs", "Sequence", ...(showText ? ["User messages (excerpts)"] : [])], multi.map((a) => [
+  maskId(a.s.sessionId), a.users, a.agents, a.roles.join(" "),
+  ...(showText ? [a.turns.filter((t) => roleOf(t.label) === "U").map((t) => `“${excerpt(clean(t), 45)}”`).join(" → ")] : []),
 ]));
 
-print(`### One masked example per structure class`);
-print();
 const seen = new Set();
-for (const a of analysed) {
+if (showText) print(`### One example per structure class (excerpts — names are NOT redacted)`), print();
+for (const a of showText ? analysed : []) {
   const shape = shapeOf(a);
   if (seen.has(shape)) continue;
   seen.add(shape);
