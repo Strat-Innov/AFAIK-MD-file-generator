@@ -7,6 +7,8 @@ import GithubSettings from "./components/GithubSettings";
 import ChangelogDetailView from "./components/ChangelogDetailView";
 import BenchmarkExport from "./components/BenchmarkExport";
 import TestQuestionGenerator from "./components/TestQuestionGenerator";
+import ResponseImport from "./components/responses/ResponseImport";
+import RawSessions from "./components/responses/RawSessions";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -17,6 +19,8 @@ import { publishChangelog, fetchFileRecords } from "./lib/github";
 import { runExclusive } from "./lib/publishQueue";
 import { buildMaster } from "./lib/masterMd";
 import { generateOptimized } from "./lib/generate";
+import { RC_IMPORT, RC_RAW_SESSIONS, isResponseView } from "./lib/responses/views";
+import { EMPTY_WORKSPACE, readResponseFile, mergeImport } from "./lib/responses/importSessions";
 
 /* ---- ZIP reading via native DecompressionStream (no dependency) ---- */
 async function inflateRaw(u8) {
@@ -387,7 +391,41 @@ export default function App() {
 
   const onTagAdded = () => syncTags();
 
-  const activeBucket = ["ManageTags", "Changelog", "Benchmark"].includes(selected) ? null : selected;
+  /* ---- Response Consolidator ----
+   *
+   * Its own state, apart from the ASPx buckets, and held here rather
+   * than in the view so tab switches don't discard an import. Memory
+   * only, on purpose: the sessions are real conversations, and the
+   * user's export is the only thing that persists. */
+  const [responseWorkspace, setResponseWorkspace] = useState(EMPTY_WORKSPACE);
+  const [responseBusy, setResponseBusy] = useState(false);
+  const [responseError, setResponseError] = useState("");
+  // Mirrors the workspace so a merge always builds on the latest one,
+  // even if a second drop lands while the first is still being read.
+  const responseRef = useRef(EMPTY_WORKSPACE);
+
+  const importResponses = async (fileList) => {
+    setResponseBusy(true); setResponseError("");
+    try {
+      const parsed = await Promise.all([...fileList].map(readResponseFile));
+      const { workspace } = mergeImport(responseRef.current, parsed, new Date().toISOString());
+      responseRef.current = workspace;
+      setResponseWorkspace(workspace);
+    } catch (e) {
+      setResponseError(e.message || String(e));
+    } finally {
+      setResponseBusy(false);
+    }
+  };
+
+  const clearResponses = () => {
+    responseRef.current = EMPTY_WORKSPACE;
+    setResponseWorkspace(EMPTY_WORKSPACE);
+    setResponseError("");
+  };
+
+  const onResponseView = isResponseView(selected);
+  const activeBucket = ["ManageTags", "Changelog", "Benchmark"].includes(selected) || onResponseView ? null : selected;
 
   // Two benchmark packagings, both fed from this session's own state.
   //
@@ -426,9 +464,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex">
-      <Sidebar tags={tags} selected={selected} onSelect={setSelected} counts={counts} />
+      <Sidebar
+        tags={tags} selected={selected} onSelect={setSelected} counts={counts}
+        responseCounts={{ [RC_RAW_SESSIONS]: responseWorkspace.sessions.length }}
+      />
 
-      <main className="flex-1 px-6 py-6 max-w-5xl">
+      <main className={"flex-1 px-6 py-6 min-w-0 " + (onResponseView ? "max-w-7xl" : "max-w-5xl")}>
+        {/* The ASPx drop zone and its status belong to Knowledge Source
+            Configuration. The Consolidator has its own, for session
+            exports, so a CSV is never dropped into the ASPx flow. */}
+        {!onResponseView && (<>
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
@@ -473,6 +518,21 @@ export default function App() {
               <span className="text-amber-700">Your files sorted and generated normally and are ready to download.</span>
             </span>
           </div>
+        )}
+        </>)}
+
+        {selected === RC_IMPORT && (
+          <ResponseImport
+            workspace={responseWorkspace}
+            busy={responseBusy}
+            error={responseError}
+            onImport={importResponses}
+            onClear={clearResponses}
+            onViewRaw={() => setSelected(RC_RAW_SESSIONS)}
+          />
+        )}
+        {selected === RC_RAW_SESSIONS && (
+          <RawSessions workspace={responseWorkspace} onGoImport={() => setSelected(RC_IMPORT)} />
         )}
 
         {selected === "ManageTags" && (

@@ -126,3 +126,35 @@ npm run dev
   (`buildSection`) if you want a fixed one like `input\name.aspx`.
 - Requires a modern browser (Chrome/Edge/Firefox/Safari) for
   `DecompressionStream` (deflate-raw).
+
+## Response Consolidator
+
+Turns AFAIK Agent session exports into knowledge-base maintenance data.
+Open **Response Consolidator → Import Responses** in the sidebar and
+drop one or more session exports (CSV or XLSX; several at once).
+
+The data is kept in layers, and a derived layer never writes back into
+the one below it:
+
+| Layer | View | What it is |
+|---|---|---|
+| **RAW** | Raw Sessions | Every imported row, exactly as exported, with its source file and row number. Read-only. |
+| RAW | Extracted Q&A *(planned)* | Each User → Agent exchange read from the transcript, wording unchanged. |
+| DERIVED | Clean Knowledge, Knowledge Gaps *(planned)* | AI candidates, validated against the raw layer and reviewed by a person before export. |
+
+**Import rules**
+
+- Columns are matched by name (`SessionId`, `StartDateTime(UTC)`,
+  `ChatTranscript`, …), with spacing and casing ignored. Unrecognised
+  columns are kept with the session.
+- A session that appears in two exports (overlapping date ranges) is
+  one session with both sources listed. The same `SessionId` with
+  different content is kept twice and flagged, never silently resolved.
+- A file dropped twice is recognised by its content and skipped.
+- Legacy binary `.xls` isn't supported; save as `.xlsx` or `.csv`.
+
+**Privacy.** Everything runs in the browser. Session data is never
+uploaded, never written to `localStorage`, and is gone when the tab
+closes; the user's export is the only thing that persists. Real exports
+must not be committed to this public repository (see
+`test/responses/README.md`).
