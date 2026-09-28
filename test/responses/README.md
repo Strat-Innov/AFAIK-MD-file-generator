@@ -25,3 +25,17 @@ fixed number of files or sessions. Without the files, that suite skips
 with a notice and everything else runs.
 
 Before committing, `git status` should never list a data file.
+
+## Validation and transcript analysis report
+
+```
+npm run responses:analyze -- test/responses --expect-files 12 --expect-sessions 55
+```
+
+Runs the files through the app's own import code and prints a Markdown
+report: import totals, a value-for-value check that every field matches
+its source cell, every speaker marker actually present, speaker
+sequences, multi-question sessions, "not found" / "agent unavailable"
+counts, and edge cases. Output is counts and short excerpts with masked
+session IDs and redacted e-mails, long numbers and URLs. It prints to
+the terminal only. Read it before sharing it.
