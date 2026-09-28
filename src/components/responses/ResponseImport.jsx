@@ -12,7 +12,7 @@ const STEPS = [
   { n: 1, label: "Import", ready: true },
   { n: 2, label: "Extract Q&A", ready: true },
   { n: 3, label: "Review raw Q&A", ready: true },
-  { n: 4, label: "AI consolidate", ready: false },
+  { n: 4, label: "AI consolidate", ready: true },
   { n: 5, label: "Review knowledge", ready: false },
   { n: 6, label: "Export", ready: false },
 ];

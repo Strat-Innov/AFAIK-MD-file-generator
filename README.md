@@ -177,6 +177,29 @@ the one below it:
 - `InitialUserMessage` is kept as reference only. The transcript is
   authoritative.
 
+**Question first.** The user's question is the primary signal: it shows
+what people expect AFAIK to know. The answer is context. Each record
+also carries simple, rule-based metadata:
+
+- **Answer type:** `KNOWLEDGE`, `NOT_FOUND`, `CONVERSATIONAL` or
+  `SYSTEM_NOTICE`. It's set only where there's answer text, which means
+  `ANSWERED` or `TRUNCATED`.
+- **Question kind:** `INFORMATION_REQUEST` or `CONVERSATIONAL`.
+  Conversational questions ("hi", "hmp") stay in the dataset but are left
+  out of consolidation.
+- **Potential knowledge gap:** an information request answered
+  `NOT_FOUND`. It's a flag for review, not a confirmed gap.
+
+**AI Consolidation, Pass 1 (preparation).** Builds a deterministic
+package of every information request, with its exact question, answer
+parts, status and type, plus a prompt asking Claude to group the
+questions by information need. The prompt says every QA ID must appear
+exactly once. Nothing is sent automatically: the user copies or
+downloads the prompt. Importing and validating Claude's reply is the
+next phase. The engine produces provider-neutral requests, and
+`src/lib/responses/ai/provider.js` renders them. v1 has one provider, a
+manual one, so another can be added without touching the UI.
+
 **Privacy.** Everything runs in the browser. Session data is never
 uploaded, never written to `localStorage`, and is gone when the tab
 closes; the user's export is the only thing that persists. Real exports

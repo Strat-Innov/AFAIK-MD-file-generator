@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readResponseFile, mergeImport, EMPTY_WORKSPACE } from "../../src/lib/responses/importSessions.js";
 import {
   extractQA, summarizeQA, classifyPart, answerStatusOf, ANSWER_STATUS, PART_KIND, STATUS_METADATA,
+  ANSWER_TYPE, QUESTION_KIND,
 } from "../../src/lib/responses/qa.js";
 import { PARSE_STATUS } from "../../src/lib/responses/transcript.js";
 import { ROWS, toCsv, fileFrom, tx, GREETING, UNAVAILABLE_NOTICE, TRUNCATED_ANSWER } from "./fixtures.js";
@@ -181,6 +182,10 @@ describe("Q&A extraction", () => {
     expect(summarizeQA(out)).toEqual({
       records: 3,
       byStatus: { ANSWERED: 1, AGENT_UNAVAILABLE: 0, NO_RESPONSE: 0, REDACTED: 1, TRUNCATED: 1 },
+      byAnswerType: { KNOWLEDGE: 2, NOT_FOUND: 0, CONVERSATIONAL: 0, SYSTEM_NOTICE: 0, NONE: 1 },
+      informationRequests: 3,
+      conversational: 0,
+      potentialKnowledgeGaps: 0,
       sessionsWithQuestions: 2,
       multiQuestionSessions: 1,
       multiPartAnswers: 0,
@@ -188,5 +193,63 @@ describe("Q&A extraction", () => {
       parseMismatches: 1,
       sessionsWithParseIssues: 1,
     });
+  });
+});
+
+describe("question-first metadata — answer type and question kind", () => {
+  const typeOf = async (question, ...agent) => (await one(tx(["User", question], ...agent.map((a) => ["Agent", a])), 1 + agent.length)).records[0];
+
+  it("a normal reply with information is KNOWLEDGE and goes to consolidation", async () => {
+    const r = await typeOf("links for the operations oms", "Here are the OMS links: https://example.test/oms");
+    expect(r).toMatchObject({
+      answerType: ANSWER_TYPE.KNOWLEDGE, questionKind: QUESTION_KIND.INFORMATION_REQUEST,
+      includeInConsolidation: true, potentialKnowledgeGap: false,
+    });
+  });
+
+  it.each([
+    "I'm sorry but I was unable to find any information about **CAI** in the configured knowledge source.",
+    "I'm sorry but **this information is not available in the configured knowledge source.**",
+    "Based on the configured knowledge sources there is no standalone brand-level role explicitly titled Operation Lead.",
+  ])("a 'not found' reply is NOT_FOUND and a potential (not confirmed) knowledge gap: %s", async (answer) => {
+    const r = await typeOf("who is the operation lead of prestige", answer);
+    expect(r).toMatchObject({ answerType: ANSWER_TYPE.NOT_FOUND, potentialKnowledgeGap: true, includeInConsolidation: true });
+  });
+
+  it("a truncated reply still gets a type from the text it has", async () => {
+    const r = await typeOf("1-BR price", "I was unable to find any information about the 1-BR unit price. " + "x".repeat(480) + "...");
+    expect(r).toMatchObject({ answerStatus: ANSWER_STATUS.TRUNCATED, answerType: ANSWER_TYPE.NOT_FOUND, potentialKnowledgeGap: true });
+  });
+
+  it("greetings stay in the dataset as CONVERSATIONAL and are kept out of consolidation", async () => {
+    for (const q of ["hi", "Hello", "hey!", "hmp", "are you available to chat?"]) {
+      const r = await typeOf(q, "Bot said:Hi! I'm your virtual assistant.");
+      expect(r, q).toMatchObject({ questionKind: QUESTION_KIND.CONVERSATIONAL, includeInConsolidation: false, potentialKnowledgeGap: false });
+    }
+    // Small talk back to a filler question is not knowledge, even without a greeting marker.
+    expect(await typeOf("hmp", "I understand the frustration! I'm back and ready to assist you.")).toMatchObject({ answerType: ANSWER_TYPE.CONVERSATIONAL });
+  });
+
+  it('only a whole-message greeting counts — "hi, who is the PD of mimosa" is a real question', async () => {
+    const r = await typeOf("hi, who is the PD of mimosa", "I was unable to find any information about the PD of Mimosa.");
+    expect(r).toMatchObject({ questionKind: QUESTION_KIND.INFORMATION_REQUEST, potentialKnowledgeGap: true });
+  });
+
+  it("a platform notice is SYSTEM_NOTICE, not knowledge evidence", async () => {
+    const r = await typeOf("escalate", "Escalating to a representative is not currently configured for this agent.");
+    expect(r.answerType).toBe(ANSWER_TYPE.SYSTEM_NOTICE);
+  });
+
+  it("no answer content, no type — but the question is still an information need", async () => {
+    for (const [agent, status] of [[["[REDACTED]"], "REDACTED"], [[UNAVAILABLE_NOTICE], "AGENT_UNAVAILABLE"], [[], "NO_RESPONSE"]]) {
+      const r = await typeOf("who is the PD of mimosa", ...agent);
+      expect(r, status).toMatchObject({ answerStatus: status, answerType: null, includeInConsolidation: true, potentialKnowledgeGap: false });
+    }
+  });
+
+  it("never changes the question, answer text or status", async () => {
+    const r = await typeOf(" hi ", "Bot said:Hi!");
+    expect(r).toMatchObject({ question: " hi ", answerStatus: ANSWER_STATUS.ANSWERED, isUsableAsAnswerEvidence: true });
+    expect(r.answerParts[0].text).toBe("Bot said:Hi!");
   });
 });

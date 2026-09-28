@@ -10,6 +10,7 @@ import TestQuestionGenerator from "./components/TestQuestionGenerator";
 import ResponseImport from "./components/responses/ResponseImport";
 import RawSessions from "./components/responses/RawSessions";
 import ExtractedQA from "./components/responses/ExtractedQA";
+import AIConsolidation from "./components/responses/AIConsolidation";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -20,7 +21,7 @@ import { publishChangelog, fetchFileRecords } from "./lib/github";
 import { runExclusive } from "./lib/publishQueue";
 import { buildMaster } from "./lib/masterMd";
 import { generateOptimized } from "./lib/generate";
-import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, isResponseView } from "./lib/responses/views";
+import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_AI_CONSOLIDATION, isResponseView } from "./lib/responses/views";
 import { EMPTY_WORKSPACE, readResponseFile, mergeImport } from "./lib/responses/importSessions";
 import { extractQA, summarizeQA } from "./lib/responses/qa";
 
@@ -550,6 +551,9 @@ export default function App() {
             summary={qaSummary}
             onGoImport={() => setSelected(RC_IMPORT)}
           />
+        )}
+        {selected === RC_AI_CONSOLIDATION && (
+          <AIConsolidation records={extracted.records} onGoImport={() => setSelected(RC_IMPORT)} />
         )}
 
         {selected === "ManageTags" && (

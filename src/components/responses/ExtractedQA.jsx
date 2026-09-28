@@ -97,6 +97,9 @@ function Detail({ record, session }) {
             ["Complete answer", yesNo(record.isCompleteAnswer)],
             ["Usable as answer evidence", yesNo(record.isUsableAsAnswerEvidence)],
             ["Needs review", yesNo(record.requiresReview)],
+            ["Question kind", record.questionKind === "CONVERSATIONAL" ? "Conversational — kept, not analysed" : "Information request"],
+            ["Answer type", record.answerType ?? "— (no answer content)"],
+            ["Potential knowledge gap", record.potentialKnowledgeGap ? "Yes — to be confirmed at review" : "No"],
             ["Parse status", record.parseFlags.length ? record.parseFlags.join(", ") : PARSE_STATUS.OK],
             ["Session outcome", [record.sessionOutcome, record.outcomeReason].filter(Boolean).join(" · ") || "—"],
             ["Channel", record.channel || "—"],
@@ -217,6 +220,14 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport }) 
             {sourceFiles.map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
           <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+            <input type="checkbox" checked={filters.potentialGapOnly} onChange={(e) => set({ potentialGapOnly: e.target.checked })} />
+            Potential knowledge gaps ({summary.potentialKnowledgeGaps})
+          </label>
+          <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+            <input type="checkbox" checked={filters.hideConversational} onChange={(e) => set({ hideConversational: e.target.checked })} />
+            Hide conversational ({summary.conversational})
+          </label>
+          <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
             <input type="checkbox" checked={filters.reviewOnly} onChange={(e) => set({ reviewOnly: e.target.checked })} />
             Needs review ({summary.requiresReview})
           </label>
@@ -274,7 +285,15 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport }) 
                         </div>
                       ))}
                     </td>
-                    <td className="px-2 py-2"><StatusBadge status={r.answerStatus} /></td>
+                    <td className="px-2 py-2">
+                      <StatusBadge status={r.answerStatus} />
+                      {r.answerType && (
+                        <div className="mt-1 text-[11px] text-slate-500 whitespace-nowrap">
+                          {r.answerType.replace("_", " ").toLowerCase()}
+                        </div>
+                      )}
+                      {r.potentialKnowledgeGap && <div className="mt-1"><FlagBadge tone="amber">Potential gap</FlagBadge></div>}
+                    </td>
                     <td className="px-2 py-2 tabular-nums text-slate-600">{r.turnNumber}</td>
                     <td className="px-2 py-2 text-xs text-slate-500 break-all min-w-[9rem]">{r.sourceFiles[0]}{r.sourceFiles.length > 1 && <span className="text-slate-400"> +{r.sourceFiles.length - 1}</span>}</td>
                     <td className="px-2 py-2 pr-4">

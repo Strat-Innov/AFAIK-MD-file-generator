@@ -102,6 +102,11 @@ describe.skipIf(!isSeptemberSet)("real exports — September 2026 regression cou
     expect(summarizeQA(qa)).toEqual({
       records: 49,
       byStatus: { ANSWERED: 13, AGENT_UNAVAILABLE: 5, NO_RESPONSE: 1, REDACTED: 8, TRUNCATED: 22 },
+      // Answer Type (added with Phase 7) — reviewed record by record on 2026-09-28.
+      byAnswerType: { KNOWLEDGE: 20, NOT_FOUND: 8, CONVERSATIONAL: 6, SYSTEM_NOTICE: 1, NONE: 14 },
+      informationRequests: 42,
+      conversational: 7,
+      potentialKnowledgeGaps: 8,
       sessionsWithQuestions: 29,
       multiQuestionSessions: 10,
       multiPartAnswers: 11,
