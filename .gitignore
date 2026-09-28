@@ -52,3 +52,17 @@ benchmark/probe/
 # benchmark/SCOPE.md records each snapshot's aggregate hashes.
 # The directory's own README is tracked; the snapshots inside are not.
 benchmark/corpora/*/
+
+# AFAIK Agent session exports used to test the Response Consolidator.
+# They are real employee/end-user conversations and this repository is
+# public — keep them local. Automated tests use the synthetic fixtures
+# in test/responses/fixtures.js; see test/responses/README.md.
+test/responses/*.csv
+test/responses/*.xlsx
+test/responses/*.xls
+test/responses/**/*.csv
+test/responses/**/*.xlsx
+test/responses/**/*.xls
+# Anything exported from the Response Consolidator (raw sessions, Q&A,
+# knowledge candidates) carries the same conversations.
+responses-exports/
