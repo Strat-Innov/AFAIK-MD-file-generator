@@ -21,8 +21,8 @@ export default function Sidebar({ tags, selected, onSelect, counts }) {
   return (
     <aside className="w-60 shrink-0 bg-slate-900 text-white p-3 flex flex-col gap-1 min-h-screen">
       <div className="px-2 py-2 mb-1">
-        <div className="text-sm font-semibold tracking-wide">ASPx → Markdown</div>
-        <div className="text-xs text-slate-400">Master File Generator</div>
+        <div className="text-sm font-semibold tracking-wide">AFAIK Configuration App</div>
+        <div className="text-xs text-slate-400">Knowledge configuration workspace</div>
       </div>
 
       {item(UNSORTED, "Unsorted", Inbox, counts[UNSORTED])}

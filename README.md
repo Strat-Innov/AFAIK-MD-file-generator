@@ -1,4 +1,15 @@
-# ASPx → Markdown Master File
+# AFAIK Configuration App
+
+The configuration and maintenance workspace for AFAIK. It has two
+capabilities:
+
+- **Knowledge Source Configuration — ASPx → Markdown.** The original
+  function of this app, unchanged and documented below.
+- **Response Consolidator.** Imports AFAIK Agent session exports and
+  turns real user questions into knowledge-base maintenance data. See
+  [Response Consolidator](#response-consolidator).
+
+## ASPx → Markdown Master File
 
 Drop `.aspx` files (or a `.zip` of them) and get one combined Markdown
 "master file" in the same format as your existing export. Everything runs
