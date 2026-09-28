@@ -140,7 +140,7 @@ the one below it:
 |---|---|---|
 | **RAW** | Raw Sessions | Every imported row, exactly as exported, with its source file and row number. Read-only. |
 | RAW | Extracted Q&A | One record per user message, read deterministically from the transcript. The question and every agent answer part are kept word for word. |
-| DERIVED | Question Consolidation | Real questions grouped into clean, reusable questions by Claude, validated against the raw layer, reviewed, and exported to Excel. |
+| DERIVED | Question Consolidation | Real questions merged into clean questions, reviewable against the originals, and exported to Excel. |
 
 **Import rules**
 
@@ -198,47 +198,46 @@ kept in Raw Sessions and Extracted Q&A, but they aren't knowledge
 questions and aren't consolidated. On the September 2026 exports that's
 49 Q&A records: 42 information questions and 7 conversational.
 
-**Question Consolidation** (manual Claude round-trip, nothing sent
-automatically):
+**Question Consolidation** is built in (`src/lib/responses/consolidate.js`).
+It doesn't use AI and has no round-trip, so the export is available as
+soon as files are imported.
 
-1. **Copy Claude prompt.** The prompt holds every information question:
-   QA ID, exact question, agent answer parts and answer status. It
-   contains no session IDs or file names. It asks Claude only to:
-   - group questions that ask for the same information (never just the
-     same topic);
-   - write one clean question per group, keeping its meaning, without
-     answering it or adding facts;
-   - account for every QA ID exactly once;
-   - judge the observed answer: `ANSWERED`, `PARTIALLY_ANSWERED`,
-     `NOT_ANSWERED` or `CANNOT_DETERMINE`. `TRUNCATED` doesn't mean
-     not answered.
-2. **Paste Claude's JSON reply.** It's checked
-   (`src/lib/responses/ai/questionResult.js`): the package ID must
-   match, every field must be present, and each eligible QA ID must
-   appear exactly once, with none missing, duplicated, invented or
-   conversational. Any failure rejects the whole reply. A pasted prompt
-   or input package is recognised and explained.
-3. **Review.** Each clean question expands to show its original
-   questions exactly as asked, the agent's answers, answer status,
-   timestamps and source files. Each QA ID links to its Extracted Q&A
-   record, which links to its raw session and source row.
-4. **Export Consolidated Excel** → `AFAIK_Question_Consolidated.xlsx`:
+- **Grouping.** Information questions are merged when their wording is
+  identical apart from case, spacing and punctuation. Reworded questions
+  stay separate. Every information question appears in exactly one
+  consolidated question.
+- **Clean question.** The original wording, tidied: extra spaces
+  removed, first letter capitalised, a question mark added. It is never
+  reworded and nothing is added.
+- **Answer result.** Taken from the transcript only:
 
-   | Sheet | Contents |
-   |---|---|
-   | `RAW_Q&A` | Every Q&A record, values exactly as imported, plus the consolidated question each one went into |
-   | `CONSOLIDATED_QUESTIONS` | Question ID, clean question, occurrence count, original QA IDs, original questions, answer result, notes |
-   | `SUMMARY` | Files, sessions, Q&A, information/conversational, consolidated and repeated questions, answer-result counts |
+  | Result | When |
+  |---|---|
+  | `NOT_ANSWERED` | Agent unavailable, no reply, or an explicit "could not find" |
+  | `CANNOT_DETERMINE` | A redacted reply, or one cut off by the export (truncation isn't "not answered") |
+  | `ANSWERED` | Otherwise |
 
-   The workbook is written in the browser with the app's own zip writer,
-   with no dependency. Text is stored as text, so a question starting
-   with `=` can't run as a formula.
+  A question asked several times is `ANSWERED` if any attempt was
+  answered, otherwise `CANNOT_DETERMINE` if any attempt can't be judged,
+  otherwise `NOT_ANSWERED`. The notes say what each attempt got.
+- **Review.** Each clean question expands to its original questions
+  exactly as asked, the agent's answers, answer status, timestamps and
+  source files. Each QA ID links to its Extracted Q&A record, which links
+  to its raw session and source row.
+- **Export Consolidated Excel** → `AFAIK_Question_Consolidated.xlsx`:
 
-The consolidation is held in memory and cleared when the imported
-sessions change. The Excel export is the lasting record. The provider
-layer (`src/lib/responses/ai/provider.js`) keeps the prompt engine
-independent of how it reaches a model, and v1's only provider is the
-manual one.
+  | Sheet | Contents |
+  |---|---|
+  | `RAW_Q&A` | Every Q&A record, values exactly as imported, plus the consolidated question each one went into |
+  | `CONSOLIDATED_QUESTIONS` | Question ID, clean question, occurrence count, original QA IDs, original questions, answer result, notes |
+  | `SUMMARY` | Files, sessions, Q&A, information/conversational, consolidated and repeated questions, answer-result counts, consolidation method |
+
+  The workbook is written in the browser with the app's own zip writer,
+  with no dependency. Text is stored as text, so a question starting
+  with `=` can't run as a formula.
+
+The consolidation is recomputed from the current sessions and never
+stored. The Excel export is the lasting record.
 
 **Privacy.** Everything runs in the browser. Session data is never
 uploaded, never written to `localStorage`, and is gone when the tab

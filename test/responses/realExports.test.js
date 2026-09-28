@@ -7,7 +7,7 @@ import {
 } from "../../src/lib/responses/importSessions.js";
 import { extractQA, summarizeQA } from "../../src/lib/responses/qa.js";
 import { SPEAKER } from "../../src/lib/responses/transcript.js";
-import { buildQuestionRequest } from "../../src/lib/responses/ai/questionPackage.js";
+import { consolidateQuestions } from "../../src/lib/responses/consolidate.js";
 
 /* Real AFAIK session exports, gitignored — see README.md in this
  * folder. The invariants hold for any set of exports. The fixed counts
@@ -114,16 +114,15 @@ describe.skipIf(!isSeptemberSet)("real exports — September 2026 regression cou
     });
   });
 
-  it("sends the 42 information questions to consolidation and nothing else", async () => {
+  it("consolidates all 42 information questions exactly once, truncated ones included", async () => {
     const { records } = await extracted();
-    const req = buildQuestionRequest(records);
-    expect(req.counts).toEqual({ records: 49, items: 42, excluded: 7 });
-    // All 22 truncated questions are included.
-    expect(req.items.filter((i) => i.answerStatus === "TRUNCATED")).toHaveLength(22);
-    // Data minimisation: no session IDs or source files.
-    expect(req.items.every((i) => !("sessionId" in i) && !("sourceFile" in i))).toBe(true);
-    // Every sent question is its exact extracted text.
-    const byId = new Map(records.map((r) => [r.id, r]));
-    expect(req.items.every((i) => i.question === byId.get(i.qaId).question)).toBe(true);
+    const qs = consolidateQuestions(records);
+    const ids = qs.flatMap((q) => q.qaIds);
+    const info = records.filter((r) => r.includeInConsolidation);
+    expect(info).toHaveLength(42);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.sort()).toEqual(info.map((r) => r.id).sort());
+    expect(info.filter((r) => r.answerStatus === "TRUNCATED")).toHaveLength(22);
+    expect(qs.length).toBeLessThanOrEqual(42);
   });
 });

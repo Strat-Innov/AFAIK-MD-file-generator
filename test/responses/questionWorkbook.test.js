@@ -2,8 +2,7 @@ import { describe, it, expect } from "vitest";
 import { listZipEntries } from "../../src/lib/responses/xlsx.js";
 import { createXlsx, columnLetter } from "../../src/lib/responses/export/xlsxWriter.js";
 import { buildQuestionSheets, exportQuestionWorkbook, answerCell, WORKBOOK_FILENAME } from "../../src/lib/responses/export/questionWorkbook.js";
-import { buildQuestionRequest } from "../../src/lib/responses/ai/questionPackage.js";
-import { validateQuestionReply } from "../../src/lib/responses/ai/questionResult.js";
+import { consolidateQuestions } from "../../src/lib/responses/consolidate.js";
 import { consolidationRecords } from "./fixtures.js";
 
 /* An independent read of a written workbook: unzip, parse each part as
@@ -28,17 +27,7 @@ async function readWorkbook(bytes) {
 
 async function consolidated() {
   const records = await consolidationRecords();
-  const request = buildQuestionRequest(records);
-  const reply = JSON.stringify({
-    packageId: request.packageId,
-    questions: [
-      { questionId: "CQ-001", cleanQuestion: "Who is the project director of Mimosa?", qaIds: ["QA-0001", "QA-0002"], answerEvaluation: "NOT_ANSWERED", notes: "Not found; then usage limit." },
-      { questionId: "CQ-002", cleanQuestion: "Where are the links to the Operations OMS?", qaIds: ["QA-0004"], answerEvaluation: "CANNOT_DETERMINE" },
-    ],
-  });
-  const result = validateQuestionReply(reply, request);
-  expect(result.ok).toBe(true);
-  return { records, questions: result.questions, summary: { files: 1, sessions: 2 }, packageId: request.packageId, exportedAt: "2026-09-28T08:00:00.000Z" };
+  return { records, questions: consolidateQuestions(records), summary: { files: 1, sessions: 2 }, exportedAt: "2026-09-28T08:00:00.000Z" };
 }
 
 describe("XLSX writer", () => {
@@ -102,8 +91,8 @@ describe("AFAIK_Question_Consolidated.xlsx", () => {
     }
     // Each raw row names the clean question it went into; the greeting went nowhere.
     expect(raw.rows.map((row) => [row[0], row[5], row[6]])).toEqual([
-      ["QA-0001", "Information", "CQ-001"], ["QA-0002", "Information", "CQ-001"],
-      ["QA-0003", "Conversational", ""], ["QA-0004", "Information", "CQ-002"],
+      ["QA-0001", "Information", "CQ-001"], ["QA-0002", "Information", "CQ-002"],
+      ["QA-0003", "Conversational", ""], ["QA-0004", "Information", "CQ-003"],
     ]);
   });
 
@@ -117,8 +106,9 @@ describe("AFAIK_Question_Consolidated.xlsx", () => {
     const [, cq] = buildQuestionSheets(await consolidated());
     expect(cq.columns.map((c) => c.header)).toEqual(["Question ID", "Clean Question", "Occurrence Count", "Original QA IDs", "Original Questions", "Answer Result", "Notes"]);
     expect(cq.rows).toEqual([
-      ["CQ-001", "Who is the project director of Mimosa?", 2, "QA-0001, QA-0002", "who is the PD of mimosa\nwho's the project director for mimosa", "Not Answered", "Not found; then usage limit."],
-      ["CQ-002", "Where are the links to the Operations OMS?", 1, "QA-0004", "links for the operations oms", "Cannot Determine", ""],
+      ["CQ-001", "Who is the PD of mimosa?", 1, "QA-0001", "who is the PD of mimosa", "Not Answered", "Reply: agent said the information was not found."],
+      ["CQ-002", "Who's the project director for mimosa?", 1, "QA-0002", "who's the project director for mimosa", "Not Answered", "Reply: agent unavailable."],
+      ["CQ-003", "Links for the operations oms?", 1, "QA-0004", "links for the operations oms", "Cannot Determine", "Reply: reply cut off by the export."],
     ]);
   });
 
@@ -127,9 +117,9 @@ describe("AFAIK_Question_Consolidated.xlsx", () => {
     const summary = Object.fromEntries(wb.sheets.SUMMARY.rows.slice(1).map(([k, v]) => [k, v]));
     expect(summary).toMatchObject({
       "Files Imported": 1, "Sessions": 2, "Total Q&A": 4, "Information Questions": 3, "Conversational Questions": 1,
-      "Consolidated Questions": 2, "Repeated Questions": 1,
-      "Answered": 0, "Partially Answered": 0, "Not Answered": 1, "Cannot Determine": 1,
+      "Consolidated Questions": 3, "Repeated Questions": 0,
+      "Answered": 0, "Partially Answered": 0, "Not Answered": 2, "Cannot Determine": 1,
     });
-    expect(summary["Package ID"]).toMatch(/^PKG-/);
+    expect(summary["Consolidation Method"]).toMatch(/identical apart from case, spacing and punctuation/);
   });
 });

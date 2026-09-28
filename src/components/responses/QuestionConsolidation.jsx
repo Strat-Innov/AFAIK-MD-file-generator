@@ -1,11 +1,7 @@
 import React, { useMemo, useState } from "react";
-import {
-  ChevronDown, ChevronRight, CheckCircle2, XCircle, Copy, Check, Download, FileJson, FileSpreadsheet, ShieldAlert, Search, Upload,
-} from "lucide-react";
+import { ChevronDown, ChevronRight, FileSpreadsheet, Search, Upload, Info } from "lucide-react";
 import { LAYER_DERIVED } from "../../lib/responses/views";
-import { buildQuestionRequest, ANSWER_EVALUATION } from "../../lib/responses/ai/questionPackage";
-import { validateQuestionReply } from "../../lib/responses/ai/questionResult";
-import { DEFAULT_PROVIDER } from "../../lib/responses/ai/provider";
+import { ANSWER_EVALUATION } from "../../lib/responses/consolidate";
 import { exportQuestionWorkbook, WORKBOOK_FILENAME, answerCell } from "../../lib/responses/export/questionWorkbook";
 import { XLSX_MIME } from "../../lib/responses/export/xlsxWriter";
 import { saveBlob } from "../BenchmarkExport";
@@ -26,132 +22,6 @@ export const EVALUATION_STYLE = {
 
 const EvaluationBadge = ({ value }) => <FlagBadge tone={EVALUATION_STYLE[value].tone}>{EVALUATION_STYLE[value].label}</FlagBadge>;
 
-/* Validation outcome of a pasted reply — kept on screen with the result
- * it justified. */
-export function ValidationSummary({ result }) {
-  const c = result.coverage;
-  const cell = (label, value, bad) => (
-    <div className={"rounded-lg border px-3 py-2 " + (bad ? "border-rose-200 bg-rose-50" : "border-slate-200 bg-white")}>
-      <div className={"text-lg font-semibold tabular-nums " + (bad ? "text-rose-700" : "text-slate-900")}>{value}</div>
-      <div className="text-xs text-slate-500">{label}</div>
-    </div>
-  );
-  return (
-    <div className={"rounded-xl border p-4 " + (result.ok ? "border-emerald-200 bg-emerald-50/50" : "border-rose-200 bg-rose-50/50")}>
-      <div className={"flex items-center gap-2 text-sm font-semibold " + (result.ok ? "text-emerald-800" : "text-rose-800")}>
-        {result.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-        {result.ok ? "Reply accepted — every question is accounted for exactly once." : "Reply rejected — nothing was imported."}
-      </div>
-      {!c.evaluated && <div className="mt-2 text-xs text-rose-800">QA ID coverage was not checked: the reply could not be read. {c.expected} QA IDs expected.</div>}
-      {c.evaluated && (
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-3">
-          {cell("expected", c.expected, false)}
-          {cell("assigned", c.assigned, c.assigned !== c.expected)}
-          {cell("missing", c.missing.length, c.missing.length > 0)}
-          {cell("duplicated", c.duplicated.length, c.duplicated.length > 0)}
-          {cell("unknown", c.unknown.length, c.unknown.length > 0)}
-          {cell("conversational", c.conversational.length, c.conversational.length > 0)}
-        </div>
-      )}
-      {result.errors.length > 0 && <ul className="mt-3 space-y-1 text-xs text-rose-800 list-disc pl-5">{result.errors.map((e) => <li key={e}>{e}</li>)}</ul>}
-      {result.warnings.length > 0 && <ul className="mt-2 space-y-1 text-xs text-amber-800 list-disc pl-5">{result.warnings.map((w) => <li key={w}>{w}</li>)}</ul>}
-    </div>
-  );
-}
-
-function ClaudeStep({ records, result, onImported }) {
-  const [copied, setCopied] = useState("");
-  const [reply, setReply] = useState("");
-  const [attempt, setAttempt] = useState(null);
-  const provider = DEFAULT_PROVIDER;
-  const request = useMemo(() => buildQuestionRequest(records), [records]);
-  const { promptText } = useMemo(() => provider.render(request), [provider, request]);
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(promptText);
-      setCopied("Prompt copied. Paste it into Claude, then paste Claude's JSON answer below.");
-    } catch {
-      setCopied("The browser blocked clipboard access. Use “Download prompt” instead.");
-    }
-  };
-  const validateAndImport = (text) => {
-    const r = validateQuestionReply(text, request);
-    setAttempt(r);
-    if (r.ok) onImported(r, request);
-  };
-
-  return (
-    <details open={!result} className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <summary className="cursor-pointer p-4 text-sm font-semibold text-slate-800">
-        {result ? "Consolidate again with Claude" : "Consolidate the questions with Claude"}
-        <span className="ml-2 font-normal text-slate-500">— {request.items.length} information questions, package {request.packageId}</span>
-      </summary>
-      <div className="border-t border-slate-100 p-4 space-y-4">
-        <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-          <ShieldAlert className="h-4 w-4 shrink-0" />
-          <span>
-            The prompt contains real employee questions and AFAIK's answers. It leaves this app only when you copy or
-            download it. Paste it only into a Claude workspace approved for this data. Session IDs and file names are not
-            included.
-          </span>
-        </div>
-        <ol className="space-y-3 text-sm text-slate-700">
-          <li>
-            <span className="font-semibold">1. Copy the prompt and send it to Claude.</span>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <button onClick={copy} className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-700">
-                {copied.startsWith("Prompt copied") ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />} Copy Claude prompt
-              </button>
-              <button
-                onClick={() => saveBlob("AFAIK_question-consolidation_prompt.txt", new Blob([promptText], { type: "text/plain" }))}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-              >
-                <Download className="h-3.5 w-3.5" /> Download prompt
-              </button>
-              {copied && <span className="text-xs text-slate-500">{copied}</span>}
-            </div>
-            {request.excluded.length > 0 && (
-              <div className="mt-2 text-xs text-slate-500">
-                Not sent (conversational, kept in Extracted Q&amp;A): {request.excluded.map((x) => `${x.qaId} “${x.question.trim()}”`).join(" · ")}
-              </div>
-            )}
-          </li>
-          <li>
-            <span className="font-semibold">2. Paste Claude's JSON answer and import it.</span>
-            <div className="text-xs text-slate-500 mt-0.5">
-              It is checked before anything is kept: the package must match and each of the {request.items.length} QA IDs must appear exactly once.
-            </div>
-            <textarea
-              value={reply} onChange={(e) => setReply(e.target.value)} rows={5} spellCheck={false}
-              placeholder='{"packageId": "…", "questions": [ … ]}' aria-label="Claude's JSON reply"
-              className="mt-2 w-full rounded-lg border border-slate-300 p-2 font-mono text-xs"
-            />
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => validateAndImport(reply)} disabled={!reply.trim()}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
-              >
-                <Check className="h-3.5 w-3.5" /> Validate &amp; import
-              </button>
-              <label className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 cursor-pointer">
-                <FileJson className="h-3.5 w-3.5" /> Load reply file
-                <input type="file" accept=".json,.txt" className="hidden"
-                  onChange={async (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) { const t = await f.text(); setReply(t); validateAndImport(t); } }} />
-              </label>
-            </div>
-          </li>
-        </ol>
-        {attempt && <ValidationSummary result={attempt} />}
-        <details>
-          <summary className="cursor-pointer text-xs font-medium text-slate-600">Show the full prompt text</summary>
-          <pre className="mt-2 whitespace-pre-wrap break-words text-xs font-mono text-slate-700 max-h-[28rem] overflow-y-auto">{promptText}</pre>
-        </details>
-      </div>
-    </details>
-  );
-}
-
 function Originals({ question, recordsById, onOpenQA }) {
   return (
     <div className="bg-slate-50 border-t border-slate-100 p-4 space-y-3">
@@ -162,7 +32,7 @@ function Originals({ question, recordsById, onOpenQA }) {
         </div>
         {question.notes && (
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Claude's notes</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notes</div>
             <div className="mt-1 text-xs text-slate-600">{question.notes}</div>
           </div>
         )}
@@ -200,7 +70,7 @@ function Originals({ question, recordsById, onOpenQA }) {
   );
 }
 
-export default function QuestionConsolidation({ records, recordsById, workspaceSummary, qaSummary, result, onImported, onOpenQA, onGoImport }) {
+export default function QuestionConsolidation({ records, recordsById, questions, workspaceSummary, qaSummary, onOpenQA, onGoImport }) {
   const [expanded, setExpanded] = useState(() => new Set());
   const [text, setText] = useState("");
   const [evaluation, setEvaluation] = useState("");
@@ -221,7 +91,6 @@ export default function QuestionConsolidation({ records, recordsById, workspaceS
     );
   }
 
-  const questions = result?.questions ?? [];
   const repeated = questions.filter((q) => q.qaIds.length > 1).length;
   const needle = text.trim().toLowerCase();
   const rows = questions.filter((q) =>
@@ -233,9 +102,7 @@ export default function QuestionConsolidation({ records, recordsById, workspaceS
   const exportExcel = async () => {
     setExporting(true); setExportError("");
     try {
-      const bytes = await exportQuestionWorkbook({
-        records, questions, summary: workspaceSummary, packageId: result.packageId, exportedAt: new Date().toISOString(),
-      });
+      const bytes = await exportQuestionWorkbook({ records, questions, summary: workspaceSummary, exportedAt: new Date().toISOString() });
       saveBlob(WORKBOOK_FILENAME, new Blob([bytes], { type: XLSX_MIME }));
     } catch (e) {
       setExportError(e.message || String(e));
@@ -259,29 +126,32 @@ export default function QuestionConsolidation({ records, recordsById, workspaceS
           <Stat label="Q&A pairs" value={qaSummary.records} />
           <Stat label="Information questions" value={qaSummary.informationRequests} />
           <Stat label="Conversational (not consolidated)" value={qaSummary.conversational} />
-          <Stat label="Consolidated questions" value={result ? questions.length : "—"} />
-          <Stat label="Asked more than once" value={result ? repeated : "—"} />
+          <Stat label="Consolidated questions" value={questions.length} />
+          <Stat label="Asked more than once" value={repeated} />
         </div>
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
           <button
-            onClick={exportExcel} disabled={!result || exporting}
+            onClick={exportExcel} disabled={exporting}
             className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-40"
           >
             <FileSpreadsheet className="h-4 w-4" /> {exporting ? "Preparing…" : "Export Consolidated Excel"}
           </button>
           <span className="text-xs text-slate-600">
-            {result
-              ? <>{WORKBOOK_FILENAME} — sheets RAW_Q&amp;A ({records.length} rows), CONSOLIDATED_QUESTIONS ({questions.length}), SUMMARY.</>
-              : "Available once Claude's consolidation has been imported below."}
+            {WORKBOOK_FILENAME} — sheets RAW_Q&amp;A ({records.length} rows), CONSOLIDATED_QUESTIONS ({questions.length}), SUMMARY.
           </span>
           {exportError && <span className="text-xs text-rose-700">Export failed: {exportError}</span>}
         </div>
-        {result && <ValidationSummary result={result} />}
+        <div className="flex items-start gap-2 text-xs text-slate-500">
+          <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+          <span>
+            Questions are merged when their wording is identical apart from case, spacing and punctuation; reworded
+            questions stay separate. Answer results come from the transcript: agent unavailable, no reply or an explicit
+            “could not find” is <em>Not answered</em>; a redacted or export-truncated reply is <em>Cannot determine</em>.
+          </span>
+        </div>
       </div>
 
-      <ClaudeStep records={records} result={result} onImported={onImported} />
-
-      {result && (
+      {(
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-4">
             <label className="relative flex-1 min-w-[14rem]">

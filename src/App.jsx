@@ -24,6 +24,7 @@ import { generateOptimized } from "./lib/generate";
 import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_QUESTIONS, isResponseView } from "./lib/responses/views";
 import { EMPTY_WORKSPACE, readResponseFile, mergeImport, summarize as summarizeWorkspace } from "./lib/responses/importSessions";
 import { extractQA, summarizeQA } from "./lib/responses/qa";
+import { consolidateQuestions } from "./lib/responses/consolidate";
 
 /* ---- ZIP reading via native DecompressionStream (no dependency) ---- */
 async function inflateRaw(u8) {
@@ -427,16 +428,10 @@ export default function App() {
   const qaSummary = useMemo(() => summarizeQA(extracted), [extracted]);
   const recordsById = useMemo(() => new Map(extracted.records.map((r) => [r.id, r])), [extracted]);
 
-  /* Layer 3: the consolidated questions — an AI grouping that passed
-   * validation. Memory only, like everything here, and dropped when the
-   * sessions change: a consolidation describes the exact question set it
-   * was made from (the same rule as the knowledge build below). The
-   * Excel export is the persistent record. */
-  const [questionResult, setQuestionResult] = useState(null);
-  useEffect(() => { setQuestionResult(null); }, [responseWorkspace]);
-  const onQuestionsImported = (result, request) => {
-    setQuestionResult({ ...result, packageId: request.packageId, importedAt: new Date().toISOString() });
-  };
+  // Layer 3: the consolidated questions. Derived like the extraction,
+  // never stored, so it always describes the current sessions. The Excel
+  // export is the persistent record.
+  const consolidated = useMemo(() => consolidateQuestions(extracted.records), [extracted]);
 
   // Traceability navigation: clean question → QA record → raw session. The
   // target view remounts on each jump (key) so it opens on that record.
@@ -496,7 +491,7 @@ export default function App() {
         responseCounts={{
           [RC_RAW_SESSIONS]: responseWorkspace.sessions.length,
           [RC_EXTRACTED_QA]: extracted.records.length,
-          [RC_QUESTIONS]: questionResult?.questions.length ?? 0,
+          [RC_QUESTIONS]: consolidated.length,
         }}
       />
 
@@ -560,7 +555,7 @@ export default function App() {
             error={responseError}
             onImport={importResponses}
             onClear={clearResponses}
-            consolidatedCount={questionResult?.questions.length ?? 0}
+            consolidatedCount={consolidated.length}
             onViewQuestions={() => goTo(RC_QUESTIONS)}
             onViewRaw={() => goTo(RC_RAW_SESSIONS)}
             onViewQA={() => goTo(RC_EXTRACTED_QA)}
@@ -591,8 +586,7 @@ export default function App() {
             recordsById={recordsById}
             workspaceSummary={summarizeWorkspace(responseWorkspace)}
             qaSummary={qaSummary}
-            result={questionResult}
-            onImported={onQuestionsImported}
+            questions={consolidated}
             onOpenQA={openQA}
             onGoImport={() => goTo(RC_IMPORT)}
           />
