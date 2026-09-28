@@ -1,19 +1,24 @@
 /* ------------------------------------------------------------------ *
- * Question consolidation — built in, deterministic, no AI.
+ * Question consolidation, in two layers.
  *
- * Merges information questions whose wording is identical apart from
- * case, spacing and punctuation, and derives each clean question's
- * answer result from what the transcript shows. Reworded questions stay
- * separate: telling "South Station 1BR price?" and "How much is a 1-BR
- * unit at South Station?" apart as the same question needs judgement
- * this module deliberately does not attempt.
+ *   INITIAL GROUPS (always, no AI)
+ *     Information questions whose wording is identical apart from case,
+ *     spacing and punctuation. Reworded questions stay apart here.
  *
- * The output has the same shape the workbook export and the view use:
- *   { questionId, cleanQuestion, qaIds, answerEvaluation, notes }
+ *   CONSOLIDATED QUESTIONS (optional, AI-assisted)
+ *     Initial groups that ask for the same information, merged, each with
+ *     one clean question written by Claude (ai/semanticConsolidation.js).
+ *     The app — not the model — expands groups to QA IDs and works out
+ *     counts and answer status, so the model cannot lose or invent a
+ *     question.
  *
- * Derived, never stored: recomputed from the Extracted Q&A records, so it
- * cannot drift from them. The original questions are never changed —
- * they are looked up by QA ID wherever they are shown.
+ * Answer status is derived here from the transcript, identically in both
+ * layers. It says what the interaction shows, never whether an answer
+ * was factually right.
+ *
+ * Derived, never stored: recomputed from the Extracted Q&A records. The
+ * original questions are never changed — they are looked up by QA ID
+ * wherever they are shown.
  * ------------------------------------------------------------------ */
 
 import { QUESTION_KIND, ANSWER_STATUS, PART_KIND } from "./qa.js";
@@ -25,8 +30,12 @@ export const ANSWER_EVALUATION = Object.freeze({
   CANNOT_DETERMINE: "CANNOT_DETERMINE",
 });
 
-export const CONSOLIDATION_METHOD =
-  "Automatic: questions merged when their wording is identical apart from case, spacing and punctuation.";
+export const METHOD = Object.freeze({
+  EXACT: "Exact match",
+  AI: "AI-assisted",
+});
+
+export const EXACT_MATCH_RULE = "Questions merged when their wording is identical apart from case, spacing and punctuation.";
 
 /** The grouping key: lower case, punctuation and extra spacing removed. */
 export const normalizeQuestion = (q) => q.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
@@ -74,39 +83,57 @@ export function evaluateRecord(r) {
  * answered attempt → ANSWERED; else anything undeterminable →
  * CANNOT_DETERMINE; else NOT_ANSWERED. The notes say what each attempt
  * got, so the combined result is never opaque. */
-function combine(outcomes) {
+export function answerStatusOf(members) {
+  const outcomes = members.map(evaluateRecord);
   const has = (e) => outcomes.some((o) => o.evaluation === e);
-  if (has(ANSWER_EVALUATION.ANSWERED)) return ANSWER_EVALUATION.ANSWERED;
-  if (has(ANSWER_EVALUATION.CANNOT_DETERMINE)) return ANSWER_EVALUATION.CANNOT_DETERMINE;
-  return ANSWER_EVALUATION.NOT_ANSWERED;
-}
-
-function notesFor(outcomes) {
-  if (outcomes.length === 1) return outcomes[0].evaluation === ANSWER_EVALUATION.ANSWERED ? "" : `Reply: ${outcomes[0].reason}.`;
-  const tally = new Map();
-  for (const o of outcomes) tally.set(o.reason, (tally.get(o.reason) ?? 0) + 1);
-  return `Asked ${outcomes.length} times: ${[...tally].map(([reason, n]) => `${n} ${reason}`).join(", ")}.`;
+  const answerEvaluation = has(ANSWER_EVALUATION.ANSWERED) ? ANSWER_EVALUATION.ANSWERED
+    : has(ANSWER_EVALUATION.CANNOT_DETERMINE) ? ANSWER_EVALUATION.CANNOT_DETERMINE
+    : ANSWER_EVALUATION.NOT_ANSWERED;
+  let notes;
+  if (outcomes.length === 1) notes = answerEvaluation === ANSWER_EVALUATION.ANSWERED ? "" : `Reply: ${outcomes[0].reason}.`;
+  else {
+    const tally = new Map();
+    for (const o of outcomes) tally.set(o.reason, (tally.get(o.reason) ?? 0) + 1);
+    notes = `Asked ${outcomes.length} times: ${[...tally].map(([reason, n]) => `${n} ${reason}`).join(", ")}.`;
+  }
+  return { answerEvaluation, notes };
 }
 
 /**
- * @param records  Extracted Q&A records
- * @returns consolidated questions, in order of first appearance
+ * Initial groups: exact-match consolidation of the information questions.
+ * @returns [{ groupId, cleanQuestion, qaIds, answerEvaluation, notes }] in order of first appearance
  */
-export function consolidateQuestions(records) {
+export function buildInitialGroups(records) {
   const groups = new Map();
   for (const r of records) {
     if (r.questionKind !== QUESTION_KIND.INFORMATION_REQUEST) continue;
     const key = normalizeQuestion(r.question);
     (groups.get(key) ?? groups.set(key, []).get(key)).push(r);
   }
-  return [...groups.values()].map((members, i) => {
-    const outcomes = members.map(evaluateRecord);
+  return [...groups.values()].map((members, i) => Object.freeze({
+    groupId: `IG-${String(i + 1).padStart(3, "0")}`,
+    cleanQuestion: cleanQuestionText(members[0].question),
+    qaIds: Object.freeze(members.map((m) => m.id)),
+    ...answerStatusOf(members),
+  }));
+}
+
+/**
+ * Consolidated questions from a validated AI grouping of initial groups.
+ * @param aiQuestions [{ cleanQuestion, groupIds }] — validated, each group exactly once
+ * @returns [{ questionId, cleanQuestion, qaIds, groupIds, answerEvaluation, notes }]
+ */
+export function applyConsolidation(records, initialGroups, aiQuestions) {
+  const byId = new Map(records.map((r) => [r.id, r]));
+  const groupById = new Map(initialGroups.map((g) => [g.groupId, g]));
+  return aiQuestions.map((q, i) => {
+    const qaIds = q.groupIds.flatMap((g) => groupById.get(g).qaIds);
     return Object.freeze({
       questionId: `CQ-${String(i + 1).padStart(3, "0")}`,
-      cleanQuestion: cleanQuestionText(members[0].question),
-      qaIds: Object.freeze(members.map((m) => m.id)),
-      answerEvaluation: combine(outcomes),
-      notes: notesFor(outcomes),
+      cleanQuestion: q.cleanQuestion,
+      qaIds: Object.freeze(qaIds),
+      groupIds: Object.freeze([...q.groupIds]),
+      ...answerStatusOf(qaIds.map((id) => byId.get(id))),
     });
   });
 }

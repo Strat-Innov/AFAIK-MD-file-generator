@@ -7,7 +7,7 @@ import {
 } from "../../src/lib/responses/importSessions.js";
 import { extractQA, summarizeQA } from "../../src/lib/responses/qa.js";
 import { SPEAKER } from "../../src/lib/responses/transcript.js";
-import { consolidateQuestions } from "../../src/lib/responses/consolidate.js";
+import { buildInitialGroups } from "../../src/lib/responses/consolidate.js";
 
 /* Real AFAIK session exports, gitignored — see README.md in this
  * folder. The invariants hold for any set of exports. The fixed counts
@@ -114,9 +114,9 @@ describe.skipIf(!isSeptemberSet)("real exports — September 2026 regression cou
     });
   });
 
-  it("consolidates all 42 information questions exactly once, truncated ones included", async () => {
+  it("puts all 42 information questions into initial groups exactly once, truncated ones included", async () => {
     const { records } = await extracted();
-    const qs = consolidateQuestions(records);
+    const qs = buildInitialGroups(records);
     const ids = qs.flatMap((q) => q.qaIds);
     const info = records.filter((r) => r.includeInConsolidation);
     expect(info).toHaveLength(42);

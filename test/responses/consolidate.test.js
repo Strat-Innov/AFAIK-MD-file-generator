@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readResponseFile, mergeImport, EMPTY_WORKSPACE } from "../../src/lib/responses/importSessions.js";
 import { extractQA } from "../../src/lib/responses/qa.js";
 import {
-  consolidateQuestions, normalizeQuestion, cleanQuestionText, evaluateRecord, ANSWER_EVALUATION,
+  buildInitialGroups, applyConsolidation, normalizeQuestion, cleanQuestionText, evaluateRecord, ANSWER_EVALUATION,
 } from "../../src/lib/responses/consolidate.js";
 import { ROWS, toCsv, fileFrom, tx, GREETING, UNAVAILABLE_NOTICE, TRUNCATED_ANSWER } from "./fixtures.js";
 
@@ -51,16 +51,16 @@ describe("answer result from the transcript", () => {
   });
 });
 
-describe("consolidating questions", () => {
+describe("initial groups (exact match)", () => {
   it("merges identical questions, ignoring case, spacing and punctuation — across sessions", async () => {
     const records = await recordsFrom(
       tx(["User", "hectares of mimosa plus"], ["Agent", UNAVAILABLE_NOTICE]),
       tx(["User", "Hectares of Mimosa Plus?"], ["Agent", "Mimosa Plus spans 201 hectares."]),
       tx(["User", "hectares  of mimosa plus"], ["Agent", UNAVAILABLE_NOTICE]),
     );
-    const [q] = consolidateQuestions(records);
+    const [q] = buildInitialGroups(records);
     expect(q).toEqual({
-      questionId: "CQ-001",
+      groupId: "IG-001",
       cleanQuestion: "Hectares of mimosa plus?",
       qaIds: ["QA-0001", "QA-0002", "QA-0003"],
       answerEvaluation: "ANSWERED",
@@ -74,7 +74,7 @@ describe("consolidating questions", () => {
       ["User", "who's the project director for mimosa"], ["Agent", "a"],
       ["User", "what is mimosa plus"], ["Agent", "a"],
     ));
-    expect(consolidateQuestions(records).map((q) => q.qaIds)).toEqual([["QA-0001"], ["QA-0002"], ["QA-0003"]]);
+    expect(buildInitialGroups(records).map((q) => q.qaIds)).toEqual([["QA-0001"], ["QA-0002"], ["QA-0003"]]);
   });
 
   it("leaves conversational questions out, and covers every information question exactly once", async () => {
@@ -82,7 +82,7 @@ describe("consolidating questions", () => {
       tx(["Agent", GREETING], ["User", "hi"], ["Agent", "Bot said:Hi!"], ["User", "links for the operations oms"], ["Agent", TRUNCATED_ANSWER]),
       tx(["User", "Links for the Operations OMS"], ["Agent", "[REDACTED]"], ["User", "hmp"], ["Agent", "I'm back!"]),
     );
-    const qs = consolidateQuestions(records);
+    const qs = buildInitialGroups(records);
     const ids = qs.flatMap((q) => q.qaIds);
     const info = records.filter((r) => r.includeInConsolidation).map((r) => r.id);
     expect(ids.sort()).toEqual(info.sort());
@@ -93,27 +93,53 @@ describe("consolidating questions", () => {
 
   it("numbers questions in order of first appearance and is deterministic", async () => {
     const records = await recordsFrom(tx(["User", "b question"], ["Agent", "a"], ["User", "a question"], ["Agent", "a"], ["User", "B question"], ["Agent", "a"]));
-    const qs = consolidateQuestions(records);
-    expect(qs.map((q) => [q.questionId, q.cleanQuestion, q.qaIds])).toEqual([
-      ["CQ-001", "B question?", ["QA-0001", "QA-0003"]],
-      ["CQ-002", "A question?", ["QA-0002"]],
+    const qs = buildInitialGroups(records);
+    expect(qs.map((q) => [q.groupId, q.cleanQuestion, q.qaIds])).toEqual([
+      ["IG-001", "B question?", ["QA-0001", "QA-0003"]],
+      ["IG-002", "A question?", ["QA-0002"]],
     ]);
-    expect(JSON.stringify(consolidateQuestions(records))).toBe(JSON.stringify(qs));
+    expect(JSON.stringify(buildInitialGroups(records))).toBe(JSON.stringify(qs));
   });
 
   it("never changes the original questions", async () => {
     const records = await recordsFrom(tx(["User", "  hectares of mimosa plus "], ["Agent", "a"]));
     const before = JSON.stringify(records);
-    consolidateQuestions(records);
+    buildInitialGroups(records);
     expect(JSON.stringify(records)).toBe(before);
     expect(records[0].question).toBe("  hectares of mimosa plus ");
   });
 
   it("explains a single non-answered question in the notes, and leaves answered ones blank", async () => {
     const records = await recordsFrom(tx(["User", "q1"], ["Agent", UNAVAILABLE_NOTICE], ["User", "q2"], ["Agent", "Here it is."]));
-    expect(consolidateQuestions(records).map((q) => [q.answerEvaluation, q.notes])).toEqual([
+    expect(buildInitialGroups(records).map((q) => [q.answerEvaluation, q.notes])).toEqual([
       ["NOT_ANSWERED", "Reply: agent unavailable."],
       ["ANSWERED", ""],
+    ]);
+  });
+});
+
+describe("AI-assisted consolidation of initial groups", () => {
+  it("merges the groups the AI names, expanding to every QA ID, with the AI's clean question", async () => {
+    const records = await recordsFrom(tx(
+      ["User", "At South Station Transport Terminal how much does a 1-BR Unit cost?"], ["Agent", TRUNCATED_ANSWER],
+      ["User", "at south station transport terminal how much does a 1-br unit cost"], ["Agent", UNAVAILABLE_NOTICE],
+      ["User", "South Station 1BR price?"], ["Agent", "I was unable to find any information about the 1-BR price."],
+      ["User", "What projects are under Filigree?"], ["Agent", "Filigree projects: A, B."],
+    ));
+    const groups = buildInitialGroups(records);
+    expect(groups.map((g) => g.qaIds)).toEqual([["QA-0001", "QA-0002"], ["QA-0003"], ["QA-0004"]]);
+    const cq = applyConsolidation(records, groups, [
+      { cleanQuestion: "What is the price of a 1-BR unit at South Station Transport Terminal?", groupIds: ["IG-001", "IG-002"] },
+      { cleanQuestion: "What projects are under the Filigree brand?", groupIds: ["IG-003"] },
+    ]);
+    expect(cq).toEqual([
+      {
+        questionId: "CQ-001", cleanQuestion: "What is the price of a 1-BR unit at South Station Transport Terminal?",
+        qaIds: ["QA-0001", "QA-0002", "QA-0003"], groupIds: ["IG-001", "IG-002"],
+        answerEvaluation: "CANNOT_DETERMINE",
+        notes: "Asked 3 times: 1 reply cut off by the export, 1 agent unavailable, 1 agent said the information was not found.",
+      },
+      { questionId: "CQ-002", cleanQuestion: "What projects are under the Filigree brand?", qaIds: ["QA-0004"], groupIds: ["IG-003"], answerEvaluation: "ANSWERED", notes: "" },
     ]);
   });
 });

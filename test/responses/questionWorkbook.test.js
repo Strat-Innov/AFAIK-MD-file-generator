@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { listZipEntries } from "../../src/lib/responses/xlsx.js";
 import { createXlsx, columnLetter } from "../../src/lib/responses/export/xlsxWriter.js";
 import { buildQuestionSheets, exportQuestionWorkbook, answerCell, WORKBOOK_FILENAME } from "../../src/lib/responses/export/questionWorkbook.js";
-import { consolidateQuestions } from "../../src/lib/responses/consolidate.js";
+import { buildInitialGroups, applyConsolidation } from "../../src/lib/responses/consolidate.js";
 import { consolidationRecords } from "./fixtures.js";
 
 /* An independent read of a written workbook: unzip, parse each part as
@@ -27,7 +27,7 @@ async function readWorkbook(bytes) {
 
 async function consolidated() {
   const records = await consolidationRecords();
-  return { records, questions: consolidateQuestions(records), summary: { files: 1, sessions: 2 }, exportedAt: "2026-09-28T08:00:00.000Z" };
+  return { records, initialGroups: buildInitialGroups(records), consolidated: null, summary: { files: 1, sessions: 2 }, exportedAt: "2026-09-28T08:00:00.000Z" };
 }
 
 describe("XLSX writer", () => {
@@ -71,55 +71,82 @@ describe("XLSX writer", () => {
 });
 
 describe("AFAIK_Question_Consolidated.xlsx", () => {
-  it("has the three agreed sheets, in order", async () => {
-    const wb = await readWorkbook(await exportQuestionWorkbook(await consolidated()));
+  // Fixture: QA-0001 "who is the PD of mimosa" (not found), QA-0002 "who's the
+  // project director for mimosa" (unavailable), QA-0003 "hi", QA-0004 OMS (truncated).
+  async function withAi() {
+    const data = await consolidated();
+    const consolidatedQs = applyConsolidation(data.records, data.initialGroups, [
+      { cleanQuestion: "Who is the project director of Mimosa?", groupIds: ["IG-001", "IG-002"] },
+      { cleanQuestion: "Where are the links to the Operations OMS?", groupIds: ["IG-003"] },
+    ]);
+    return { ...data, consolidated: consolidatedQs };
+  }
+
+  it("has the three agreed sheets, in order — with or without the AI step", async () => {
+    for (const data of [await consolidated(), await withAi()]) {
+      const wb = await readWorkbook(await exportQuestionWorkbook(data));
+      expect(wb.names).toEqual(["RAW_Q&A", "CONSOLIDATED_QUESTIONS", "SUMMARY"]);
+    }
     expect(WORKBOOK_FILENAME).toBe("AFAIK_Question_Consolidated.xlsx");
-    expect(wb.names).toEqual(["RAW_Q&A", "CONSOLIDATED_QUESTIONS", "SUMMARY"]);
   });
 
   it("RAW_Q&A keeps every record — conversational ones included — with original values unchanged", async () => {
-    const data = await consolidated();
+    const data = await withAi();
     const [raw] = buildQuestionSheets(data);
-    expect(raw.columns.map((c) => c.header).slice(0, 5)).toEqual(["QA ID", "Timestamp (UTC)", "User Question", "Answer", "Status"]);
+    expect(raw.columns.map((c) => c.header)).toEqual([
+      "QA ID", "Timestamp (UTC)", "User Question", "Answer", "Status", "Question Type",
+      "Initial Group ID", "Consolidated Question ID", "Channel", "Source File", "Source Row", "Session ID",
+    ]);
     expect(raw.rows).toHaveLength(data.records.length);
     for (const [i, r] of data.records.entries()) {
-      expect(raw.rows[i][0]).toBe(r.id);
-      expect(raw.rows[i][2]).toBe(r.question);     // exact question
-      expect(raw.rows[i][3]).toBe(answerCell(r));  // exact answer text
-      expect(raw.rows[i][4]).toBe(r.answerStatus);
-      expect(raw.rows[i][10]).toBe(r.sessionId);
+      expect(raw.rows[i][2]).toBe(r.question);
+      expect(raw.rows[i][3]).toBe(answerCell(r));
+      expect(raw.rows[i][11]).toBe(r.sessionId);
     }
-    // Each raw row names the clean question it went into; the greeting went nowhere.
-    expect(raw.rows.map((row) => [row[0], row[5], row[6]])).toEqual([
-      ["QA-0001", "Information", "CQ-001"], ["QA-0002", "Information", "CQ-002"],
-      ["QA-0003", "Conversational", ""], ["QA-0004", "Information", "CQ-003"],
+    expect(raw.rows.map((row) => [row[0], row[5], row[6], row[7]])).toEqual([
+      ["QA-0001", "Information", "IG-001", "CQ-001"], ["QA-0002", "Information", "IG-002", "CQ-001"],
+      ["QA-0003", "Conversational", "", ""], ["QA-0004", "Information", "IG-003", "CQ-002"],
     ]);
   });
 
-  it("labels answer parts only when there are several, keeping each part's text exact", async () => {
+  it("labels answer parts only when there are several, keeping each part's text exact", () => {
     expect(answerCell({ answerParts: [] })).toBe("");
     expect(answerCell({ answerParts: [{ text: "only" }] })).toBe("only");
     expect(answerCell({ answerParts: [{ text: "a" }, { text: "b" }] })).toBe("[Part 1] a\n\n[Part 2] b");
   });
 
-  it("CONSOLIDATED_QUESTIONS lists each clean question with its count, QA IDs and original wording", async () => {
+  it("without the AI step, CONSOLIDATED_QUESTIONS lists the exact-match initial groups and says so", async () => {
     const [, cq] = buildQuestionSheets(await consolidated());
-    expect(cq.columns.map((c) => c.header)).toEqual(["Question ID", "Clean Question", "Occurrence Count", "Original QA IDs", "Original Questions", "Answer Result", "Notes"]);
-    expect(cq.rows).toEqual([
-      ["CQ-001", "Who is the PD of mimosa?", 1, "QA-0001", "who is the PD of mimosa", "Not Answered", "Reply: agent said the information was not found."],
-      ["CQ-002", "Who's the project director for mimosa?", 1, "QA-0002", "who's the project director for mimosa", "Not Answered", "Reply: agent unavailable."],
-      ["CQ-003", "Links for the operations oms?", 1, "QA-0004", "links for the operations oms", "Cannot Determine", "Reply: reply cut off by the export."],
+    expect(cq.columns.map((c) => c.header)).toEqual([
+      "Question ID", "Clean Question", "Occurrence Count", "Original QA IDs", "Original Questions", "Answer Status", "Method", "Initial Group IDs", "Notes",
+    ]);
+    expect(cq.rows.map((r) => [r[0], r[1], r[2], r[5], r[6]])).toEqual([
+      ["IG-001", "Who is the PD of mimosa?", 1, "Not Answered", "Exact match"],
+      ["IG-002", "Who's the project director for mimosa?", 1, "Not Answered", "Exact match"],
+      ["IG-003", "Links for the operations oms?", 1, "Cannot Determine", "Exact match"],
     ]);
   });
 
-  it("SUMMARY counts what the other two sheets contain", async () => {
-    const wb = await readWorkbook(await exportQuestionWorkbook(await consolidated()));
-    const summary = Object.fromEntries(wb.sheets.SUMMARY.rows.slice(1).map(([k, v]) => [k, v]));
-    expect(summary).toMatchObject({
+  it("with the AI step, CONSOLIDATED_QUESTIONS lists the merged clean questions with every original", async () => {
+    const [, cq] = buildQuestionSheets(await withAi());
+    expect(cq.rows).toEqual([
+      ["CQ-001", "Who is the project director of Mimosa?", 2, "QA-0001, QA-0002", "who is the PD of mimosa\nwho's the project director for mimosa",
+        "Not Answered", "AI-assisted", "IG-001, IG-002", "Asked 2 times: 1 agent said the information was not found, 1 agent unavailable."],
+      ["CQ-002", "Where are the links to the Operations OMS?", 1, "QA-0004", "links for the operations oms",
+        "Cannot Determine", "AI-assisted", "IG-003", "Reply: reply cut off by the export."],
+    ]);
+  });
+
+  it("SUMMARY counts what the other two sheets contain and says whether AI was applied", async () => {
+    const read = async (data) => Object.fromEntries((await readWorkbook(await exportQuestionWorkbook(data))).sheets.SUMMARY.rows.slice(1).map(([k, v]) => [k, v]));
+    expect(await read(await consolidated())).toMatchObject({
       "Files Imported": 1, "Sessions": 2, "Total Q&A": 4, "Information Questions": 3, "Conversational Questions": 1,
-      "Consolidated Questions": 3, "Repeated Questions": 0,
+      "Initial Groups": 3, "AI Consolidation": "Not applied", "Consolidated Questions": "—", "Repeated Questions": 0,
       "Answered": 0, "Partially Answered": 0, "Not Answered": 2, "Cannot Determine": 1,
     });
-    expect(summary["Consolidation Method"]).toMatch(/identical apart from case, spacing and punctuation/);
+    expect(await read(await withAi())).toMatchObject({
+      "Initial Groups": 3, "AI Consolidation": "Applied", "Consolidated Questions": 2, "Repeated Questions": 1,
+      "Not Answered": 1, "Cannot Determine": 1,
+    });
   });
 });
