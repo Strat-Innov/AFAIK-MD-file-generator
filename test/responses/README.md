@@ -36,6 +36,8 @@ Runs the files through the app's own import code and prints a Markdown
 report: import totals, a value-for-value check that every field matches
 its source cell, every speaker marker actually present, speaker
 sequences, multi-question sessions, "not found" / "agent unavailable"
-counts, and edge cases. Output is counts and short excerpts with masked
-session IDs and redacted e-mails, long numbers and URLs. It prints to
-the terminal only. Read it before sharing it.
+counts, and edge cases. By default the output is counts and shortened
+session IDs only, with no message text: user questions name people, and
+names can't be reliably redacted by pattern. `--show-text` adds short
+excerpts for local inspection. Names are **not** redacted in that mode,
+so don't share its output. It prints to the terminal only.
