@@ -140,7 +140,7 @@ the one below it:
 |---|---|---|
 | **RAW** | Raw Sessions | Every imported row, exactly as exported, with its source file and row number. Read-only. |
 | RAW | Extracted Q&A | One record per user message, read deterministically from the transcript. The question and every agent answer part are kept word for word. |
-| DERIVED | Question Consolidation | Initial groups (exact match, always), optionally consolidated by AI into clean questions, reviewable against the originals, and exported to Excel. |
+| DERIVED | Question Consolidation | Repeated questions consolidated into clean questions, reviewable against the originals, and exported to Excel. |
 
 **Import rules**
 
@@ -178,12 +178,8 @@ the one below it:
   whether the answer was correct**.
 
   - `TRUNCATED` only means the export has a character limit. The question
-    is fully valid and always goes to intent consolidation, and the
-    visible text is kept as context. The missing part is never
+    is fully valid and is always consolidated. The missing part is never
     reconstructed.
-  - Correctness is a separate field, `knowledgeValidation`. It is judged
-    against the validated AFAIK knowledge source, not the transcript.
-    Every record starts `NOT_EVALUATED`.
 
 - `InitialUserMessage` is kept as reference only. The transcript is
   authoritative.
@@ -198,36 +194,13 @@ kept in Raw Sessions and Extracted Q&A, but they aren't knowledge
 questions and aren't consolidated. On the September 2026 exports that's
 49 Q&A records: 42 information questions and 7 conversational.
 
-**Question Consolidation** has two layers. The Excel export never
-waits for AI.
+**Question Consolidation** (`src/lib/responses/consolidate.js`).
 
-```
-Extracted questions (42 information, 7 conversational set aside)
-   → INITIAL GROUPS          exact match; always available
-   → CONSOLIDATED QUESTIONS  optional AI step: reworded questions merged, one clean question each
-   → Export Excel            uses consolidated questions if applied, else initial groups
-```
-
-- **Initial groups** (`src/lib/responses/consolidate.js`). Questions are
-  merged when their wording is identical apart from case, spacing and
-  punctuation. The clean question is the original wording, tidied.
-- **AI-assisted consolidation** (optional,
-  `src/lib/responses/ai/semanticConsolidation.js`). The prompt asks
-  Claude only which initial groups ask for the same information, and for
-  one clean question per resulting group, e.g. "South Station 1BR
-  price?" + "How much does a 1-BR unit cost at South Station…" becomes
-  "What is the price of a 1-BR unit at South Station Transport
-  Terminal?". Same subject isn't enough: "What is Mimosa Plus?" and "Who
-  is the PD of Mimosa Plus?" stay apart.
-  - Claude returns only group IDs and clean questions. The app expands
-    them to QA IDs and works out counts and answer status, so no question
-    can be lost or invented.
-  - The reply is checked: each group exactly once, matching package. A
-    pasted prompt is recognised and explained.
-  - How to use it: copy the prompt, paste Claude's answer, click Apply.
-    "Back to initial groups" undoes it. Nothing is sent automatically.
-- **Answer status.** Worked out from the transcript in both layers. It
-  describes the interaction, not whether an answer was factually right:
+- Information questions are merged when their wording is identical
+  apart from case, spacing and punctuation. Reworded questions stay
+  separate. The clean question is the original wording, tidied.
+- **Answer status.** Worked out from the transcript. It describes the
+  interaction, not whether an answer was factually right:
 
   | Status | When |
   |---|---|
@@ -240,21 +213,20 @@ Extracted questions (42 information, 7 conversational set aside)
 - **Review.** Every clean question expands to its original questions
   exactly as asked, with the agent's answers, status, timestamps and
   source files. QA IDs link to Extracted Q&A and on to the raw session.
-- **Export Consolidated Excel** → `AFAIK_Question_Consolidated.xlsx`:
+- **Export Excel** → `AFAIK_Question_Consolidated.xlsx`:
 
   | Sheet | Contents |
   |---|---|
-  | `RAW_Q&A` | Every Q&A record, values exactly as imported, plus its initial group and consolidated question |
-  | `CONSOLIDATED_QUESTIONS` | ID, clean question, occurrence count, original QA IDs, original questions, answer status, method (Exact match / AI-assisted), initial group IDs, notes |
-  | `SUMMARY` | Files, sessions, Q&A, information/conversational, initial groups, whether AI consolidation was applied, consolidated and repeated questions, answer-status counts |
+  | `RAW_Q&A` | Every Q&A record, values exactly as imported, plus the question it went into |
+  | `CONSOLIDATED_QUESTIONS` | ID, clean question, occurrence count, original QA IDs, original questions, answer status, notes |
+  | `SUMMARY` | Files, sessions, Q&A, information/conversational, consolidated and repeated questions, answer-status counts |
 
   The workbook is written in the browser with the app's own zip writer,
   with no dependency. Text is stored as text, so a question starting
   with `=` can't run as a formula.
 
-Initial groups are recomputed from the current sessions. An applied AI
-consolidation is held in memory and cleared when the sessions change.
-The Excel export is the lasting record.
+Consolidated questions are recomputed from the current sessions. The
+Excel export is the lasting record.
 
 **Privacy.** Everything runs in the browser. Session data is never
 uploaded, never written to `localStorage`, and is gone when the tab

@@ -24,7 +24,7 @@ import { generateOptimized } from "./lib/generate";
 import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_QUESTIONS, isResponseView } from "./lib/responses/views";
 import { EMPTY_WORKSPACE, readResponseFile, mergeImport, summarize as summarizeWorkspace } from "./lib/responses/importSessions";
 import { extractQA, summarizeQA } from "./lib/responses/qa";
-import { buildInitialGroups, applyConsolidation } from "./lib/responses/consolidate";
+import { consolidateQuestions } from "./lib/responses/consolidate";
 
 /* ---- ZIP reading via native DecompressionStream (no dependency) ---- */
 async function inflateRaw(u8) {
@@ -428,19 +428,9 @@ export default function App() {
   const qaSummary = useMemo(() => summarizeQA(extracted), [extracted]);
   const recordsById = useMemo(() => new Map(extracted.records.map((r) => [r.id, r])), [extracted]);
 
-  // Layer 3a: exact-match initial groups — derived like the extraction,
-  // never stored, always current.
-  const initialGroups = useMemo(() => buildInitialGroups(extracted.records), [extracted]);
-  // Layer 3b: optional AI-assisted consolidation of those groups. Held in
-  // memory and dropped when the sessions change, because it describes the
-  // exact groups it was made from. The Excel export is the lasting record.
-  const [aiGrouping, setAiGrouping] = useState(null);
-  useEffect(() => { setAiGrouping(null); }, [responseWorkspace]);
-  const consolidated = useMemo(
-    () => (aiGrouping ? applyConsolidation(extracted.records, initialGroups, aiGrouping) : null),
-    [aiGrouping, extracted, initialGroups],
-  );
-  const currentQuestionCount = consolidated ? consolidated.length : initialGroups.length;
+  // Layer 3: consolidated questions — derived like the extraction, never
+  // stored, always current.
+  const questions = useMemo(() => consolidateQuestions(extracted.records), [extracted]);
 
   // Traceability navigation: clean question → QA record → raw session. The
   // target view remounts on each jump (key) so it opens on that record.
@@ -500,7 +490,7 @@ export default function App() {
         responseCounts={{
           [RC_RAW_SESSIONS]: responseWorkspace.sessions.length,
           [RC_EXTRACTED_QA]: extracted.records.length,
-          [RC_QUESTIONS]: currentQuestionCount,
+          [RC_QUESTIONS]: questions.length,
         }}
       />
 
@@ -564,10 +554,7 @@ export default function App() {
             error={responseError}
             onImport={importResponses}
             onClear={clearResponses}
-            consolidatedCount={currentQuestionCount}
             onViewQuestions={() => goTo(RC_QUESTIONS)}
-            onViewRaw={() => goTo(RC_RAW_SESSIONS)}
-            onViewQA={() => goTo(RC_EXTRACTED_QA)}
           />
         )}
         {selected === RC_RAW_SESSIONS && (
@@ -595,10 +582,7 @@ export default function App() {
             recordsById={recordsById}
             workspaceSummary={summarizeWorkspace(responseWorkspace)}
             qaSummary={qaSummary}
-            initialGroups={initialGroups}
-            consolidated={consolidated}
-            onApplyAi={setAiGrouping}
-            onRevertAi={() => setAiGrouping(null)}
+            questions={questions}
             onOpenQA={openQA}
             onGoImport={() => goTo(RC_IMPORT)}
           />

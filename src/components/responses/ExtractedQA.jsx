@@ -150,7 +150,7 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport, fo
   });
   const sortBy = (key) => setSort((s) => ({ key, direction: s.key === key && s.direction === "asc" ? "desc" : "asc" }));
   const filtered = JSON.stringify(filters) !== JSON.stringify(DEFAULT_QA_FILTERS);
-  const cols = showIds ? 10 : 9;
+  const cols = showIds ? 8 : 7;
 
   const Th = ({ k, children, className = "" }) => (
     <th className={`px-2 py-2 font-medium ${className}`}>
@@ -182,7 +182,7 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport, fo
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <h1 className="text-sm font-semibold text-slate-800">Extracted Q&amp;A</h1>
-            <LayerBadge layer={LAYER_RAW} note="parsed from the transcript, wording unchanged" />
+            <LayerBadge layer={LAYER_RAW} />
           </div>
           <span className="text-xs text-slate-500">
             {summary.records} questions from {summary.sessionsWithQuestions} sessions · {summary.multiQuestionSessions} with several questions
@@ -234,10 +234,12 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport, fo
             <input type="checkbox" checked={filters.reviewOnly} onChange={(e) => set({ reviewOnly: e.target.checked })} />
             Needs review ({summary.requiresReview})
           </label>
-          <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
-            <input type="checkbox" checked={filters.parseIssuesOnly} onChange={(e) => set({ parseIssuesOnly: e.target.checked })} />
-            Parse issues ({summary.sessionsWithParseIssues} sessions)
-          </label>
+          {summary.sessionsWithParseIssues > 0 && (
+            <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+              <input type="checkbox" checked={filters.parseIssuesOnly} onChange={(e) => set({ parseIssuesOnly: e.target.checked })} />
+              Parse issues ({summary.sessionsWithParseIssues} sessions)
+            </label>
+          )}
           {filtered && <button onClick={() => set(DEFAULT_QA_FILTERS)} className="text-xs text-slate-500 hover:text-slate-800 underline">Reset</button>}
           <button
             onClick={() => setShowIds((v) => !v)}
@@ -262,9 +264,7 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport, fo
               <Th k="question">User question</Th>
               <Th>Answer</Th>
               <Th k="answerStatus">Status</Th>
-              <Th>Turn</Th>
-              <Th>Source file</Th>
-              <Th className="pr-4">Parse</Th>
+              <Th className="pr-4">Source file</Th>
             </tr>
           </thead>
           <tbody>
@@ -291,14 +291,9 @@ export default function ExtractedQA({ records, sessions, summary, onGoImport, fo
                     <td className="px-2 py-2">
                       <StatusBadge status={r.answerStatus} />
                       {r.questionKind === "CONVERSATIONAL" && <div className="mt-1 text-[11px] text-slate-500 whitespace-nowrap">conversational</div>}
+                      {r.parseStatus !== PARSE_STATUS.OK && <div className="mt-1"><FlagBadge tone="amber">{r.parseStatus}</FlagBadge></div>}
                     </td>
-                    <td className="px-2 py-2 tabular-nums text-slate-600">{r.turnNumber}</td>
-                    <td className="px-2 py-2 text-xs text-slate-500 break-all min-w-[9rem]">{r.sourceFiles[0]}{r.sourceFiles.length > 1 && <span className="text-slate-400"> +{r.sourceFiles.length - 1}</span>}</td>
-                    <td className="px-2 py-2 pr-4">
-                      {r.parseStatus === PARSE_STATUS.OK
-                        ? <span className="text-xs text-slate-400">OK</span>
-                        : <FlagBadge tone="amber">{r.parseStatus}</FlagBadge>}
-                    </td>
+                    <td className="px-2 py-2 pr-4 text-xs text-slate-500 break-all min-w-[9rem]">{r.sourceFiles[0]}{r.sourceFiles.length > 1 && <span className="text-slate-400"> +{r.sourceFiles.length - 1}</span>}</td>
                   </tr>
                   {open && <tr><td colSpan={cols} className="p-0"><Detail record={r} session={sessionById.get(r.sessionRecordId)} onOpenSession={onOpenSession} /></td></tr>}
                 </React.Fragment>

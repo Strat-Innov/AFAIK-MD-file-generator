@@ -29,7 +29,7 @@ export const RESPONSE_VIEWS = [
   // AI — so it sits with the raw layer, not with the derived one.
   { key: RC_EXTRACTED_QA, label: "Extracted Q&A", layer: LAYER_RAW },
   // The main output: real questions consolidated into clean ones.
-  { key: RC_QUESTIONS, label: "Question Consolidation", layer: LAYER_DERIVED },
+  { key: RC_QUESTIONS, label: "Questions", layer: LAYER_DERIVED },
 ];
 
 export const isResponseView = (key) => typeof key === "string" && key.startsWith("responses:");

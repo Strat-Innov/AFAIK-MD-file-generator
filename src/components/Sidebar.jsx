@@ -1,5 +1,5 @@
 import React from "react";
-import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, Upload, Table2, MessagesSquare, Sparkles } from "lucide-react";
+import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, Upload, Table2, MessagesSquare, ListTree } from "lucide-react";
 import { UNSORTED } from "../lib/router";
 import {
   RESPONSE_VIEWS, RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_QUESTIONS, LAYER_RAW, LAYER_DERIVED,
@@ -7,7 +7,7 @@ import {
 
 const RESPONSE_ICONS = {
   [RC_IMPORT]: Upload, [RC_RAW_SESSIONS]: Table2, [RC_EXTRACTED_QA]: MessagesSquare,
-  [RC_QUESTIONS]: Sparkles,
+  [RC_QUESTIONS]: ListTree,
 };
 
 export default function Sidebar({ tags, selected, onSelect, counts, responseCounts = {} }) {
@@ -59,9 +59,9 @@ export default function Sidebar({ tags, selected, onSelect, counts, responseCoun
         {sectionHeading("Response Consolidator", "AFAIK Agent sessions")}
       </div>
       {byLayer(null).map(responseItem)}
-      {byLayer(LAYER_RAW).length > 0 && groupLabel("Raw · source of truth")}
+      {byLayer(LAYER_RAW).length > 0 && groupLabel("Raw")}
       {byLayer(LAYER_RAW).map(responseItem)}
-      {byLayer(LAYER_DERIVED).length > 0 && groupLabel("Derived · AI consolidated")}
+      {byLayer(LAYER_DERIVED).length > 0 && groupLabel("Derived")}
       {byLayer(LAYER_DERIVED).map(responseItem)}
 
       <div className="mt-auto pt-2 border-t border-slate-800 flex flex-col gap-1">

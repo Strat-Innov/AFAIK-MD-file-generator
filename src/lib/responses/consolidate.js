@@ -1,20 +1,12 @@
 /* ------------------------------------------------------------------ *
- * Question consolidation, in two layers.
+ * Question consolidation.
  *
- *   INITIAL GROUPS (always, no AI)
- *     Information questions whose wording is identical apart from case,
- *     spacing and punctuation. Reworded questions stay apart here.
+ * Information questions whose wording is identical apart from case,
+ * spacing and punctuation become one clean question, with every
+ * original QA ID kept. Reworded questions stay apart.
  *
- *   CONSOLIDATED QUESTIONS (optional, AI-assisted)
- *     Initial groups that ask for the same information, merged, each with
- *     one clean question written by Claude (ai/semanticConsolidation.js).
- *     The app — not the model — expands groups to QA IDs and works out
- *     counts and answer status, so the model cannot lose or invent a
- *     question.
- *
- * Answer status is derived here from the transcript, identically in both
- * layers. It says what the interaction shows, never whether an answer
- * was factually right.
+ * Answer status is derived here from the transcript. It says what the
+ * interaction shows, never whether an answer was factually right.
  *
  * Derived, never stored: recomputed from the Extracted Q&A records. The
  * original questions are never changed — they are looked up by QA ID
@@ -28,11 +20,6 @@ export const ANSWER_EVALUATION = Object.freeze({
   PARTIALLY_ANSWERED: "PARTIALLY_ANSWERED",
   NOT_ANSWERED: "NOT_ANSWERED",
   CANNOT_DETERMINE: "CANNOT_DETERMINE",
-});
-
-export const METHOD = Object.freeze({
-  EXACT: "Exact match",
-  AI: "AI-assisted",
 });
 
 export const EXACT_MATCH_RULE = "Questions merged when their wording is identical apart from case, spacing and punctuation.";
@@ -100,10 +87,10 @@ export function answerStatusOf(members) {
 }
 
 /**
- * Initial groups: exact-match consolidation of the information questions.
- * @returns [{ groupId, cleanQuestion, qaIds, answerEvaluation, notes }] in order of first appearance
+ * Consolidates the information questions by exact match.
+ * @returns [{ questionId, cleanQuestion, qaIds, answerEvaluation, notes }] in order of first appearance
  */
-export function buildInitialGroups(records) {
+export function consolidateQuestions(records) {
   const groups = new Map();
   for (const r of records) {
     if (r.questionKind !== QUESTION_KIND.INFORMATION_REQUEST) continue;
@@ -111,29 +98,9 @@ export function buildInitialGroups(records) {
     (groups.get(key) ?? groups.set(key, []).get(key)).push(r);
   }
   return [...groups.values()].map((members, i) => Object.freeze({
-    groupId: `IG-${String(i + 1).padStart(3, "0")}`,
+    questionId: `Q-${String(i + 1).padStart(3, "0")}`,
     cleanQuestion: cleanQuestionText(members[0].question),
     qaIds: Object.freeze(members.map((m) => m.id)),
     ...answerStatusOf(members),
   }));
-}
-
-/**
- * Consolidated questions from a validated AI grouping of initial groups.
- * @param aiQuestions [{ cleanQuestion, groupIds }] — validated, each group exactly once
- * @returns [{ questionId, cleanQuestion, qaIds, groupIds, answerEvaluation, notes }]
- */
-export function applyConsolidation(records, initialGroups, aiQuestions) {
-  const byId = new Map(records.map((r) => [r.id, r]));
-  const groupById = new Map(initialGroups.map((g) => [g.groupId, g]));
-  return aiQuestions.map((q, i) => {
-    const qaIds = q.groupIds.flatMap((g) => groupById.get(g).qaIds);
-    return Object.freeze({
-      questionId: `CQ-${String(i + 1).padStart(3, "0")}`,
-      cleanQuestion: q.cleanQuestion,
-      qaIds: Object.freeze(qaIds),
-      groupIds: Object.freeze([...q.groupIds]),
-      ...answerStatusOf(qaIds.map((id) => byId.get(id))),
-    });
-  });
 }

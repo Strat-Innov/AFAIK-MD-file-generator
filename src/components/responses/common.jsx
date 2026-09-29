@@ -3,7 +3,7 @@ import { Database, Sparkles } from "lucide-react";
 import { LAYER_RAW } from "../../lib/responses/views";
 
 /* Every Consolidator view states which layer it shows. RAW is the
- * source of truth; DERIVED is an AI candidate. The badge is the same
+ * source of truth; DERIVED is computed from it. The badge is the same
  * everywhere so the distinction reads at a glance. */
 export function LayerBadge({ layer, note }) {
   const raw = layer === LAYER_RAW;

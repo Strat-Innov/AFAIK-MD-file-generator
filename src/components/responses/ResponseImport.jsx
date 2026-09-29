@@ -1,51 +1,7 @@
 import React, { useRef, useState } from "react";
-import {
-  Upload, Loader2, ShieldCheck, Trash2, ArrowRight, CheckCircle2, AlertTriangle, XCircle, Copy, Circle,
-} from "lucide-react";
+import { Upload, Loader2, ShieldCheck, Trash2, ArrowRight, CheckCircle2, AlertTriangle, XCircle, Copy } from "lucide-react";
 import { ACCEPT_ATTRIBUTE, FILE_STATUS, summarize } from "../../lib/responses/importSessions";
 import { Stat, FlagBadge } from "./common";
-
-/* The workflow, always visible so no stage is hidden. `ready` marks the
- * stages this build provides; the rest are shown as not yet available
- * rather than left out, so the path from import to export stays clear. */
-const STEPS = [
-  { n: 1, label: "Import", ready: true },
-  { n: 2, label: "Extract Q&A", ready: true },
-  { n: 3, label: "Review raw Q&A", ready: true },
-  { n: 4, label: "Consolidate questions", ready: true },
-  { n: 5, label: "Review clean questions", ready: true },
-  { n: 6, label: "Export Excel", ready: true },
-];
-
-function Workflow({ imported, extracted, consolidated }) {
-  return (
-    <ol className="flex flex-wrap items-center gap-1.5 text-xs">
-      {STEPS.map((s, i) => {
-        // Extraction runs on import; consolidation is done once a reply
-        // passed validation. Review is never "done" on the app's say-so,
-        // so steps 3 and 5 stay open.
-        const done = (s.n === 1 && imported) || (s.n === 2 && extracted) || (s.n === 4 && consolidated);
-        return (
-          <React.Fragment key={s.n}>
-            <li
-              className={
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 " +
-                (done ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                  : s.ready ? "border-slate-300 bg-white text-slate-700"
-                  : "border-dashed border-slate-200 bg-slate-50 text-slate-400")
-              }
-              title={s.ready ? undefined : "Not available in this version yet"}
-            >
-              {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5" />}
-              <span className="font-semibold">{s.n}</span> {s.label}
-            </li>
-            {i < STEPS.length - 1 && <ArrowRight className="h-3 w-3 text-slate-300" />}
-          </React.Fragment>
-        );
-      })}
-    </ol>
-  );
-}
 
 const STATUS_BADGE = {
   [FILE_STATUS.IMPORTED]: { tone: "emerald", Icon: CheckCircle2, label: "Imported" },
@@ -98,7 +54,7 @@ function FileTable({ files }) {
   );
 }
 
-export default function ResponseImport({ workspace, qaSummary, consolidatedCount = 0, busy, error, onImport, onClear, onViewRaw, onViewQA, onViewQuestions }) {
+export default function ResponseImport({ workspace, qaSummary, busy, error, onImport, onClear, onViewQuestions }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const summary = summarize(workspace);
@@ -111,19 +67,11 @@ export default function ResponseImport({ workspace, qaSummary, consolidatedCount
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
-        <h1 className="text-lg font-semibold text-slate-900">Response Consolidator</h1>
-        <p className="text-sm text-slate-600 mt-1">
-          Analyze AFAIK Agent sessions and turn real user questions and responses into reusable knowledge.
+        <h1 className="text-lg font-semibold text-slate-900">Import Responses</h1>
+        <p className="mt-2 flex items-start gap-2 text-xs text-slate-500">
+          <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+          Read in this browser only — nothing is uploaded or saved. Reloading the tab clears the workspace.
         </p>
-        <div className="mt-4"><Workflow imported={summary.sessions > 0} extracted={qaSummary.records > 0} consolidated={consolidatedCount > 0} /></div>
-        <div className="mt-4 flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-600">
-          <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-px" />
-          <span>
-            Files are read in this browser only. Nothing is uploaded, saved, or sent to an AI service.
-            Imported sessions are kept as exported and are never rewritten. Closing or reloading the tab discards the
-            workspace, so export anything you need to keep.
-          </span>
-        </div>
       </div>
 
       <div
@@ -140,15 +88,7 @@ export default function ResponseImport({ workspace, qaSummary, consolidatedCount
         <div className="text-sm font-medium text-slate-700">
           {busy ? "Reading files…" : "Drop CSV / XLSX session exports here"}
         </div>
-        <div className="text-xs text-slate-500 mt-1">Supported: CSV • XLSX · several files at once</div>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
-          className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-        >
-          Browse files
-        </button>
+        <div className="text-xs text-slate-500 mt-1">or click to browse · several files at once</div>
         <input
           ref={inputRef} type="file" multiple accept={ACCEPT_ATTRIBUTE} className="hidden"
           onChange={(e) => { if (e.target.files.length) onImport(e.target.files); e.target.value = ""; }}
@@ -164,44 +104,35 @@ export default function ResponseImport({ workspace, qaSummary, consolidatedCount
       {hasFiles && (
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 p-4">
-            <span className="text-sm font-semibold text-slate-800">Import summary</span>
+            <span className="text-sm font-semibold text-slate-800">Imported</span>
             <div className="flex items-center gap-2">
               <button onClick={clear} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50">
-                <Trash2 className="h-3.5 w-3.5" /> Clear workspace
-              </button>
-              <button
-                onClick={onViewRaw}
-                disabled={summary.sessions === 0}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-              >
-                View raw sessions
-              </button>
-              <button
-                onClick={onViewQA}
-                disabled={qaSummary.records === 0}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-              >
-                Review extracted Q&amp;A
+                <Trash2 className="h-3.5 w-3.5" /> Clear
               </button>
               <button
                 onClick={onViewQuestions}
                 disabled={qaSummary.records === 0}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-700 disabled:opacity-40"
               >
-                Consolidate questions <ArrowRight className="h-3.5 w-3.5" />
+                View questions <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 p-4">
-            <Stat label="Files imported" value={summary.files} />
+          <div className="grid grid-cols-3 gap-3 p-4">
+            <Stat label="Files" value={summary.files} />
             <Stat label="Sessions" value={summary.sessions} />
-            <Stat label="Q&A pairs (user questions)" value={qaSummary.records} />
-            <Stat label="Q&A needing review" value={qaSummary.requiresReview} tone={qaSummary.requiresReview ? "amber" : "slate"} />
-            <Stat label="Rows read" value={summary.rows} />
-            <Stat label="Sessions in >1 file" value={summary.multiSourceSessions} />
-            <Stat label="Conflicting session IDs" value={summary.conflicts} tone={summary.conflicts ? "amber" : "slate"} />
-            <Stat label="Files skipped" value={summary.filesSkipped} tone={summary.filesSkipped ? "rose" : "slate"} />
+            <Stat label="Q&A pairs" value={qaSummary.records} />
           </div>
+          {/* Only shown when there is something to act on. */}
+          {(summary.conflicts > 0 || summary.filesSkipped > 0) && (
+            <div className="mx-4 mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>
+                {summary.conflicts > 0 && `${summary.conflicts} session ID(s) appear with different content and are kept separately. `}
+                {summary.filesSkipped > 0 && `${summary.filesSkipped} file(s) not imported — see below.`}
+              </span>
+            </div>
+          )}
           <FileTable files={workspace.files} />
         </div>
       )}
