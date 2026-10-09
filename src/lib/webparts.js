@@ -15,6 +15,28 @@ export const QUICK_LINKS_ID = "c70391ea-0b10-4ee9-b2b4-006d3fcad0cd";
 export const IMAGE_ID = "d1d91016-032f-456d-98a4-721247c305e8";
 export const AGENT_LINK_ID = "f82072bb-4968-4341-b99b-d450fc52ec2f";
 
+/* ---- the text a web part carries in `properties` ----
+ *
+ * SharePoint puts most readable text under serverProcessedContent, but
+ * not all of it: Image keeps its caption in properties.captionText, the
+ * Agent link its label in properties.webPartTitle, and parts we have no
+ * dedicated extractor for routinely carry a heading in properties.title.
+ *
+ * Both sides of the fidelity check read this list. The unit harvester
+ * counted these fields as source content while the generic renderer read
+ * none of them, so any unrecognised web part whose text lived here was
+ * harvested, never emitted, and reported as a missing unit — content the
+ * reader could see on the page and the optimized file simply lost.
+ * Keeping one list is what stops the two drifting apart again. */
+export const WEB_PART_TEXT_PROPERTIES = [
+  "captionText",
+  "altText",
+  "overlayText",
+  "webPartTitle",
+  "linkUrl",
+  "title",
+];
+
 // A link whose target is an image file is that image, not a destination
 // a reader navigates to. The Hero web part records its tiles as
 // links.content[i].link pointing straight at a .png in SiteAssets, which

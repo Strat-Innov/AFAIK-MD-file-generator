@@ -24,7 +24,7 @@
  * its own tokens — see coverage.js.
  * ------------------------------------------------------------------ */
 
-import { decodeEntitiesOnce, isImageAssetUrl } from "./webparts.js";
+import { decodeEntitiesOnce, isImageAssetUrl, WEB_PART_TEXT_PROPERTIES } from "./webparts.js";
 import { canonicalControls } from "./canvasOrder.js";
 
 /* ---------------- normalization ---------------- */
@@ -133,7 +133,7 @@ function webPartValues(blob) {
     out.push(decodeEntitiesOnce(String(v)));
   }
   const p = blob?.properties || {};
-  for (const k of ["captionText", "altText", "overlayText", "webPartTitle", "linkUrl", "title"]) {
+  for (const k of WEB_PART_TEXT_PROPERTIES) {
     if (typeof p[k] === "string" && !isImageAssetUrl(p[k])) out.push(decodeEntitiesOnce(p[k]));
   }
   for (const person of p.persons || []) if (person?.role) out.push(decodeEntitiesOnce(String(person.role)));
