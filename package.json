@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "benchmark:questions": "node scripts/build-question-set.mjs",
     "benchmark:arms": "node scripts/build-arms.mjs",
-    "benchmark:csv": "node scripts/export-question-csv.mjs"
+    "benchmark:csv": "node scripts/export-question-csv.mjs",
+    "responses:analyze": "node scripts/analyze-session-exports.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.383.0",

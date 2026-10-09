@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Upload, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import BucketView from "./components/BucketView";
@@ -8,6 +8,10 @@ import ChangelogDetailView from "./components/ChangelogDetailView";
 import BenchmarkExport from "./components/BenchmarkExport";
 import LatestMd from "./components/LatestMd";
 import TestQuestionGenerator from "./components/TestQuestionGenerator";
+import ResponseImport from "./components/responses/ResponseImport";
+import RawSessions from "./components/responses/RawSessions";
+import ExtractedQA from "./components/responses/ExtractedQA";
+import QuestionConsolidation from "./components/responses/QuestionConsolidation";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
 import { routeFile, UNSORTED } from "./lib/router";
@@ -18,6 +22,10 @@ import { publishChangelog, fetchFileRecords } from "./lib/github";
 import { runExclusive } from "./lib/publishQueue";
 import { buildMaster } from "./lib/masterMd";
 import { generateOptimized } from "./lib/generate";
+import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_QUESTIONS, isResponseView } from "./lib/responses/views";
+import { EMPTY_WORKSPACE, readResponseFile, mergeImport, summarize as summarizeWorkspace } from "./lib/responses/importSessions";
+import { extractQA, summarizeQA } from "./lib/responses/qa";
+import { consolidateQuestions } from "./lib/responses/consolidate";
 
 /* ---- ZIP reading via native DecompressionStream (no dependency) ---- */
 async function inflateRaw(u8) {
@@ -388,6 +396,58 @@ export default function App() {
 
   const onTagAdded = () => syncTags();
 
+  /* ---- Response Consolidator ----
+   *
+   * Its own state, apart from the ASPx buckets, and held here rather
+   * than in the view so tab switches don't discard an import. Memory
+   * only, on purpose: the sessions are real conversations, and the
+   * user's export is the only thing that persists. */
+  const [responseWorkspace, setResponseWorkspace] = useState(EMPTY_WORKSPACE);
+  const [responseBusy, setResponseBusy] = useState(false);
+  const [responseError, setResponseError] = useState("");
+  // Mirrors the workspace so a merge always builds on the latest one,
+  // even if a second drop lands while the first is still being read.
+  const responseRef = useRef(EMPTY_WORKSPACE);
+
+  const importResponses = async (fileList) => {
+    setResponseBusy(true); setResponseError("");
+    try {
+      const parsed = await Promise.all([...fileList].map(readResponseFile));
+      const { workspace } = mergeImport(responseRef.current, parsed, new Date().toISOString());
+      responseRef.current = workspace;
+      setResponseWorkspace(workspace);
+    } catch (e) {
+      setResponseError(e.message || String(e));
+    } finally {
+      setResponseBusy(false);
+    }
+  };
+
+  // Layer 2 is derived, never stored: recomputed from the raw sessions
+  // whenever they change, so it can't drift from them.
+  const extracted = useMemo(() => extractQA(responseWorkspace.sessions), [responseWorkspace]);
+  const qaSummary = useMemo(() => summarizeQA(extracted), [extracted]);
+  const recordsById = useMemo(() => new Map(extracted.records.map((r) => [r.id, r])), [extracted]);
+
+  // Layer 3: consolidated questions — derived like the extraction, never
+  // stored, always current.
+  const questions = useMemo(() => consolidateQuestions(extracted.records), [extracted]);
+
+  // Traceability navigation: clean question → QA record → raw session. The
+  // target view remounts on each jump (key) so it opens on that record.
+  const [focus, setFocus] = useState({ qaId: null, sessionRecordId: null, n: 0 });
+  const openQA = (qaId) => { setFocus((f) => ({ qaId, sessionRecordId: null, n: f.n + 1 })); setSelected(RC_EXTRACTED_QA); };
+  const openSession = (sessionRecordId) => { setFocus((f) => ({ qaId: null, sessionRecordId, n: f.n + 1 })); setSelected(RC_RAW_SESSIONS); };
+  const goTo = (view) => { setFocus((f) => ({ qaId: null, sessionRecordId: null, n: f.n + 1 })); setSelected(view); };
+
+  const clearResponses = () => {
+    responseRef.current = EMPTY_WORKSPACE;
+    setResponseWorkspace(EMPTY_WORKSPACE);
+    setResponseError("");
+  };
+
+  const onResponseView = isResponseView(selected);
+
   /* A bucket is showing only when the selection IS one — not when it
    * fails to be on a list of everything that is not. The deny-list had
    * already fallen behind: "TestQuestions" was missing from it, so that
@@ -432,9 +492,20 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex">
-      <Sidebar tags={tags} selected={selected} onSelect={setSelected} counts={counts} />
+      <Sidebar
+        tags={tags} selected={selected} onSelect={goTo} counts={counts}
+        responseCounts={{
+          [RC_RAW_SESSIONS]: responseWorkspace.sessions.length,
+          [RC_EXTRACTED_QA]: extracted.records.length,
+          [RC_QUESTIONS]: questions.length,
+        }}
+      />
 
-      <main className="flex-1 px-6 py-6 max-w-5xl">
+      <main className={"flex-1 px-6 py-6 min-w-0 " + (onResponseView ? "max-w-7xl" : "max-w-5xl")}>
+        {/* The ASPx drop zone and its status belong to Knowledge Source
+            Configuration. The Consolidator has its own, for session
+            exports, so a CSV is never dropped into the ASPx flow. */}
+        {!onResponseView && (<>
         <div
           onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
           onDragLeave={() => setDragging(false)}
@@ -479,6 +550,49 @@ export default function App() {
               <span className="text-amber-700">Your files sorted and generated normally and are ready to download.</span>
             </span>
           </div>
+        )}
+        </>)}
+
+        {selected === RC_IMPORT && (
+          <ResponseImport
+            workspace={responseWorkspace}
+            qaSummary={qaSummary}
+            busy={responseBusy}
+            error={responseError}
+            onImport={importResponses}
+            onClear={clearResponses}
+            onViewQuestions={() => goTo(RC_QUESTIONS)}
+          />
+        )}
+        {selected === RC_RAW_SESSIONS && (
+          <RawSessions
+            key={`raw-${focus.n}`}
+            workspace={responseWorkspace}
+            focusSessionRecordId={focus.sessionRecordId}
+            onGoImport={() => goTo(RC_IMPORT)}
+          />
+        )}
+        {selected === RC_EXTRACTED_QA && (
+          <ExtractedQA
+            key={`qa-${focus.n}`}
+            records={extracted.records}
+            sessions={responseWorkspace.sessions}
+            summary={qaSummary}
+            focusQaId={focus.qaId}
+            onOpenSession={openSession}
+            onGoImport={() => goTo(RC_IMPORT)}
+          />
+        )}
+        {selected === RC_QUESTIONS && (
+          <QuestionConsolidation
+            records={extracted.records}
+            recordsById={recordsById}
+            workspaceSummary={summarizeWorkspace(responseWorkspace)}
+            qaSummary={qaSummary}
+            questions={questions}
+            onOpenQA={openQA}
+            onGoImport={() => goTo(RC_IMPORT)}
+          />
         )}
 
         {selected === "ManageTags" && (

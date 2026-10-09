@@ -1,4 +1,15 @@
-# ASPx → Markdown Master File
+# AFAIK Configuration App
+
+The configuration and maintenance workspace for AFAIK. It has two
+capabilities:
+
+- **Knowledge Source Configuration — ASPx → Markdown.** The original
+  function of this app, unchanged and documented below.
+- **Response Consolidator.** Imports AFAIK Agent session exports and
+  turns real user questions into knowledge-base maintenance data. See
+  [Response Consolidator](#response-consolidator).
+
+## ASPx → Markdown Master File
 
 Drop `.aspx` files (or a `.zip` of them) and get one combined Markdown
 "master file" in the same format as your existing export. Everything runs
@@ -115,3 +126,110 @@ npm run dev
   (`buildSection`) if you want a fixed one like `input\name.aspx`.
 - Requires a modern browser (Chrome/Edge/Firefox/Safari) for
   `DecompressionStream` (deflate-raw).
+
+## Response Consolidator
+
+Turns AFAIK Agent session exports into knowledge-base maintenance data.
+Open **Response Consolidator → Import Responses** in the sidebar and
+drop one or more session exports (CSV or XLSX; several at once).
+
+The data is kept in layers, and a derived layer never writes back into
+the one below it:
+
+| Layer | View | What it is |
+|---|---|---|
+| **RAW** | Raw Sessions | Every imported row, exactly as exported, with its source file and row number. Read-only. |
+| RAW | Extracted Q&A | One record per user message, read deterministically from the transcript. The question and every agent answer part are kept word for word. |
+| DERIVED | Question Consolidation | Repeated questions consolidated into clean questions, reviewable against the originals, and exported to Excel. |
+
+**Import rules**
+
+- Columns are matched by name (`SessionId`, `StartDateTime(UTC)`,
+  `ChatTranscript`, …), with spacing and casing ignored. Unrecognised
+  columns are kept with the session.
+- A session that appears in two exports (overlapping date ranges) is
+  one session with both sources listed. The same `SessionId` with
+  different content is kept twice and flagged, never silently resolved.
+- A file dropped twice is recognised by its content and skipped.
+- Legacy binary `.xls` isn't supported; save as `.xlsx` or `.csv`.
+
+**Extraction rules** (`src/lib/responses/transcript.js`, `qa.js`)
+
+- Transcripts are `<Speaker> says: <text>;` entries. Only `User says`
+  and `Agent says` are speakers; `Bot said:` inside an agent message is
+  message text. The parsed entry count must equal the `Turns` column,
+  otherwise the session is flagged `PARSE_MISMATCH`. Unknown speakers and
+  text outside any entry are kept and flagged, never dropped.
+- Each user message is one Q&A record. Its answer is the agent messages
+  that follow, up to the next user message, kept as ordered parts.
+  Agent messages before the first question are session preamble.
+- Every answer gets a status taken from the transcript text, never from
+  `SessionOutcome`:
+
+  | Status | When | Transcript completeness | Needs review |
+  |---|---|---|---|
+  | `ANSWERED` | A normal agent reply | `COMPLETE` | No |
+  | `TRUNCATED` | The exporter cut a message off (≥480 characters ending in `...`) | `TRUNCATED` | No |
+  | `REDACTED` | A message is exactly `[REDACTED]` | `NONE` | Yes |
+  | `NO_RESPONSE` | No agent message before the next user message or the end | `NONE` | Yes |
+  | `AGENT_UNAVAILABLE` | Every reply is the usage-limit notice | `NONE` | No |
+
+  Answer status describes the interaction and the export, **never
+  whether the answer was correct**.
+
+  - `TRUNCATED` only means the export has a character limit. The question
+    is fully valid and is always consolidated. The missing part is never
+    reconstructed.
+
+- `InitialUserMessage` is kept as reference only. The transcript is
+  authoritative.
+
+**Purpose.** The Response Consolidator shows what AFAIK users are
+actually asking. It keeps those real questions, turns repeated and
+reworded ones into clean reusable questions, and exports that question
+master for improving AFAIK. Answer evaluation is supporting information.
+
+**Information vs conversational.** Greetings and filler ("hi", "hmp") are
+kept in Raw Sessions and Extracted Q&A, but they aren't knowledge
+questions and aren't consolidated. On the September 2026 exports that's
+49 Q&A records: 42 information questions and 7 conversational.
+
+**Question Consolidation** (`src/lib/responses/consolidate.js`).
+
+- Information questions are merged when their wording is identical
+  apart from case, spacing and punctuation. Reworded questions stay
+  separate. The clean question is the original wording, tidied.
+- **Answer status.** Worked out from the transcript. It describes the
+  interaction, not whether an answer was factually right:
+
+  | Status | When |
+  |---|---|
+  | `NOT_ANSWERED` | Agent unavailable, no reply, or an explicit "could not find" |
+  | `CANNOT_DETERMINE` | A redacted reply, or one cut off by the export |
+  | `ANSWERED` | Otherwise |
+
+  A question asked several times is `ANSWERED` if any attempt was, and
+  the notes say what each attempt got.
+- **Review.** Every clean question expands to its original questions
+  exactly as asked, with the agent's answers, status, timestamps and
+  source files. QA IDs link to Extracted Q&A and on to the raw session.
+- **Export Excel** → `AFAIK_Question_Consolidated.xlsx`:
+
+  | Sheet | Contents |
+  |---|---|
+  | `RAW_Q&A` | Every Q&A record, values exactly as imported, plus the question it went into |
+  | `CONSOLIDATED_QUESTIONS` | ID, clean question, occurrence count, original QA IDs, original questions, answer status, notes |
+  | `SUMMARY` | Files, sessions, Q&A, information/conversational, consolidated and repeated questions, answer-status counts |
+
+  The workbook is written in the browser with the app's own zip writer,
+  with no dependency. Text is stored as text, so a question starting
+  with `=` can't run as a formula.
+
+Consolidated questions are recomputed from the current sessions. The
+Excel export is the lasting record.
+
+**Privacy.** Everything runs in the browser. Session data is never
+uploaded, never written to `localStorage`, and is gone when the tab
+closes; the user's export is the only thing that persists. Real exports
+must not be committed to this public repository (see
+`test/responses/README.md`).
