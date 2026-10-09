@@ -6,6 +6,7 @@ import TagManager from "./components/TagManager";
 import GithubSettings from "./components/GithubSettings";
 import ChangelogDetailView from "./components/ChangelogDetailView";
 import BenchmarkExport from "./components/BenchmarkExport";
+import LatestMd from "./components/LatestMd";
 import TestQuestionGenerator from "./components/TestQuestionGenerator";
 import { getTags } from "./lib/tags";
 import { rememberTag, forgetTag } from "./lib/memory";
@@ -387,7 +388,12 @@ export default function App() {
 
   const onTagAdded = () => syncTags();
 
-  const activeBucket = ["ManageTags", "Changelog", "Benchmark"].includes(selected) ? null : selected;
+  /* A bucket is showing only when the selection IS one — not when it
+   * fails to be on a list of everything that is not. The deny-list had
+   * already fallen behind: "TestQuestions" was missing from it, so that
+   * tab rendered an empty bucket view underneath itself, and every tab
+   * added later would have done the same. */
+  const activeBucket = selected === UNSORTED || tags.includes(selected) ? selected : null;
 
   // Two benchmark packagings, both fed from this session's own state.
   //
@@ -480,6 +486,11 @@ export default function App() {
             <GithubSettings />
             <TagManager tags={tags} onRename={onTagRenamed} onRemove={onTagRemoved} onAdd={onTagAdded} />
           </>
+        )}
+        {/* Shares the one current build with the benchmark panel, so a
+            build made in either tab is the build the other shows. */}
+        {selected === "LatestMd" && (
+          <LatestMd files={benchmarkFiles} currentBuild={currentBuild} onBuild={setCurrentBuild} />
         )}
         {selected === "Changelog" && <ChangelogDetailView tags={tags} />}
         {selected === "Benchmark" && (

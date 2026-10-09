@@ -1,5 +1,5 @@
 import React from "react";
-import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks } from "lucide-react";
+import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, FileText } from "lucide-react";
 import { UNSORTED } from "../lib/router";
 
 export default function Sidebar({ tags, selected, onSelect, counts }) {
@@ -31,6 +31,7 @@ export default function Sidebar({ tags, selected, onSelect, counts }) {
       {tags.map((t) => item(t, t, FolderTree, counts[t]))}
 
       <div className="mt-auto pt-2 border-t border-slate-800 flex flex-col gap-1">
+        {item("LatestMd", "Latest MD", FileText)}
         {item("Changelog", "Changelog", List)}
         {item("Benchmark", "Benchmark", FlaskConical)}
         {item("TestQuestions", "Test Questions", ListChecks)}
