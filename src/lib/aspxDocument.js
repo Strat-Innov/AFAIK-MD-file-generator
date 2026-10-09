@@ -20,6 +20,7 @@
 import { extractTag, decodeOnce } from "./masterMd.js";
 import { canonicalControls } from "./canvasOrder.js";
 import {
+  WEB_PART_TEXT_PROPERTIES,
   decodeEntitiesOnce,
   isImageAssetUrl,
   PEOPLE_ID,
@@ -233,12 +234,29 @@ function agentLink(blob) {
 function generic(blob) {
   const spt = blob?.serverProcessedContent?.searchablePlainTexts || {};
   const links = blob?.serverProcessedContent?.links || {};
+  const props = blob?.properties || {};
   const texts = Object.entries(spt).filter(([k]) => k !== "title").map(([, v]) => text(v)).filter(Boolean);
+  /* Also whatever the part keeps in `properties`. Image and Agent link
+   * have extractors that read these fields; a part without one had them
+   * counted as source units and never rendered, which is a unit the
+   * reader can see on the page and the optimized file has lost. The list
+   * is shared with the unit harvester so the two cannot disagree about
+   * what a web part carries. */
   const urls = Object.entries(links)
     .filter(([k, v]) => k !== "baseUrl" && !isImageAssetUrl(v))
     .map(([, v]) => text(v))
     .filter(Boolean);
-  const title = text(spt.title);
+  /* The heading comes from the searchable title when there is one, and
+   * from properties.title otherwise. When both exist the other is still
+   * content the page shows, so it goes in the body rather than being
+   * discarded for losing the heading slot. */
+  const title = text(spt.title) || text(props.title);
+  for (const k of WEB_PART_TEXT_PROPERTIES) {
+    const v = text(props[k]);
+    if (!v || v === title || isImageAssetUrl(v)) continue;
+    const into = k === "linkUrl" ? urls : texts;       // a target, not prose
+    if (!into.includes(v)) into.push(v);
+  }
   // A title-only part is still content: Home.aspx's News web part
   // carries nothing but "Company News & Announcements", and requiring
   // body text discarded that heading entirely.
