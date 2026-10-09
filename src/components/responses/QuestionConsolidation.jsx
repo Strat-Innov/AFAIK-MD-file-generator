@@ -4,7 +4,7 @@ import { LAYER_DERIVED } from "../../lib/responses/views";
 import { ANSWER_EVALUATION, EXACT_MATCH_RULE } from "../../lib/responses/consolidate";
 import { exportQuestionWorkbook, WORKBOOK_FILENAME, answerCell } from "../../lib/responses/export/questionWorkbook";
 import { XLSX_MIME } from "../../lib/responses/export/xlsxWriter";
-import { saveBlob } from "../BenchmarkExport";
+import { saveBlob } from "../../lib/download";
 import { LayerBadge, Stat, FlagBadge, formatUtc } from "./common";
 import { StatusBadge } from "./ExtractedQA";
 

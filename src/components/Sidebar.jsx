@@ -1,5 +1,5 @@
 import React from "react";
-import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, Upload, Table2, MessagesSquare, ListTree } from "lucide-react";
+import { FolderTree, Inbox, Settings, List, FlaskConical, ListChecks, FileText, Upload, Table2, MessagesSquare, ListTree } from "lucide-react";
 import { UNSORTED } from "../lib/router";
 import {
   RESPONSE_VIEWS, RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_QUESTIONS, LAYER_RAW, LAYER_DERIVED,
@@ -65,6 +65,7 @@ export default function Sidebar({ tags, selected, onSelect, counts, responseCoun
       {byLayer(LAYER_DERIVED).map(responseItem)}
 
       <div className="mt-auto pt-2 border-t border-slate-800 flex flex-col gap-1">
+        {item("LatestMd", "Latest MD", FileText)}
         {item("Changelog", "Changelog", List)}
         {item("Benchmark", "Benchmark", FlaskConical)}
         {item("TestQuestions", "Test Questions", ListChecks)}
