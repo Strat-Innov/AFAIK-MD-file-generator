@@ -26,6 +26,8 @@ import { RC_IMPORT, RC_RAW_SESSIONS, RC_EXTRACTED_QA, RC_QUESTIONS, isResponseVi
 import { EMPTY_WORKSPACE, readResponseFile, mergeImport, summarize as summarizeWorkspace } from "./lib/responses/importSessions";
 import { extractQA, summarizeQA } from "./lib/responses/qa";
 import { consolidateQuestions } from "./lib/responses/consolidate";
+import { runKnowledgeCheck } from "./lib/responses/knowledgeCheck";
+import { answerCell } from "./lib/responses/export/questionWorkbook";
 
 /* ---- ZIP reading via native DecompressionStream (no dependency) ---- */
 async function inflateRaw(u8) {
@@ -433,6 +435,19 @@ export default function App() {
   // stored, always current.
   const questions = useMemo(() => consolidateQuestions(extracted.records), [extracted]);
 
+  /* The knowledge check: only the uploaded file's index is held, and the
+   * verdicts are recomputed from it like everything else in this
+   * workspace. Question ids are positional, so a stored result would
+   * quietly describe questions that a later import has renumbered. */
+  const [knowledgeIndex, setKnowledgeIndex] = useState(null);
+  const knowledge = useMemo(
+    () => (knowledgeIndex
+      ? runKnowledgeCheck(questions, knowledgeIndex, (q) =>
+        q.qaIds.map((id) => { const r = recordsById.get(id); return r ? answerCell(r) : ""; }).join("\n"))
+      : null),
+    [knowledgeIndex, questions, recordsById]
+  );
+
   // Traceability navigation: clean question → QA record → raw session. The
   // target view remounts on each jump (key) so it opens on that record.
   const [focus, setFocus] = useState({ qaId: null, sessionRecordId: null, n: 0 });
@@ -592,6 +607,8 @@ export default function App() {
             questions={questions}
             onOpenQA={openQA}
             onGoImport={() => goTo(RC_IMPORT)}
+            knowledge={knowledge}
+            onKnowledgeIndex={setKnowledgeIndex}
           />
         )}
 
