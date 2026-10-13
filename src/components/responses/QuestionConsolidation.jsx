@@ -7,6 +7,8 @@ import { XLSX_MIME } from "../../lib/responses/export/xlsxWriter";
 import { saveBlob } from "../../lib/download";
 import { LayerBadge, Stat, FlagBadge, formatUtc } from "./common";
 import { StatusBadge } from "./ExtractedQA";
+import KnowledgePanel, { KnowledgeBadge, KnowledgeEvidence, VERDICT_STYLE } from "./KnowledgeCheck";
+import { KNOWLEDGE_VERDICT, KNOWLEDGE_CHECK_RULE } from "../../lib/responses/knowledgeCheck";
 
 /* The Response Consolidator's main view: what AFAIK users are actually
  * asking, repeated questions consolidated, every original kept
@@ -21,10 +23,11 @@ export const EVALUATION_STYLE = {
 
 const EvaluationBadge = ({ value }) => <FlagBadge tone={EVALUATION_STYLE[value].tone}>{EVALUATION_STYLE[value].label}</FlagBadge>;
 
-function Originals({ question, recordsById, onOpenQA }) {
+function Originals({ question, recordsById, onOpenQA, knowledgeResult }) {
   return (
     <div className="bg-slate-50 border-t border-slate-100 p-4 space-y-2">
       {question.notes && <div className="text-xs text-slate-600">{question.notes}</div>}
+      <KnowledgeEvidence result={knowledgeResult} />
       {question.qaIds.map((id) => {
         const r = recordsById.get(id);
         if (!r) return <div key={id} className="text-xs text-rose-700">{id}: not in the current dataset</div>;
@@ -46,10 +49,11 @@ function Originals({ question, recordsById, onOpenQA }) {
   );
 }
 
-export default function QuestionConsolidation({ records, recordsById, questions, workspaceSummary, qaSummary, onOpenQA, onGoImport }) {
+export default function QuestionConsolidation({ records, recordsById, questions, workspaceSummary, qaSummary, onOpenQA, onGoImport, knowledge, onKnowledgeIndex }) {
   const [expanded, setExpanded] = useState(() => new Set());
   const [text, setText] = useState("");
   const [evaluation, setEvaluation] = useState("");
+  const [verdict, setVerdict] = useState("");
   const [repeatedOnly, setRepeatedOnly] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
@@ -69,16 +73,19 @@ export default function QuestionConsolidation({ records, recordsById, questions,
 
   const repeated = questions.filter((q) => q.qaIds.length > 1).length;
   const needle = text.trim().toLowerCase();
+  const checkOf = (q) => knowledge?.byQuestionId.get(q.questionId) ?? null;
   const rows = questions.filter((q) =>
     (!evaluation || q.answerEvaluation === evaluation) &&
+    (!verdict || checkOf(q)?.verdict === verdict) &&
     (!repeatedOnly || q.qaIds.length > 1) &&
     (!needle || [q.questionId, q.cleanQuestion, ...q.qaIds, ...q.qaIds.map((id) => recordsById.get(id)?.question ?? "")].join("\n").toLowerCase().includes(needle)));
+  const cols = knowledge ? 6 : 5;
   const toggle = (id) => setExpanded((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const exportExcel = async () => {
     setExporting(true); setExportError("");
     try {
-      const bytes = await exportQuestionWorkbook({ records, questions, summary: workspaceSummary, exportedAt: new Date().toISOString() });
+      const bytes = await exportQuestionWorkbook({ records, questions, summary: workspaceSummary, exportedAt: new Date().toISOString(), knowledge });
       saveBlob(WORKBOOK_FILENAME, new Blob([bytes], { type: XLSX_MIME }));
     } catch (e) {
       setExportError(e.message || String(e));
@@ -108,6 +115,8 @@ export default function QuestionConsolidation({ records, recordsById, questions,
         </div>
       </div>
 
+      <KnowledgePanel index={knowledge?.index ?? null} onIndex={onKnowledgeIndex} counts={knowledge?.counts} />
+
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 p-4">
           <label className="relative flex-1 min-w-[14rem]">
@@ -122,6 +131,15 @@ export default function QuestionConsolidation({ records, recordsById, questions,
               <option key={v} value={v}>{EVALUATION_STYLE[v].label} ({questions.filter((q) => q.answerEvaluation === v).length})</option>
             ))}
           </select>
+          {knowledge && (
+            <select value={verdict} onChange={(e) => setVerdict(e.target.value)} aria-label="Knowledge check filter"
+              className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700">
+              <option value="">All knowledge results</option>
+              {Object.values(KNOWLEDGE_VERDICT).map((v) => (
+                <option key={v} value={v}>{VERDICT_STYLE[v].label} ({knowledge.counts[v]})</option>
+              ))}
+            </select>
+          )}
           <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
             <input type="checkbox" checked={repeatedOnly} onChange={(e) => setRepeatedOnly(e.target.checked)} />
             Repeated only
@@ -135,6 +153,7 @@ export default function QuestionConsolidation({ records, recordsById, questions,
               <th className="px-2 py-2 font-medium" title={EXACT_MATCH_RULE}>Question</th>
               <th className="px-2 py-2 font-medium text-right">Asked</th>
               <th className="px-4 py-2 font-medium">Answer status</th>
+              {knowledge && <th className="px-4 py-2 font-medium" title={KNOWLEDGE_CHECK_RULE}>Knowledge check</th>}
             </tr>
           </thead>
           <tbody>
@@ -148,12 +167,13 @@ export default function QuestionConsolidation({ records, recordsById, questions,
                     <td className="px-2 py-2 text-slate-900">{q.cleanQuestion}</td>
                     <td className="px-2 py-2 text-right tabular-nums text-slate-700">{q.qaIds.length}</td>
                     <td className="px-4 py-2"><EvaluationBadge value={q.answerEvaluation} /></td>
+                    {knowledge && <td className="px-4 py-2"><KnowledgeBadge result={checkOf(q)} /></td>}
                   </tr>
-                  {open && <tr><td colSpan={5} className="p-0"><Originals question={q} recordsById={recordsById} onOpenQA={onOpenQA} /></td></tr>}
+                  {open && <tr><td colSpan={cols} className="p-0"><Originals question={q} recordsById={recordsById} onOpenQA={onOpenQA} knowledgeResult={checkOf(q)} /></td></tr>}
                 </React.Fragment>
               );
             })}
-            {rows.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-sm text-slate-400">No questions match these filters.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={cols} className="p-6 text-center text-sm text-slate-400">No questions match these filters.</td></tr>}
           </tbody>
         </table>
       </div>

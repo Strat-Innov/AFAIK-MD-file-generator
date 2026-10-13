@@ -3,6 +3,7 @@ import { listZipEntries } from "../../src/lib/responses/xlsx.js";
 import { createXlsx, columnLetter } from "../../src/lib/responses/export/xlsxWriter.js";
 import { buildQuestionSheets, exportQuestionWorkbook, answerCell, WORKBOOK_FILENAME } from "../../src/lib/responses/export/questionWorkbook.js";
 import { consolidateQuestions } from "../../src/lib/responses/consolidate.js";
+import { indexKnowledge, runKnowledgeCheck, KNOWLEDGE_VERDICT } from "../../src/lib/responses/knowledgeCheck.js";
 import { consolidationRecords } from "./fixtures.js";
 
 /* An independent read of a written workbook: unzip, parse each part as
@@ -124,5 +125,87 @@ describe("AFAIK_Question_Consolidated.xlsx", () => {
       "Consolidated Questions": 3, "Repeated Questions": 0,
       "Answered": 0, "Partially Answered": 0, "Not Answered": 2, "Cannot Determine": 1,
     });
+  });
+});
+
+/* The knowledge columns are added only when a knowledge file was
+ * checked. A workbook exported without one must look exactly as it did
+ * before the feature existed: an empty column would read as a finding
+ * of "nothing found" rather than "not checked". */
+describe("the knowledge check in the workbook", () => {
+  /* One page, carrying the project director but not the abbreviation
+   * "PD", which is what makes the three fixture questions land on three
+   * different verdicts. */
+  const KB = "# Mimosa-Plus\n\nThe project director for Mimosa Plus is on the project page.\n\n" +
+    "## Source\n\n- Source file: Mimosa-Plus.aspx\n";
+
+  async function withKnowledge() {
+    const data = await consolidated();
+    const index = indexKnowledge([{ name: "AI.md", text: KB }]);
+    return { ...data, knowledge: runKnowledgeCheck(data.questions, index) };
+  }
+
+  it("adds no columns and changes no cell when no file was checked", async () => {
+    const [, cq] = buildQuestionSheets(await consolidated());
+    expect(cq.columns).toHaveLength(7);
+    expect(cq.rows.every((r) => r.length === 7)).toBe(true);
+  });
+
+  it("adds the verdict, the score, the page and the words not found", async () => {
+    const [, cq] = buildQuestionSheets(await withKnowledge());
+    expect(cq.columns.map((c) => c.header).slice(7)).toEqual([
+      "Knowledge Check", "Question Words Found %", "Best Matching Page",
+      "Question Words Not Found", "Reply Words On That Page %",
+    ]);
+  });
+
+  /* The whole point of the feature: one "Not Answered" splits into a
+   * page that exists and was never found, and a question the file only
+   * half covers. */
+  it("tells a retrieval gap apart from a thin match on the same answer status", async () => {
+    const [, cq] = buildQuestionSheets(await withKnowledge());
+    const row = (id) => cq.rows.find((r) => r[0] === id);
+
+    expect(row("Q-002")[5]).toBe("Not Answered");
+    expect(row("Q-002")[7]).toBe("Retrieval Gap — in the file, not answered");
+    expect(row("Q-002")[8]).toBe(100);
+    expect(row("Q-002")[9]).toBe("Mimosa-Plus.aspx");
+    expect(row("Q-002")[10]).toBe("");
+
+    expect(row("Q-001")[5]).toBe("Not Answered");
+    expect(row("Q-001")[7]).toBe("Weak Match — read it");
+    expect(row("Q-001")[10]).toBe("pd");
+  });
+
+  it("leaves the score and the page blank for a question it could not check", async () => {
+    const [, cq] = buildQuestionSheets(await withKnowledge());
+    // Q-003's reply was cut off by the export, so the transcript cannot
+    // show what the user got; none of its words are in the file either,
+    // so there is no page to point at.
+    const row = cq.rows.find((r) => r[0] === "Q-003");
+    expect(row[7]).toBe("Cannot Check");
+    expect(row[8]).toBe("");
+    expect(row[9]).toBe("");
+  });
+
+  it("reports the check on the summary sheet, zero counts included", async () => {
+    const wb = await readWorkbook(await exportQuestionWorkbook(await withKnowledge()));
+    const rows = Object.fromEntries(wb.sheets.SUMMARY.rows.slice(1).map(([k, v]) => [k, v]));
+    expect(rows["Knowledge Pages Indexed"]).toBe(1);
+    expect(rows["Knowledge Files"]).toBe("AI.md");
+    expect(rows["Retrieval Gap — in the file, not answered"]).toBe(1);
+    expect(rows["Weak Match — read it"]).toBe(1);
+    expect(rows["Cannot Check"]).toBe(1);
+    // A verdict nothing landed on still gets a row, so zero reads as zero.
+    expect(rows["Content Missing — not in the file"]).toBe(0);
+    expect(rows["Supported"]).toBe(0);
+    // Still last, so the sheet keeps reading as a report.
+    expect(wb.sheets.SUMMARY.rows.at(-1)[0]).toBe("Exported (UTC)");
+  });
+
+  it("says nothing about the knowledge check when none was run", async () => {
+    const wb = await readWorkbook(await exportQuestionWorkbook(await consolidated()));
+    const keys = wb.sheets.SUMMARY.rows.slice(1).map(([k]) => k);
+    expect(keys.some((k) => String(k).startsWith("Knowledge"))).toBe(false);
   });
 });
